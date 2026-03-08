@@ -1,0 +1,16 @@
+{
+    "name": "restroflow",
+    "version": "1.0.0",
+    "description": "Professional Multi-Tenant Restaurant Management System",
+    "scripts": {
+        "dev:api": "cd apps/api && npm run dev",
+        "dev:web": "cd apps/web && npm run dev",
+        "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+        "install:all": "npm install && cd apps/api && npm install && cd ../web && npm install",
+        "prisma:generate": "cd apps/api && npx prisma generate",
+        "prisma:push": "cd apps/api && npx prisma db push"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}
