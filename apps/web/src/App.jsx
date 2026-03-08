@@ -11,29 +11,31 @@ import {
 } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
-import Dashboard from './pages/Dashboard';
-import MenuManagement from './pages/MenuManagement';
-import TableManagement from './pages/TableManagement';
-import OrderList from './pages/OrderList';
-import Billing from './pages/Billing';
-import Login from './pages/Login';
-import InventoryManagement from './pages/InventoryManagement';
-import ExpenseTracker from './pages/ExpenseTracker';
-import StaffManagement from './pages/StaffManagement';
-import SettingsPage from './pages/SettingsPage';
-import ClientManagement from './pages/ClientManagement';
-import ActivityLog from './pages/ActivityLog';
-import KitchenDisplay from './pages/KitchenDisplay';
-import Reports from './pages/Reports';
-import PublicMenu from './pages/PublicMenu';
-import CustomerManagement from './pages/CustomerManagement';
-import ProfitDashboard from './pages/ProfitDashboard';
-import WasteManagement from './pages/WasteManagement';
-import NotFound from './pages/NotFound';
+// Lazy loaded pages to optimize bundle size per tenant/user role
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const MenuManagement = React.lazy(() => import('./pages/MenuManagement'));
+const TableManagement = React.lazy(() => import('./pages/TableManagement'));
+const OrderList = React.lazy(() => import('./pages/OrderList'));
+const Billing = React.lazy(() => import('./pages/Billing'));
+const Login = React.lazy(() => import('./pages/Login'));
+const InventoryManagement = React.lazy(() => import('./pages/InventoryManagement'));
+const ExpenseTracker = React.lazy(() => import('./pages/ExpenseTracker'));
+const StaffManagement = React.lazy(() => import('./pages/StaffManagement'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const ClientManagement = React.lazy(() => import('./pages/ClientManagement'));
+const ActivityLog = React.lazy(() => import('./pages/ActivityLog'));
+const KitchenDisplay = React.lazy(() => import('./pages/KitchenDisplay'));
+const Reports = React.lazy(() => import('./pages/Reports'));
+const PublicMenu = React.lazy(() => import('./pages/PublicMenu'));
+const CustomerManagement = React.lazy(() => import('./pages/CustomerManagement'));
+const ProfitDashboard = React.lazy(() => import('./pages/ProfitDashboard'));
+const WasteManagement = React.lazy(() => import('./pages/WasteManagement'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
@@ -66,125 +68,133 @@ function AppContent() {
     }
 
     return (
-        <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={!user ? <Login /> : <Navigate to={from} replace />} />
-            <Route path="/menu/p/:clientId/:tableId" element={<PublicMenu />} />
-            <Route path="/menu/p/:clientId" element={<PublicMenu />} />
+        <React.Suspense fallback={
+            <div className="login-container">
+                <Loader2 className="animate-spin" size={40} color="var(--primary)" />
+            </div>
+        }>
+            <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={!user ? <Login /> : <Navigate to={from} replace />} />
+                <Route path="/menu/p/:clientId/:tableId" element={<PublicMenu />} />
+                <Route path="/menu/p/:clientId" element={<PublicMenu />} />
 
-            {/* Protected Dashboard Routes */}
-            <Route path="/*" element={
-                <ProtectedRoute>
-                    <div className="app-container">
-                        <Sidebar />
-                        <main className="main-content">
-                            <Header />
-                            <Routes>
-                                <Route index element={<Navigate to="/dashboard" replace />} />
-                                <Route path="dashboard" element={<Dashboard />} />
-                                <Route path="clients" element={
-                                    <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-                                        <ClientManagement />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="menu" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN', 'CHEF', 'WAITER']}>
-                                        <MenuManagement />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="tables" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
-                                        <TableManagement />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="orders" element={<OrderList />} />
-                                <Route path="inventory" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN', 'CHEF']}>
-                                        <InventoryManagement />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="expenses" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN']}>
-                                        <ExpenseTracker />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="staff" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN']}>
-                                        <StaffManagement />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="billing" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
-                                        <Billing />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="activity" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN']}>
-                                        <ActivityLog />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="kitchen" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN', 'CHEF']}>
-                                        <KitchenDisplay />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="reports" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN']}>
-                                        <Reports />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="customers" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
-                                        <CustomerManagement />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="profit-analytics" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN']}>
-                                        <ProfitDashboard />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="waste" element={
-                                    <ProtectedRoute allowedRoles={['ADMIN', 'CHEF', 'WAITER']}>
-                                        <WasteManagement />
-                                    </ProtectedRoute>
-                                } />
-                                <Route path="settings" element={<SettingsPage />} />
+                {/* Protected Dashboard Routes */}
+                <Route path="/*" element={
+                    <ProtectedRoute>
+                        <div className="app-container">
+                            <Sidebar />
+                            <main className="main-content">
+                                <Header />
+                                <Routes>
+                                    <Route index element={<Navigate to="/dashboard" replace />} />
+                                    <Route path="dashboard" element={<Dashboard />} />
+                                    <Route path="clients" element={
+                                        <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                                            <ClientManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="menu" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'CHEF', 'WAITER']}>
+                                            <MenuManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="tables" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
+                                            <TableManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="orders" element={<OrderList />} />
+                                    <Route path="inventory" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'CHEF']}>
+                                            <InventoryManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="expenses" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                            <ExpenseTracker />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="staff" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                            <StaffManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="billing" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
+                                            <Billing />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="activity" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                            <ActivityLog />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="kitchen" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'CHEF']}>
+                                            <KitchenDisplay />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="reports" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                            <Reports />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="customers" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
+                                            <CustomerManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="profit-analytics" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                            <ProfitDashboard />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="waste" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'CHEF', 'WAITER']}>
+                                            <WasteManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="settings" element={<SettingsPage />} />
 
-                                {/* 404 inside Protected Area */}
-                                <Route path="*" element={<NotFound />} />
-                            </Routes>
-                        </main>
-                    </div>
-                </ProtectedRoute>
-            } />
+                                    {/* 404 inside Protected Area */}
+                                    <Route path="*" element={<NotFound />} />
+                                </Routes>
+                            </main>
+                        </div>
+                    </ProtectedRoute>
+                } />
 
-            {/* Global Fallback/404 */}
-            <Route path="*" element={<NotFound />} />
-        </Routes>
+                {/* Global Fallback/404 */}
+                <Route path="*" element={<NotFound />} />
+            </Routes>
+        </React.Suspense>
     );
 }
 
 function App() {
     return (
-        <ThemeProvider>
-            <AuthProvider>
-                <Router>
-                    <AppContent />
-                    <Toaster
-                        position="top-right"
-                        toastOptions={{
-                            className: 'premium-toast',
-                            style: {
-                                background: 'var(--bg-card)',
-                                color: 'var(--text-main)',
-                                border: '1px solid var(--border)',
-                                backdropFilter: 'blur(10px)',
-                            },
-                        }}
-                    />
-                </Router>
-            </AuthProvider>
-        </ThemeProvider>
+        <ErrorBoundary>
+            <ThemeProvider>
+                <AuthProvider>
+                    <Router>
+                        <AppContent />
+                        <Toaster
+                            position="top-right"
+                            toastOptions={{
+                                className: 'premium-toast',
+                                style: {
+                                    background: 'var(--bg-card)',
+                                    color: 'var(--text-main)',
+                                    border: '1px solid var(--border)',
+                                    backdropFilter: 'blur(10px)',
+                                },
+                            }}
+                        />
+                    </Router>
+                </AuthProvider>
+            </ThemeProvider>
+        </ErrorBoundary>
     );
 }
 
