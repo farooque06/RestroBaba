@@ -108,8 +108,9 @@ const KitchenDisplay = () => {
     };
 
     if (loading) return (
-        <div className="page-container flex-center">
+        <div className="page-container flex-center" style={{ flexDirection: 'column', gap: '1rem' }}>
             <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+            <p style={{ color: 'var(--text-muted)' }}>Syncing kitchen orders...</p>
         </div>
     );
 

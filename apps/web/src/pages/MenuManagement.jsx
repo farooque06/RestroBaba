@@ -7,6 +7,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { formatCurrency } from '../utils/formatters';
 import OptimizedImage from '../components/common/OptimizedImage';
 import toast from 'react-hot-toast';
+import foodPlaceholder from '../assets/food-placeholder.png';
 
 const MenuManagement = () => {
     const { user } = useAuth();
@@ -311,8 +312,9 @@ const MenuManagement = () => {
     });
 
     if (loading) return (
-        <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+            <p style={{ color: 'var(--text-muted)' }}>Loading menu items...</p>
         </div>
     );
 
@@ -395,7 +397,7 @@ const MenuManagement = () => {
                     <div key={item.id} className="stat-card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)', background: 'var(--bg-card)' }}>
                         <div style={{ height: '180px', width: '100%', position: 'relative' }}>
                             <OptimizedImage
-                                src={item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'}
+                                src={item.image || foodPlaceholder}
                                 alt={item.name}
                                 style={{ width: '100%', height: '100%', opacity: item.available ? 1 : 0.6 }}
                             />

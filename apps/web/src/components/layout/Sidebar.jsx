@@ -58,7 +58,7 @@ const Sidebar = () => {
 
             <div className="logo" style={{ justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
                 <UtensilsCrossed size={24} color="var(--primary)" style={{ flexShrink: 0 }} />
-                {!isCollapsed && <span>RestroFlow</span>}
+                {!isCollapsed && <span title={user?.clientName || 'RestroBaba'} style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.clientName || 'RestroBaba'}</span>}
             </div>
 
             <div className="nav-links">

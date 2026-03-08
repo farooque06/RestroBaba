@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Users, Clock, Plus, Square, Loader2, Trash2, Edit2, Utensils, DollarSign } from 'lucide-react';
+import { Users, Clock, Plus, Square, Loader2, Trash2, Edit2, Utensils, DollarSign, TableProperties } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import OrderTaking from '../components/OrderTaking';
@@ -166,8 +166,9 @@ const TableManagement = () => {
     const filteredTables = tables.filter(t => filter === 'All' || t.status === filter);
 
     if (loading) return (
-        <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+            <p style={{ color: 'var(--text-muted)' }}>Loading floor plan...</p>
         </div>
     );
 
@@ -308,6 +309,12 @@ const TableManagement = () => {
                         </div>
                     </div>
                 ))}
+                {filteredTables.length === 0 && (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                        <TableProperties size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
+                        <p>{filter === 'All' ? 'No tables found. Add a new table to get started.' : `No tables are currently ${filter.toLowerCase()}.`}</p>
+                    </div>
+                )}
             </div>
 
             {/* Checkout Modal */}

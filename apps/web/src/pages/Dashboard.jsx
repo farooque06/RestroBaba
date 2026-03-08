@@ -37,8 +37,9 @@ const Dashboard = () => {
     };
 
     if (loading) return (
-        <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Loader2 className="animate-spin" size={40} color="var(--primary)" />
+            <p style={{ color: 'var(--text-muted)' }}>Loading system overview...</p>
         </div>
     );
 

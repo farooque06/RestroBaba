@@ -108,8 +108,9 @@ const OrderList = () => {
     });
 
     if (loading) return (
-        <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+            <p style={{ color: 'var(--text-muted)' }}>Fetching recent orders...</p>
         </div>
     );
 
@@ -228,9 +229,9 @@ const OrderList = () => {
                                         <ChefHat size={16} />
                                         <span>Start Cooking</span>
                                     </button>
-                                    <button onClick={() => handleCancel(order.id)} style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
+                                    <button onClick={() => handleCancel(order.id)} style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 500, fontSize: '0.85rem' }} title="Cancel Order">
                                         <XCircle size={16} />
-                                        Cancel
+                                        <span>Cancel</span>
                                     </button>
                                 </>
                             )}
@@ -240,7 +241,7 @@ const OrderList = () => {
                                         <Clock size={16} />
                                         <span>Mark Ready</span>
                                     </button>
-                                    <button onClick={() => handleCancel(order.id)} style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
+                                    <button onClick={() => handleCancel(order.id)} style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Cancel Order">
                                         <XCircle size={16} />
                                     </button>
                                 </>
@@ -264,7 +265,7 @@ const OrderList = () => {
                 {filteredOrders.length === 0 && (
                     <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
                         <ClipboardList size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
-                        <p>No orders found.</p>
+                        <p>{filter === 'All' ? 'No orders found.' : `No ${filter.toLowerCase()} orders found.`}</p>
                     </div>
                 )}
             </div>

@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../config';
 import { Utensils, Search, Loader2, Star, Award, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 import OptimizedImage from '../components/common/OptimizedImage';
+import foodPlaceholder from '../assets/food-placeholder.png';
 
 const PublicMenu = () => {
     const { clientId, tableId } = useParams();
@@ -40,8 +41,9 @@ const PublicMenu = () => {
     });
 
     if (loading) return (
-        <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0a0a0b' }}>
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', background: '#0a0a0b' }}>
             <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+            <p style={{ color: '#888' }}>Fetching digital menu...</p>
         </div>
     );
 
@@ -126,7 +128,7 @@ const PublicMenu = () => {
                     }}>
                         <div style={{ position: 'relative' }}>
                             <OptimizedImage
-                                src={item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1760&auto=format&fit=crop'}
+                                src={item.image || foodPlaceholder}
                                 alt={item.name}
                                 style={{ width: '100px', height: '100px', borderRadius: '12px' }}
                             />
