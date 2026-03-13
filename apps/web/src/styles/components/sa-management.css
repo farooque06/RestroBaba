@@ -55,6 +55,67 @@
     gap: 2rem;
 }
 
+/* ── Filter Pills ── */
+.pill-btn {
+    padding: 0.6rem 1.25rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.pill-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--border-light);
+    color: var(--text-main);
+    transform: translateY(-1px);
+}
+
+.pill-btn.active {
+    background: var(--primary-gradient);
+    border-color: var(--primary);
+    color: white;
+    box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+/* ── Search Bar Enhancement ── */
+.sa-search-premium {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 18px !important;
+    padding: 0.5rem 1.25rem !important;
+    max-width: 450px;
+    width: 100%;
+}
+
+.sa-search-premium input {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-main) !important;
+    font-weight: 500;
+}
+
+.sa-search-clear {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease;
+}
+
+.sa-search-clear:hover {
+    color: var(--danger);
+}
+
 /* Base Responsive Rules */
 @media (max-width: 1024px) {
     .sa-mgmt-header {
