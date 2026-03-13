@@ -124,7 +124,6 @@ const ClientManagement = () => {
 
     const handleCreateClient = async (e) => {
         e.preventDefault();
-        console.log('Dispatching new client data:', newClient);
         setSubmitLoading(true);
         try {
             const token = localStorage.getItem('restroToken');
@@ -321,26 +320,26 @@ const ClientManagement = () => {
     };
 
     const filteredClients = clients.filter(client => {
-        const matchesSearch = 
+        const matchesSearch =
             client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
             client.shopCode.toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         const clientStatus = client.isActive ? 'LIVE' : 'SUSPENDED';
-        
-        let matchesFilter = activeFilter === 'ALL' || 
-                           activeFilter === clientStatus || 
-                           activeFilter === client.plan;
+
+        let matchesFilter = activeFilter === 'ALL' ||
+            activeFilter === clientStatus ||
+            activeFilter === client.plan;
 
         if (activeFilter === 'EXPIRING_SOON') {
-            const daysLeft = client.subscriptionEnd 
+            const daysLeft = client.subscriptionEnd
                 ? Math.ceil((new Date(client.subscriptionEnd) - new Date()) / (1000 * 60 * 60 * 24))
                 : Infinity;
             matchesFilter = daysLeft > 0 && daysLeft <= 15;
         } else if (activeFilter === 'PENDING_PAYMENT') {
             matchesFilter = client.paymentStatus === 'PENDING' || client.paymentStatus === 'OVERDUE';
         }
-                             
+
         return matchesSearch && matchesFilter;
     });
 
@@ -356,7 +355,7 @@ const ClientManagement = () => {
             <div className="sa-mgmt-header">
                 <div className="sa-mgmt-title">
                     <h1>
-                        Client Ecosystem 
+                        Client Ecosystem
                         <span className="status-badge sa-badge-super">
                             <ShieldCheck size={14} /> SUPER ADMIN
                         </span>
@@ -390,7 +389,7 @@ const ClientManagement = () => {
                         <span className="badge badge-subtle">{clients.filter(c => !c.isActive).length} Inactive</span>
                     </div>
                 </div>
-                
+
                 <div className="stat-card sa-stat-card-premium">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
@@ -437,7 +436,7 @@ const ClientManagement = () => {
                             </button>
                         )}
                     </div>
-                    
+
                     <div className="sa-mgmt-filters">
                         {['ALL', 'LIVE', 'SUSPENDED', 'EXPIRING_SOON', 'PENDING_PAYMENT', 'SILVER', 'GOLD', 'DIAMOND'].map(f => (
                             <button
@@ -461,13 +460,13 @@ const ClientManagement = () => {
                     </div>
                 ) : (
                     filteredClients.map(client => (
-                        <div 
-                            key={client.id} 
+                        <div
+                            key={client.id}
                             className="premium-glass animate-slideUp"
-                            style={{ 
-                                padding: '1.75rem', 
-                                display: 'flex', 
-                                flexDirection: 'column', 
+                            style={{
+                                padding: '1.75rem',
+                                display: 'flex',
+                                flexDirection: 'column',
                                 gap: '1.5rem',
                                 border: '1px solid var(--border)',
                                 opacity: client.isActive ? 1 : 0.8,
@@ -478,13 +477,13 @@ const ClientManagement = () => {
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                    <div style={{ 
-                                        width: '56px', 
-                                        height: '56px', 
-                                        borderRadius: '18px', 
-                                        background: client.isActive ? 'var(--primary-glow)' : 'rgba(239, 68, 68, 0.1)', 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
+                                    <div style={{
+                                        width: '56px',
+                                        height: '56px',
+                                        borderRadius: '18px',
+                                        background: client.isActive ? 'var(--primary-glow)' : 'rgba(239, 68, 68, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
                                         justifyContent: 'center'
                                     }}>
                                         <Store size={28} color={client.isActive ? 'var(--primary)' : '#ef4444'} />
@@ -547,8 +546,8 @@ const ClientManagement = () => {
                                         style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '12px', width: '38px', height: '38px' }}
                                         onClick={() => {
                                             setSelectedClient(client);
-                                            setEditClient({ 
-                                                name: client.name, 
+                                            setEditClient({
+                                                name: client.name,
                                                 email: client.email,
                                                 useTax: client.useTax,
                                                 taxRate: client.taxRate,
@@ -667,26 +666,26 @@ const ClientManagement = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
-                                            <input type="checkbox" checked={newClient.useTax} onChange={e => setNewClient({ ...newClient, useTax: e.target.checked })} 
+                                            <input type="checkbox" checked={newClient.useTax} onChange={e => setNewClient({ ...newClient, useTax: e.target.checked })}
                                                 style={{ width: '18px', height: '18px' }} />
                                             Enable VAT Compliance
                                         </label>
                                         <div className="input-wrapper" style={{ opacity: newClient.useTax ? 1 : 0.4 }}>
                                             <input type="number" step="0.01" placeholder="13" value={newClient.taxRate || 0}
-                                                onChange={e => setNewClient({ ...newClient, taxRate: e.target.value })} disabled={!newClient.useTax} 
+                                                onChange={e => setNewClient({ ...newClient, taxRate: e.target.value })} disabled={!newClient.useTax}
                                                 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 700 }} />
                                             <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>%</span>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
-                                            <input type="checkbox" checked={newClient.useServiceCharge} onChange={e => setNewClient({ ...newClient, useServiceCharge: e.target.checked })} 
+                                            <input type="checkbox" checked={newClient.useServiceCharge} onChange={e => setNewClient({ ...newClient, useServiceCharge: e.target.checked })}
                                                 style={{ width: '18px', height: '18px' }} />
                                             Service Charge
                                         </label>
                                         <div className="input-wrapper" style={{ opacity: newClient.useServiceCharge ? 1 : 0.4 }}>
                                             <input type="number" step="0.01" placeholder="10" value={newClient.serviceChargeRate || 0}
-                                                onChange={e => setNewClient({ ...newClient, serviceChargeRate: e.target.value })} disabled={!newClient.useServiceCharge} 
+                                                onChange={e => setNewClient({ ...newClient, serviceChargeRate: e.target.value })} disabled={!newClient.useServiceCharge}
                                                 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 700 }} />
                                             <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>%</span>
                                         </div>
@@ -704,7 +703,7 @@ const ClientManagement = () => {
                                         const color = p.tier === 'GOLD' ? '#fbbf24' : p.tier === 'DIAMOND' ? '#38bdf8' : '#94a3b8';
                                         const isActive = newClient.plan === p.tier;
                                         return (
-                                            <div 
+                                            <div
                                                 key={p.id}
                                                 onClick={() => setNewClient({ ...newClient, plan: p.tier })}
                                                 className={`plan-card-mini ${isActive ? 'active' : ''}`}
@@ -724,9 +723,9 @@ const ClientManagement = () => {
                                                     overflow: 'hidden'
                                                 }}
                                             >
-                                                <div style={{ 
-                                                    padding: '8px', 
-                                                    borderRadius: '12px', 
+                                                <div style={{
+                                                    padding: '8px',
+                                                    borderRadius: '12px',
                                                     background: isActive ? color : 'rgba(255,255,255,0.05)',
                                                     color: isActive ? 'black' : 'var(--text-muted)',
                                                     transition: 'all 0.2s ease'
@@ -778,27 +777,27 @@ const ClientManagement = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
                                     <div className="input-group">
                                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Subscription Expiry</label>
-                                        <div className="input-wrapper" style={{ 
-                                            background: 'rgba(255,255,255,0.03)', 
-                                            border: '1px solid var(--border)', 
-                                            borderRadius: '16px', 
+                                        <div className="input-wrapper" style={{
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '16px',
                                             padding: '4px 12px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '12px'
                                         }}>
                                             <Calendar size={18} color="var(--primary)" />
-                                            <input 
-                                                type="date" 
+                                            <input
+                                                type="date"
                                                 value={newClient.subscriptionEnd || ''}
-                                                onChange={e => setNewClient({ ...newClient, subscriptionEnd: e.target.value })} 
-                                                required 
-                                                style={{ 
-                                                    background: 'transparent', 
-                                                    border: 'none', 
-                                                    color: 'white', 
-                                                    padding: '12px 0', 
-                                                    fontSize: '1rem', 
+                                                onChange={e => setNewClient({ ...newClient, subscriptionEnd: e.target.value })}
+                                                required
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: 'white',
+                                                    padding: '12px 0',
+                                                    fontSize: '1rem',
                                                     fontWeight: 600,
                                                     outline: 'none',
                                                     width: '100%',
@@ -810,10 +809,10 @@ const ClientManagement = () => {
 
                                     <div className="input-group">
                                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Payment Status</label>
-                                        <div className="input-wrapper" style={{ 
-                                            background: 'rgba(255,255,255,0.03)', 
-                                            border: '1px solid var(--border)', 
-                                            borderRadius: '16px', 
+                                        <div className="input-wrapper" style={{
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '16px',
                                             padding: '4px 12px',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -821,16 +820,16 @@ const ClientManagement = () => {
                                             position: 'relative'
                                         }}>
                                             <CreditCard size={18} color="var(--primary)" />
-                                            <select 
+                                            <select
                                                 value={newClient.paymentStatus || 'PAID'}
                                                 onChange={e => setNewClient({ ...newClient, paymentStatus: e.target.value })}
-                                                style={{ 
-                                                    width: '100%', 
-                                                    background: 'transparent', 
-                                                    border: 'none', 
-                                                    color: 'white', 
-                                                    padding: '12px 0', 
-                                                    fontSize: '1rem', 
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: 'white',
+                                                    padding: '12px 0',
+                                                    fontSize: '1rem',
                                                     fontWeight: 600,
                                                     outline: 'none',
                                                     appearance: 'none',
@@ -899,26 +898,26 @@ const ClientManagement = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
-                                            <input type="checkbox" checked={editClient.useTax} onChange={e => setEditClient({ ...editClient, useTax: e.target.checked })} 
+                                            <input type="checkbox" checked={editClient.useTax} onChange={e => setEditClient({ ...editClient, useTax: e.target.checked })}
                                                 style={{ width: '18px', height: '18px' }} />
                                             VAT Override
                                         </label>
                                         <div className="input-wrapper" style={{ opacity: editClient.useTax ? 1 : 0.4 }}>
                                             <input type="number" step="0.01" placeholder="13" value={editClient.taxRate || 0}
-                                                onChange={e => setEditClient({ ...editClient, taxRate: e.target.value })} disabled={!editClient.useTax} 
+                                                onChange={e => setEditClient({ ...editClient, taxRate: e.target.value })} disabled={!editClient.useTax}
                                                 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 700 }} />
                                             <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>%</span>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
-                                            <input type="checkbox" checked={editClient.useServiceCharge} onChange={e => setEditClient({ ...editClient, useServiceCharge: e.target.checked })} 
+                                            <input type="checkbox" checked={editClient.useServiceCharge} onChange={e => setEditClient({ ...editClient, useServiceCharge: e.target.checked })}
                                                 style={{ width: '18px', height: '18px' }} />
                                             Service Charge
                                         </label>
                                         <div className="input-wrapper" style={{ opacity: editClient.useServiceCharge ? 1 : 0.4 }}>
                                             <input type="number" step="0.01" placeholder="10" value={editClient.serviceChargeRate || 0}
-                                                onChange={e => setEditClient({ ...editClient, serviceChargeRate: e.target.value })} disabled={!editClient.useServiceCharge} 
+                                                onChange={e => setEditClient({ ...editClient, serviceChargeRate: e.target.value })} disabled={!editClient.useServiceCharge}
                                                 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 700 }} />
                                             <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>%</span>
                                         </div>
@@ -936,7 +935,7 @@ const ClientManagement = () => {
                                         const color = p.tier === 'GOLD' ? '#fbbf24' : p.tier === 'DIAMOND' ? '#38bdf8' : '#94a3b8';
                                         const isActive = editClient.plan === p.tier;
                                         return (
-                                            <div 
+                                            <div
                                                 key={p.id}
                                                 onClick={() => setEditClient({ ...editClient, plan: p.tier })}
                                                 className={`plan-card-mini ${isActive ? 'active' : ''}`}
@@ -956,9 +955,9 @@ const ClientManagement = () => {
                                                     overflow: 'hidden'
                                                 }}
                                             >
-                                                <div style={{ 
-                                                    padding: '8px', 
-                                                    borderRadius: '12px', 
+                                                <div style={{
+                                                    padding: '8px',
+                                                    borderRadius: '12px',
                                                     background: isActive ? color : 'rgba(255,255,255,0.05)',
                                                     color: isActive ? 'black' : 'var(--text-muted)',
                                                     transition: 'all 0.2s ease'
@@ -1010,27 +1009,27 @@ const ClientManagement = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
                                     <div className="input-group">
                                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Subscription Expiry</label>
-                                        <div className="input-wrapper" style={{ 
-                                            background: 'rgba(255,255,255,0.03)', 
-                                            border: '1px solid var(--border)', 
-                                            borderRadius: '16px', 
+                                        <div className="input-wrapper" style={{
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '16px',
                                             padding: '4px 12px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '12px'
                                         }}>
                                             <Calendar size={18} color="var(--primary)" />
-                                            <input 
-                                                type="date" 
+                                            <input
+                                                type="date"
                                                 value={editClient.subscriptionEnd || ''}
-                                                onChange={e => setEditClient({ ...editClient, subscriptionEnd: e.target.value })} 
-                                                required 
-                                                style={{ 
-                                                    background: 'transparent', 
-                                                    border: 'none', 
-                                                    color: 'white', 
-                                                    padding: '12px 0', 
-                                                    fontSize: '1rem', 
+                                                onChange={e => setEditClient({ ...editClient, subscriptionEnd: e.target.value })}
+                                                required
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: 'white',
+                                                    padding: '12px 0',
+                                                    fontSize: '1rem',
                                                     fontWeight: 600,
                                                     outline: 'none',
                                                     width: '100%',
@@ -1078,10 +1077,10 @@ const ClientManagement = () => {
 
                                     <div className="input-group">
                                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Payment Status</label>
-                                        <div className="input-wrapper" style={{ 
-                                            background: 'rgba(255,255,255,0.03)', 
-                                            border: '1px solid var(--border)', 
-                                            borderRadius: '16px', 
+                                        <div className="input-wrapper" style={{
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '16px',
                                             padding: '4px 12px',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -1089,16 +1088,16 @@ const ClientManagement = () => {
                                             position: 'relative'
                                         }}>
                                             <CreditCard size={18} color="var(--primary)" />
-                                            <select 
+                                            <select
                                                 value={editClient.paymentStatus || 'PAID'}
                                                 onChange={e => setEditClient({ ...editClient, paymentStatus: e.target.value })}
-                                                style={{ 
-                                                    width: '100%', 
-                                                    background: 'transparent', 
-                                                    border: 'none', 
-                                                    color: 'white', 
-                                                    padding: '12px 0', 
-                                                    fontSize: '1rem', 
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: 'white',
+                                                    padding: '12px 0',
+                                                    fontSize: '1rem',
                                                     fontWeight: 600,
                                                     outline: 'none',
                                                     appearance: 'none',
