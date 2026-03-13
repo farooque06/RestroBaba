@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
+
 const Sidebar = () => {
     const { logout, user } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(localStorage.getItem('sidebarCollapsed') === 'true');
@@ -73,7 +74,7 @@ const Sidebar = () => {
 
         // 2. Check Plan (SUPER_ADMIN sees everything)
         if (user?.role === 'SUPER_ADMIN') return true;
-        
+
         const subPlan = user?.client?.subscriptionPlan;
         const clientPlan = user?.client?.plan || 'SILVER';
 
@@ -87,21 +88,21 @@ const Sidebar = () => {
 
         // 2b. Check Plan Rank (fallback)
         const hasPlan = PLAN_RANK[clientPlan] >= PLAN_RANK[item.minPlan];
-        
+
         return hasPlan;
     });
 
     return (
         <>
             {/* Mobile Overlay */}
-            <div 
-                className={`sidebar-overlay ${isMobileOpen ? 'active' : ''}`} 
+            <div
+                className={`sidebar-overlay ${isMobileOpen ? 'active' : ''}`}
                 onClick={() => setIsMobileOpen(false)}
             />
 
             <div className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}>
                 {/* Mobile Close Button - Now top-level and fixed via CSS */}
-                <button 
+                <button
                     className="mobile-close-btn"
                     onClick={() => setIsMobileOpen(false)}
                 >
