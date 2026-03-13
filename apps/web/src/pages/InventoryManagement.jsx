@@ -226,14 +226,13 @@ const InventoryManagement = () => {
             )}
 
             <div className="premium-glass" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-                <div className="search-bar" style={{ width: '100%', maxWidth: '400px' }}>
-                    <Search size={18} color="var(--text-muted)" />
+                <div className="search-bar" style={{ maxWidth: '400px' }}>
+                    <Search size={18} />
                     <input
                         type="text"
                         placeholder="Search stock items..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        style={{ color: 'var(--text-main)' }}
                     />
                 </div>
             </div>

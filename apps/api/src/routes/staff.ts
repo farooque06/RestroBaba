@@ -17,11 +17,37 @@ router.get('/', async (req: Request, res: Response) => {
                 role: true,
                 pin: true,
                 isActive: true,
+                salary: true,
+                salaryType: true,
+                joiningDate: true,
                 createdAt: true,
+                staffTransactions: {
+                    select: {
+                        type: true,
+                        amount: true
+                    }
+                }
             },
             orderBy: { createdAt: 'desc' }
         });
-        res.json(staff);
+
+        const staffWithSummaries = staff.map(member => {
+            const advances = member.staffTransactions
+                .filter(t => t.type === 'ADVANCE')
+                .reduce((acc, t) => acc + t.amount, 0);
+            const payments = member.staffTransactions
+                .filter(t => t.type === 'PAYMENT')
+                .reduce((acc, t) => acc + t.amount, 0);
+            
+            return {
+                ...member,
+                advances,
+                payments,
+                balance: (member.salary || 0) - advances - payments
+            };
+        });
+
+        res.json(staffWithSummaries);
     } catch (error) {
         console.error('Fetch staff error:', error);
         res.status(500).json({ error: 'Failed to fetch staff' });
@@ -31,7 +57,7 @@ router.get('/', async (req: Request, res: Response) => {
 // POST /api/staff — Admin creates a new staff member
 router.post('/', async (req: Request, res: Response) => {
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
-    const { name, email, password, role, pin } = req.body;
+    const { name, email, password, role, pin, salary, salaryType, joiningDate } = req.body;
 
     if (!name || !email || !password || !role) {
         return res.status(400).json({ error: 'Name, email, password, and role are required' });
@@ -42,6 +68,26 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     try {
+        const client = await prisma.client.findUnique({
+            where: { id: req.clientId },
+            include: { subscriptionPlan: true }
+        });
+
+        if (!client) return res.status(404).json({ error: 'Client not found' });
+
+        const staffCount = await prisma.user.count({ 
+            where: { clientId: req.clientId } 
+        });
+
+        // Use dynamic limit from subscriptionPlan, fallback to hardcoded if not linked
+        const planLimit = client.subscriptionPlan?.maxStaff || 2;
+
+        if (staffCount >= planLimit) {
+            return res.status(403).json({ 
+                error: `Subscription limit reached. Your ${client.plan} plan allows maximum ${planLimit} staff members. Please upgrade to add more.` 
+            });
+        }
+
         // Check if email already exists
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) {
@@ -66,6 +112,9 @@ router.post('/', async (req: Request, res: Response) => {
                 password: hashedPassword,
                 role,
                 pin: pin || null,
+                salary: salary ? parseFloat(salary) : 0,
+                salaryType: salaryType || 'MONTHLY',
+                joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
                 clientId: req.clientId,
             },
             select: {
@@ -75,6 +124,9 @@ router.post('/', async (req: Request, res: Response) => {
                 role: true,
                 pin: true,
                 isActive: true,
+                salary: true,
+                salaryType: true,
+                joiningDate: true,
                 createdAt: true,
             }
         });
@@ -103,7 +155,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
     const id = req.params.id as string;
-    const { name, email, role, pin, isActive } = req.body;
+    const { name, email, role, pin, isActive, salary, salaryType, joiningDate } = req.body;
 
     if (pin && (pin.length !== 4 || !/^\d{4}$/.test(pin))) {
         return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
@@ -143,6 +195,9 @@ router.put('/:id', async (req: Request, res: Response) => {
 
         if (pin !== undefined) updateData.pin = pin || null;
         if (isActive !== undefined) updateData.isActive = isActive;
+        if (salary !== undefined) updateData.salary = parseFloat(salary);
+        if (salaryType !== undefined) updateData.salaryType = salaryType;
+        if (joiningDate !== undefined) updateData.joiningDate = joiningDate ? new Date(joiningDate) : null;
 
         const user = await prisma.user.update({
             where: { id },
@@ -154,6 +209,9 @@ router.put('/:id', async (req: Request, res: Response) => {
                 role: true,
                 pin: true,
                 isActive: true,
+                salary: true,
+                salaryType: true,
+                joiningDate: true,
                 createdAt: true,
             }
         });

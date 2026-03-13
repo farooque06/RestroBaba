@@ -23,6 +23,7 @@ const ExpenseTracker = React.lazy(() => import('./pages/ExpenseTracker'));
 const StaffManagement = React.lazy(() => import('./pages/StaffManagement'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const ClientManagement = React.lazy(() => import('./pages/ClientManagement'));
+const PlanManagement = React.lazy(() => import('./pages/PlanManagement'));
 const ActivityLog = React.lazy(() => import('./pages/ActivityLog'));
 const KitchenDisplay = React.lazy(() => import('./pages/KitchenDisplay'));
 const Reports = React.lazy(() => import('./pages/Reports'));
@@ -30,10 +31,10 @@ const PublicMenu = React.lazy(() => import('./pages/PublicMenu'));
 const CustomerManagement = React.lazy(() => import('./pages/CustomerManagement'));
 const ProfitDashboard = React.lazy(() => import('./pages/ProfitDashboard'));
 const WasteManagement = React.lazy(() => import('./pages/WasteManagement'));
+const ShiftManagement = React.lazy(() => import('./pages/ShiftManagement'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 import Sidebar from './components/layout/Sidebar';
-import Header from './components/layout/Header';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -85,7 +86,6 @@ function AppContent() {
                         <div className="app-container">
                             <Sidebar />
                             <main className="main-content">
-                                <Header />
                                 <Routes>
                                     <Route index element={<Navigate to="/dashboard" replace />} />
                                     <Route path="dashboard" element={<Dashboard />} />
@@ -94,65 +94,75 @@ function AppContent() {
                                             <ClientManagement />
                                         </ProtectedRoute>
                                     } />
+                                    <Route path="plans" element={
+                                        <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                                            <PlanManagement />
+                                        </ProtectedRoute>
+                                    } />
                                     <Route path="menu" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'CHEF', 'WAITER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CHEF', 'WAITER']}>
                                             <MenuManagement />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="tables" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER']}>
                                             <TableManagement />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="orders" element={<OrderList />} />
                                     <Route path="inventory" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'CHEF']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CHEF']}>
                                             <InventoryManagement />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="expenses" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
                                             <ExpenseTracker />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="staff" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
                                             <StaffManagement />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="billing" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER']}>
                                             <Billing />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="activity" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
                                             <ActivityLog />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="kitchen" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'CHEF']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CHEF']}>
                                             <KitchenDisplay />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="reports" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
                                             <Reports />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="customers" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'WAITER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'WAITER']}>
                                             <CustomerManagement />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="profit-analytics" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
                                             <ProfitDashboard />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="waste" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'CHEF', 'WAITER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CHEF', 'WAITER']}>
                                             <WasteManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="shifts" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                                            <ShiftManagement />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="settings" element={<SettingsPage />} />

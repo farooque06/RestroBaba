@@ -10,7 +10,10 @@ router.get('/categories', async (req, res) => {
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
     try {
         const categories = await prisma.menuCategory.findMany({
-            where: { clientId: req.clientId },
+            where: { 
+                clientId: req.clientId,
+                isDeleted: false
+            },
             orderBy: { name: 'asc' }
         });
         res.json(categories);
@@ -21,6 +24,8 @@ router.get('/categories', async (req, res) => {
 
 // Create a new category
 router.post('/categories', async (req, res) => {
+    if ((req as any).user?.role === 'WAITER') return res.status(403).json({ error: 'Waiters cannot create categories' });
+
     const { name, station } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
     if (!name || !name.trim()) return res.status(400).json({ error: 'Category name is required' });
@@ -59,6 +64,8 @@ router.post('/categories', async (req, res) => {
 
 // Update a category
 router.put('/categories/:id', async (req, res) => {
+    if ((req as any).user?.role === 'WAITER') return res.status(403).json({ error: 'Waiters cannot update categories' });
+
     const { id } = req.params;
     const { name, station } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
@@ -96,12 +103,18 @@ router.put('/categories/:id', async (req, res) => {
 
 // Delete a category
 router.delete('/categories/:id', async (req, res) => {
+    if ((req as any).user?.role === 'WAITER') return res.status(403).json({ error: 'Waiters cannot delete categories' });
+
     const { id } = req.params;
     try {
-        await prisma.menuCategory.delete({
+        await prisma.menuCategory.update({
             where: {
                 id,
                 clientId: req.clientId!
+            },
+            data: {
+                isDeleted: true,
+                deletedAt: new Date()
             }
         });
         res.json({ message: 'Category deleted' });
@@ -118,7 +131,10 @@ router.get('/items', async (req, res) => {
 
     try {
         const items = await prisma.menuItem.findMany({
-            where: { clientId: req.clientId! },
+            where: { 
+                clientId: req.clientId!,
+                isDeleted: false
+            },
             include: {
                 category: true,
                 recipe: {
@@ -142,6 +158,8 @@ router.get('/items', async (req, res) => {
 
 // Create a new menu item
 router.post('/items', async (req, res) => {
+    if ((req as any).user?.role === 'WAITER') return res.status(403).json({ error: 'Waiters cannot create menu items' });
+
     const { name, description, price, categoryId, image, available } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
 
@@ -180,6 +198,8 @@ router.post('/items', async (req, res) => {
 
 // Update a menu item
 router.put('/items/:id', async (req, res) => {
+    if ((req as any).user?.role === 'WAITER') return res.status(403).json({ error: 'Waiters cannot update menu items' });
+
     const { id } = req.params;
     const { name, description, price, categoryId, image, available } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
@@ -222,13 +242,19 @@ router.put('/items/:id', async (req, res) => {
 
 // Delete a menu item
 router.delete('/items/:id', async (req, res) => {
+    if ((req as any).user?.role === 'WAITER') return res.status(403).json({ error: 'Waiters cannot delete menu items' });
+
     const { id } = req.params;
     try {
         const deletedItem = await prisma.menuItem.findUnique({ where: { id: id as string } });
-        await prisma.menuItem.delete({
+        await prisma.menuItem.update({
             where: {
                 id: id as string,
                 clientId: req.clientId // Security: Ensure item belongs to client
+            },
+            data: {
+                isDeleted: true,
+                deletedAt: new Date()
             }
         });
 

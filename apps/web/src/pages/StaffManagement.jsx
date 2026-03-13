@@ -3,15 +3,20 @@ import { API_BASE_URL } from '../config';
 import {
     Users, Plus, Trash2, Edit2, Shield,
     ChefHat, Coffee, Loader2, X,
-    UserCheck, UserX
+    UserCheck, UserX, AlertCircle,
+    Calendar, Banknote, TrendingDown,
+    TrendingUp, FileSpreadsheet, ArrowLeftRight,
+    History
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../components/ConfirmModal';
 import AuthInput from '../components/AuthInput';
+import { formatCurrency } from '../utils/formatters';
 
 const roleConfig = {
     ADMIN: { label: 'Admin', color: '#818cf8', icon: Shield },
+    MANAGER: { label: 'Manager', color: '#f472b6', icon: UserCheck },
     WAITER: { label: 'Waiter', color: '#10b981', icon: Coffee },
     CHEF: { label: 'Chef', color: '#f59e0b', icon: ChefHat },
 };
@@ -23,12 +28,24 @@ const StaffManagement = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingStaff, setEditingStaff] = useState(null);
     const [formData, setFormData] = useState({
-        name: '', email: '', password: '', role: 'WAITER', pin: ''
+        name: '', email: '', password: '', role: 'WAITER', pin: '',
+        salary: 0, salaryType: 'MONTHLY', joiningDate: new Date().toISOString().split('T')[0]
     });
+    const [showLedgerModal, setShowLedgerModal] = useState(false);
+    const [selectedStaffAccount, setSelectedStaffAccount] = useState(null);
+    const [ledgerData, setLedgerData] = useState({ transactions: [], user: null });
+    const [ledgerLoading, setLedgerLoading] = useState(false);
+    const [transactionForm, setTransactionForm] = useState({ type: 'ADVANCE', amount: '', description: '' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ title: '', message: '', onConfirm: () => { } });
+
+    // Plan-based limits
+    const plan = user?.client?.plan || 'SILVER';
+    const limits = { SILVER: 2, GOLD: 10, DIAMOND: Infinity };
+    const limit = limits[plan] || 2;
+    const isLimitReached = staff.length >= limit;
 
     useEffect(() => { fetchStaff(); }, []);
 
@@ -61,7 +78,10 @@ const StaffManagement = () => {
             email: member.email,
             password: '',
             role: member.role,
-            pin: member.pin || ''
+            pin: member.pin || '',
+            salary: member.salary || 0,
+            salaryType: member.salaryType || 'MONTHLY',
+            joiningDate: member.joiningDate ? new Date(member.joiningDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         });
         setError('');
         setIsModalOpen(true);
@@ -79,7 +99,15 @@ const StaffManagement = () => {
                 : `${API_BASE_URL}/api/staff`;
 
             const body = editingStaff
-                ? { name: formData.name, email: formData.email, role: formData.role, pin: formData.pin || null }
+                ? { 
+                    name: formData.name, 
+                    email: formData.email, 
+                    role: formData.role, 
+                    pin: formData.pin || null,
+                    salary: formData.salary,
+                    salaryType: formData.salaryType,
+                    joiningDate: formData.joiningDate
+                }
                 : formData;
 
             const res = await fetch(url, {
@@ -128,6 +156,53 @@ const StaffManagement = () => {
         }
     };
 
+    const fetchLedger = async (member) => {
+        setLedgerLoading(true);
+        setSelectedStaffAccount(member);
+        const token = localStorage.getItem('restroToken');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/staff-accountancy/${member.id}/ledger`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setLedgerData(data);
+                setShowLedgerModal(true);
+            }
+        } catch (err) {
+            toast.error('Failed to load ledger');
+        } finally {
+            setLedgerLoading(false);
+        }
+    };
+
+    const handleTransaction = async (e) => {
+        e.preventDefault();
+        const amt = parseFloat(transactionForm.amount);
+        if (!amt || isNaN(amt)) return toast.error('Valid amount required');
+        
+        const token = localStorage.getItem('restroToken');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/staff-accountancy/${selectedStaffAccount.id}/transaction`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(transactionForm)
+            });
+            if (res.ok) {
+                toast.success('Transaction recorded');
+                setTransactionForm({ ...transactionForm, amount: '', description: '' });
+                fetchLedger(selectedStaffAccount);
+            } else {
+                toast.error('Failed to record transaction');
+            }
+        } catch (err) {
+            toast.error('Connection error');
+        }
+    };
+
     const deleteStaff = (id) => {
         setConfirmAction({
             title: 'Delete Staff Member?',
@@ -166,20 +241,61 @@ const StaffManagement = () => {
         <div className="page-container animate-fade">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Staff Management</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <h1 style={{ fontSize: '2rem', margin: 0 }}>Staff Management</h1>
+                        <span className={`badge ${plan === 'DIAMOND' ? 'badge-primary' : plan === 'GOLD' ? 'badge-success' : ''}`} style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 800 }}>
+                            {plan} PLAN
+                        </span>
+                    </div>
                     <p style={{ color: 'var(--text-muted)' }}>
                         Manage your team at <strong style={{ color: 'var(--text-main)' }}>{user?.clientName}</strong>
                     </p>
                 </div>
-                <button
-                    onClick={openCreateModal}
-                    className="nav-item active"
-                    style={{ border: 'none', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
-                >
-                    <Plus size={20} />
-                    <span>Add Staff</span>
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem' }}>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                            Team Capacity: <strong style={{ color: isLimitReached ? 'var(--danger)' : 'var(--text-main)' }}>{staff.length}</strong> / {limit === Infinity ? '∞' : limit}
+                        </div>
+                        {limit !== Infinity && (
+                            <div style={{ width: '200px', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                <div style={{ 
+                                    width: `${Math.min((staff.length / limit) * 100, 100)}%`, 
+                                    height: '100%', 
+                                    background: isLimitReached ? 'var(--danger)' : 'var(--primary-gradient)',
+                                    transition: 'width 0.5s ease'
+                                }} />
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={openCreateModal}
+                        className={`nav-item ${isLimitReached ? '' : 'active'}`}
+                        disabled={isLimitReached}
+                        style={{ 
+                            border: 'none', 
+                            display: 'flex', 
+                            gap: '0.5rem', 
+                            alignItems: 'center', 
+                            padding: '0.75rem 1.5rem', 
+                            borderRadius: '12px', 
+                            cursor: isLimitReached ? 'not-allowed' : 'pointer',
+                            opacity: isLimitReached ? 0.5 : 1
+                        }}
+                    >
+                        <Plus size={20} />
+                        <span>Add Staff</span>
+                    </button>
+                </div>
             </div>
+
+            {isLimitReached && (
+                <div className="premium-glass" style={{ marginBottom: '2rem', padding: '1rem 1.5rem', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', gap: '1rem', color: '#ef4444' }}>
+                    <AlertCircle size={20} />
+                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 500 }}>
+                        Staff limit reached for your <strong>{plan}</strong> plan. Upgrade your subscription to add more team members.
+                    </p>
+                </div>
+            )}
 
             {/* Summary Cards */}
             <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '3rem', gap: '1.5rem' }}>
@@ -187,15 +303,19 @@ const StaffManagement = () => {
                     <span className="stat-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Team Size</span>
                     <span className="stat-value">{staff.length}</span>
                 </div>
-                {Object.entries(roleConfig).map(([role, config]) => (
-                    <div key={role} className="stat-card" style={{ borderLeft: `4px solid ${config.color}` }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                            <config.icon size={16} color={config.color} />
-                            <span className="stat-label">{config.label}s</span>
-                        </div>
-                        <span className="stat-value" style={{ color: config.color }}>{staff.filter(s => s.role === role).length}</span>
-                    </div>
-                ))}
+                {/* Financial Overview Tags */}
+                <div className="stat-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                    <span className="stat-label">Total Monthly Salary</span>
+                    <span className="stat-value" style={{ color: '#f59e0b' }}>{formatCurrency(staff.reduce((acc, s) => acc + (s.salary || 0), 0))}</span>
+                </div>
+                <div className="stat-card" style={{ borderLeft: '4px solid var(--danger)' }}>
+                    <span className="stat-label">Total Advances</span>
+                    <span className="stat-value" style={{ color: 'var(--danger)' }}>{formatCurrency(staff.reduce((acc, s) => acc + (s.advances || 0), 0))}</span>
+                </div>
+                <div className="stat-card" style={{ borderLeft: '4px solid var(--success)' }}>
+                    <span className="stat-label">Net Balance Due</span>
+                    <span className="stat-value" style={{ color: 'var(--success)' }}>{formatCurrency(staff.reduce((acc, s) => acc + (s.balance || 0), 0))}</span>
+                </div>
             </div>
 
             {/* Staff Grid */}
@@ -251,12 +371,41 @@ const StaffManagement = () => {
                                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                    <Banknote size={14} color="var(--success)" opacity={member.salary ? 1 : 0.2} />
+                                    <span>{member.salary ? `${formatCurrency(member.salary)} / ${member.salaryType}` : 'Salary Not Set'}</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                     <Shield size={14} style={{ opacity: member.pin ? 1 : 0.2 }} color={member.pin ? 'var(--primary)' : 'inherit'} />
                                     <span>{member.pin ? 'Quick PIN Enabled' : 'No PIN Set'}</span>
+                                </div>
+                                <div style={{ 
+                                    marginTop: '0.5rem',
+                                    padding: '0.75rem', 
+                                    borderRadius: '10px', 
+                                    background: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid var(--glass-border)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Current Balance</span>
+                                    <span style={{ 
+                                        fontSize: '0.9rem', 
+                                        fontWeight: 800, 
+                                        color: member.balance > 0 ? 'var(--primary)' : member.balance < 0 ? 'var(--danger)' : 'var(--text-muted)' 
+                                    }}>
+                                        {formatCurrency(member.balance || 0)}
+                                    </span>
                                 </div>
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.75rem', marginTop: 'auto' }}>
+                                <button onClick={() => fetchLedger(member)}
+                                    className="premium-glass"
+                                    title="Financial Ledger"
+                                    style={{ padding: '0.65rem', borderRadius: '10px', cursor: 'pointer', color: 'var(--primary)', border: '1px solid var(--glass-border)' }}>
+                                    {ledgerLoading && selectedStaffAccount?.id === member.id ? <Loader2 size={18} className="animate-spin" /> : <Banknote size={18} />}
+                                </button>
                                 <button onClick={() => openEditModal(member)}
                                     className="premium-glass"
                                     style={{ flex: 1, padding: '0.65rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 700, border: '1px solid var(--glass-border)' }}>
@@ -298,29 +447,81 @@ const StaffManagement = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <input className="auth-input" placeholder="Full Name" required value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })} />
-
-                            <input className="auth-input" type="email" placeholder="Email Address" required value={formData.email}
-                                onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <input className="auth-input" placeholder="Full Name" required value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })} style={{ flex: 1 }} />
+                                <input className="auth-input" type="email" placeholder="Email Address" required value={formData.email}
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })} style={{ flex: 1 }} />
+                            </div>
 
                             {!editingStaff && (
-                                <input className="auth-input" type="password" placeholder="Password" required value={formData.password}
+                                <input className="auth-input" type="password" placeholder="Set Login Password" required value={formData.password}
                                     onChange={e => setFormData({ ...formData, password: e.target.value })} />
                             )}
 
-                            <select className="auth-input" value={formData.role}
-                                onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                style={{ background: 'var(--card-glass)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '0.75rem', borderRadius: '10px' }}>
-                                <option value="WAITER">Waiter</option>
-                                <option value="CHEF">Chef</option>
-                                <option value="ADMIN">Admin</option>
-                            </select>
+                            {/* Role Selection Grid */}
+                            <div>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>
+                                    Assign Operational Role
+                                </label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                                    {Object.entries(roleConfig).map(([role, config]) => (
+                                        <div 
+                                            key={role}
+                                            onClick={() => setFormData({ ...formData, role: role })}
+                                            style={{
+                                                padding: '0.75rem 0.25rem',
+                                                borderRadius: '12px',
+                                                cursor: 'pointer',
+                                                background: formData.role === role ? `${config.color}15` : 'rgba(255,255,255,0.02)',
+                                                border: `1px solid ${formData.role === role ? config.color : 'var(--glass-border)'}`,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <config.icon size={16} color={formData.role === role ? config.color : 'var(--text-muted)'} />
+                                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: formData.role === role ? 'var(--text-main)' : 'var(--text-muted)' }}>{config.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
 
-                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Base Salary</label>
+                                    <div className="input-with-icon">
+                                        <Banknote size={16} />
+                                        <input type="number" placeholder="0.00" value={formData.salary}
+                                            onChange={e => setFormData({ ...formData, salary: e.target.value })} style={{ fontWeight: 700 }} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Type</label>
+                                    <select className="auth-input" value={formData.salaryType}
+                                        onChange={e => setFormData({ ...formData, salaryType: e.target.value })}
+                                        style={{ background: 'var(--glass-shine)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '0.75rem', borderRadius: '12px', width: '100%', height: '48px' }}>
+                                        <option value="MONTHLY">Monthly</option>
+                                        <option value="DAILY">Daily</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Employment Start Date</label>
+                                <div className="input-with-icon">
+                                    <Calendar size={16} />
+                                    <input type="date" value={formData.joiningDate}
+                                        onChange={e => setFormData({ ...formData, joiningDate: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                         SECURITY PIN
                                     </label>
                                     <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>4 Digits Required</span>
@@ -331,22 +532,19 @@ const StaffManagement = () => {
                                     length={4}
                                     isAlphanumeric={false}
                                 />
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '1rem', lineHeight: '1.4' }}>
-                                    Staff can use this PIN to quickly switch accounts or authorize sales without their full password.
-                                </p>
                             </div>
 
-                            {error && <div className="error-message">{error}</div>}
+                            {error && <div className="error-message" style={{ margin: 0 }}>{error}</div>}
 
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                                 <button type="button" onClick={() => setIsModalOpen(false)}
-                                    style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer' }}>
+                                    style={{ flex: 1, padding: '1rem', borderRadius: '16px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 700 }}>
                                     Cancel
                                 </button>
                                 <button type="submit" disabled={submitting}
-                                    className="nav-item active"
-                                    style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
-                                    {submitting ? <Loader2 className="animate-spin" size={18} /> : (editingStaff ? 'Save Changes' : 'Create Staff')}
+                                    className="premium-button active"
+                                    style={{ flex: 1, padding: '1rem', borderRadius: '16px', border: 'none', cursor: 'pointer', fontWeight: 800 }}>
+                                    {submitting ? 'Saving...' : editingStaff ? 'Update Details' : 'Create Account'}
                                 </button>
                             </div>
                         </form>
@@ -355,13 +553,235 @@ const StaffManagement = () => {
             )}
 
             <ConfirmModal
-                isOpen={isConfirmModalOpen}
-                onClose={() => setIsConfirmModalOpen(false)}
-                onConfirm={confirmAction.onConfirm}
                 title={confirmAction.title}
                 message={confirmAction.message}
                 variant="danger"
             />
+
+            {/* Financial Ledger Modal */}
+            {showLedgerModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
+                    <div className="modal-card" style={{ width: '800px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0 }}>Staff Financial Ledger</h2>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{selectedStaffAccount?.name} • {selectedStaffAccount?.role}</p>
+                            </div>
+                            <button onClick={() => setShowLedgerModal(false)} className="icon-button"><X size={24} /></button>
+                        </div>
+
+                        <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+                            <div className="stat-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                                <span className="stat-label">Total Salary Expected</span>
+                                <span className="stat-value">{formatCurrency(ledgerData.user?.salary || 0)}</span>
+                            </div>
+                            <div className="stat-card" style={{ borderLeft: '4px solid var(--danger)' }}>
+                                <span className="stat-label">Advances Taken</span>
+                                <span className="stat-value" style={{ color: 'var(--danger)' }}>
+                                    {formatCurrency(ledgerData.transactions.filter(t => t.type === 'ADVANCE').reduce((acc, t) => acc + t.amount, 0))}
+                                </span>
+                            </div>
+                            <div className="stat-card" style={{ borderLeft: '4px solid var(--success)' }}>
+                                <span className="stat-label">Actual Payouts</span>
+                                <span className="stat-value" style={{ color: 'var(--success)' }}>
+                                    {formatCurrency(ledgerData.transactions.filter(t => t.type === 'PAYMENT').reduce((acc, t) => acc + t.amount, 0))}
+                                </span>
+                            </div>
+                            <div className="stat-card" style={{ borderLeft: `4px solid ${((ledgerData.user?.salary || 0) - ledgerData.transactions.filter(t => t.type === 'ADVANCE' || t.type === 'PAYMENT').reduce((acc, t) => acc + t.amount, 0)) >= 0 ? 'var(--primary)' : 'var(--danger)'}` }}>
+                                <span className="stat-label">Net Balance Due</span>
+                                <span className="stat-value" style={{ color: ((ledgerData.user?.salary || 0) - ledgerData.transactions.filter(t => t.type === 'ADVANCE' || t.type === 'PAYMENT').reduce((acc, t) => acc + t.amount, 0)) >= 0 ? 'var(--primary)' : 'var(--danger)' }}>
+                                    {formatCurrency((ledgerData.user?.salary || 0) - ledgerData.transactions.filter(t => t.type === 'ADVANCE' || t.type === 'PAYMENT').reduce((acc, t) => acc + t.amount, 0))}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem' }}>
+                            {/* History */}
+                            <div className="premium-glass" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+                                <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <History size={18} /> Transaction History
+                                </h3>
+                                <div style={{ overflowY: 'auto', maxHeight: '400px', paddingRight: '0.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {ledgerData.transactions.length === 0 ? (
+                                            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px' }}>
+                                                <TrendingUp size={32} style={{ opacity: 0.1, marginBottom: '1rem' }} />
+                                                <p style={{ margin: 0, fontSize: '0.9rem' }}>No transaction history found.</p>
+                                            </div>
+                                        ) : ledgerData.transactions.map(t => {
+                                            const typeColors = {
+                                                'ADVANCE': { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', label: 'Advance' },
+                                                'PAYMENT': { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', label: 'Payout' },
+                                                'BONUS': { bg: 'rgba(99, 102, 241, 0.1)', text: '#6366f1', label: 'Bonus' },
+                                                'FINE': { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', label: 'Fine' }
+                                            };
+                                            const style = typeColors[t.type] || typeColors['ADVANCE'];
+
+                                            return (
+                                                <div key={t.id} style={{ 
+                                                    padding: '1rem', 
+                                                    borderRadius: '16px', 
+                                                    background: 'rgba(255,255,255,0.02)', 
+                                                    border: '1px solid var(--glass-border)',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                        <div style={{ 
+                                                            width: '40px', height: '40px', borderRadius: '12px', 
+                                                            background: style.bg, color: style.text,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}>
+                                                            {t.type === 'ADVANCE' && <TrendingDown size={18} />}
+                                                            {t.type === 'PAYMENT' && <Banknote size={18} />}
+                                                            {t.type === 'BONUS' && <TrendingUp size={18} />}
+                                                            {t.type === 'FINE' && <FileSpreadsheet size={18} />}
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{style.label}</div>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(t.date).toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontSize: '1rem', fontWeight: 800, color: t.type === 'ADVANCE' || t.type === 'FINE' ? '#ef4444' : '#10b981' }}>
+                                                            {t.type === 'ADVANCE' || t.type === 'FINE' ? '-' : '+'}{formatCurrency(t.amount)}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {t.description || 'No remarks'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* New Transaction Form */}
+                            <div className="premium-glass" style={{ padding: '2rem', borderRadius: '24px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <h3 style={{ marginTop: 0, marginBottom: '4px', fontSize: '1.25rem', fontWeight: 800 }}>Record Transaction</h3>
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Update records for {selectedStaffAccount?.name}</p>
+                                </div>
+
+                                <form onSubmit={handleTransaction} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                    {/* Transaction Type Selection */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                        {[
+                                            { id: 'ADVANCE', label: 'Advance', color: 'var(--danger)', icon: TrendingDown },
+                                            { id: 'PAYMENT', label: 'Payout', color: 'var(--success)', icon: Banknote },
+                                            { id: 'BONUS', label: 'Bonus', color: 'var(--primary)', icon: TrendingUp },
+                                            { id: 'FINE', label: 'Fine', color: '#f59e0b', icon: FileSpreadsheet }
+                                        ].map(type => (
+                                            <div 
+                                                key={type.id}
+                                                onClick={() => setTransactionForm({ ...transactionForm, type: type.id })}
+                                                style={{
+                                                    padding: '1rem',
+                                                    borderRadius: '16px',
+                                                    cursor: 'pointer',
+                                                    background: transactionForm.type === type.id ? `${type.color}15` : 'rgba(255,255,255,0.02)',
+                                                    border: `1px solid ${transactionForm.type === type.id ? type.color : 'var(--glass-border)'}`,
+                                                    display: 'flex',
+                                                    gap: '0.75rem',
+                                                    alignItems: 'center',
+                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: '32px', height: '32px', borderRadius: '10px',
+                                                    background: transactionForm.type === type.id ? type.color : 'rgba(255,255,255,0.05)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    color: transactionForm.type === type.id ? 'white' : 'var(--text-muted)'
+                                                }}>
+                                                    <type.icon size={16} />
+                                                </div>
+                                                <span style={{ 
+                                                    fontSize: '0.85rem', 
+                                                    fontWeight: 700,
+                                                    color: transactionForm.type === type.id ? 'var(--text-main)' : 'var(--text-muted)'
+                                                }}>
+                                                    {type.label}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>
+                                            AMOUNT (RS.)
+                                        </label>
+                                        <div className="input-with-icon">
+                                            <Banknote size={16} />
+                                            <input 
+                                                type="number" 
+                                                placeholder="Enter amount..." 
+                                                required
+                                                value={transactionForm.amount}
+                                                onChange={e => setTransactionForm({ ...transactionForm, amount: e.target.value })}
+                                                style={{ fontSize: '1.2rem', fontWeight: 800 }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>
+                                            NOTES / REMARKS
+                                        </label>
+                                        <textarea 
+                                            placeholder="Write a brief description..."
+                                            value={transactionForm.description}
+                                            onChange={e => setTransactionForm({ ...transactionForm, description: e.target.value })}
+                                            style={{ 
+                                                background: 'var(--bg-input)', 
+                                                color: 'var(--text-main)', 
+                                                border: '1px solid var(--border)', 
+                                                padding: '1rem', 
+                                                borderRadius: '16px', 
+                                                minHeight: '100px', 
+                                                fontSize: '0.9rem',
+                                                lineHeight: '1.5',
+                                                resize: 'none',
+                                                width: '100%',
+                                                boxSizing: 'border-box',
+                                                outline: 'none',
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                            onFocus={(e) => {
+                                                e.target.style.borderColor = 'var(--primary)';
+                                                e.target.style.background = 'var(--bg-card)';
+                                                e.target.style.boxShadow = '0 0 12px var(--primary-glow)';
+                                            }}
+                                            onBlur={(e) => {
+                                                e.target.style.borderColor = 'var(--border)';
+                                                e.target.style.background = 'var(--bg-input)';
+                                                e.target.style.boxShadow = 'none';
+                                            }}
+                                        />
+                                    </div>
+
+                                    <button 
+                                        type="submit" 
+                                        className="premium-button active" 
+                                        style={{ 
+                                            width: '100%', 
+                                            marginTop: '0.5rem',
+                                            padding: '1rem',
+                                            borderRadius: '16px',
+                                            fontSize: '1rem',
+                                            fontWeight: 800,
+                                            boxShadow: '0 10px 20px -5px var(--primary-shadow)'
+                                        }}
+                                   >
+                                        Confirm & Save Transaction
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

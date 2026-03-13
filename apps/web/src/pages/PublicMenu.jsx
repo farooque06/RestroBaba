@@ -65,7 +65,7 @@ const PublicMenu = () => {
                     <div style={{ padding: '0.4rem', background: 'var(--primary)', borderRadius: '8px' }}>
                         <Utensils size={20} color="white" />
                     </div>
-                    <h1 style={{ fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{clientInfo?.name || 'RestroFlow Menu'}</h1>
+                    <h1 style={{ fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{clientInfo?.name || 'RestroBaBa Menu'}</h1>
                 </div>
                 {tableId && <p style={{ color: 'var(--primary)', fontWeight: 700 }}>Table {tableId}</p>}
                 <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '4px' }}>Welcome to our premium dining experience.</p>
@@ -169,7 +169,7 @@ const PublicMenu = () => {
 
             {/* Footer */}
             <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#444', fontSize: '0.75rem' }}>
-                <p>© 2024 {clientInfo?.name} · Powered by RestroFlow</p>
+                <p>© 2024 {clientInfo?.name} · Powered by RestroBaBa</p>
             </div>
         </div>
     );

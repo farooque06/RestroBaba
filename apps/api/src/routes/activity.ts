@@ -9,10 +9,19 @@ router.get('/', async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const skip = (page - 1) * limit;
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, type } = req.query;
 
     try {
-        const where: any = { clientId: user.clientId };
+        const where: any = {};
+        
+        // If not a Super Admin, restrict to their own clientId
+        if (user.role !== 'SUPER_ADMIN') {
+            where.clientId = user.clientId;
+        }
+
+        if (type) {
+            where.type = type as string;
+        }
 
         if (startDate || endDate) {
             where.createdAt = {};
@@ -29,7 +38,10 @@ router.get('/', async (req: Request, res: Response) => {
             orderBy: { createdAt: 'desc' },
             skip,
             take: limit,
-            include: { user: { select: { name: true } } }
+            include: { 
+                user: { select: { name: true } },
+                client: { select: { name: true } }
+            }
         });
 
         const total = await prisma.activityLog.count({ where });

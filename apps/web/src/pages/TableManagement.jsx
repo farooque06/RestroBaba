@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Users, Clock, Plus, Square, Loader2, Trash2, Edit2, Utensils, DollarSign, TableProperties } from 'lucide-react';
+import { Users, Clock, Plus, Square, Loader2, Trash2, Edit2, Utensils, DollarSign, TableProperties, MoveHorizontal } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import OrderTaking from '../components/OrderTaking';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../components/ConfirmModal';
 import { QRCodeCanvas } from 'qrcode.react';
-import { QrCode, Download, X } from 'lucide-react';
+import { QrCode, Download, X, Split, Printer } from 'lucide-react';
 import { initSocket, disconnectSocket } from '../services/socket';
+import SplitBillModal from '../components/SplitBillModal';
+import Receipt from '../components/Receipt';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { createPortal } from 'react-dom';
+import { Calendar, CalendarX } from 'lucide-react';
 
 const TableManagement = () => {
     const { user } = useAuth();
@@ -23,6 +29,12 @@ const TableManagement = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ title: '', message: '', onConfirm: () => { } });
     const [qrModalTable, setQrModalTable] = useState(null);
+    const [splitOrder, setSplitOrder] = useState(null);
+    const [printingOrder, setPrintingOrder] = useState(null);
+    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+    const [tableToTransfer, setTableToTransfer] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const receiptRef = React.useRef(null);
 
     useEffect(() => {
         fetchTables();
@@ -32,17 +44,46 @@ const TableManagement = () => {
             const socket = initSocket(clientId);
 
             socket.on('ORDER_NEW', () => {
-                console.log('🆕 New order detected, syncing tables...');
+                console.log('🆕 New order → refreshing tables');
                 fetchTables(true);
             });
 
             socket.on('ORDER_UPDATE', () => {
-                console.log('🔄 Order update detected, syncing tables...');
+                console.log('🔄 Order updated → refreshing tables');
+                fetchTables(true);
+            });
+
+            socket.on('ORDER_ITEM_UPDATE', (data) => {
+                console.log('🍽️ Item update:', data);
+                if (data.status === 'Ready') {
+                    // STAFF BUZZER LOGIC
+                    // 1. Audio Alert (Speech)
+                    const msg = new SpeechSynthesisUtterance(`Table ${data.tableNumber}, ${data.itemName} is ready`);
+                    window.speechSynthesis.speak(msg);
+
+                    // 2. Vibration (if mobile)
+                    if (window.navigator.vibrate) {
+                        window.navigator.vibrate([200, 100, 200]);
+                    }
+
+                    // 3. Visual Toast
+                    toast.success(`Table ${data.tableNumber}: ${data.itemName} is READY!`, {
+                        icon: '🔔',
+                        duration: 6000,
+                        position: 'top-right',
+                        style: {
+                            background: 'var(--primary)',
+                            color: '#000',
+                            fontWeight: 'bold',
+                            border: '2px solid white'
+                        }
+                    });
+                }
                 fetchTables(true);
             });
         }
 
-        const interval = setInterval(() => fetchTables(true), 30000); // Increased to 30s since we have sockets now
+        const interval = setInterval(() => fetchTables(true), 30000);
         return () => {
             clearInterval(interval);
             disconnectSocket();
@@ -54,7 +95,7 @@ const TableManagement = () => {
         const token = localStorage.getItem('restroToken');
         try {
             const response = await fetch(`${API_BASE_URL}/api/tables`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
             });
             const data = await response.json();
             if (response.ok) {
@@ -64,6 +105,7 @@ const TableManagement = () => {
             }
         } catch (err) {
             setError('Connection error');
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -77,16 +119,16 @@ const TableManagement = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(newTable)
+                body: JSON.stringify(newTable),
             });
             const data = await response.json();
             if (response.ok) {
                 setTables([...tables, data]);
                 setIsModalOpen(false);
                 setNewTable({ number: '', capacity: '' });
-                toast.success('Table added successfully');
+                toast.success('Table added');
             } else {
                 toast.error(data.error || 'Failed to add table');
             }
@@ -98,8 +140,8 @@ const TableManagement = () => {
     const deleteTable = (id) => {
         setConfirmAction({
             title: 'Delete Table?',
-            message: 'Are you sure you want to permanently delete this table? This action cannot be undone.',
-            onConfirm: () => performDeleteTable(id)
+            message: 'This action cannot be undone.',
+            onConfirm: () => performDeleteTable(id),
         });
         setIsConfirmModalOpen(true);
     };
@@ -109,10 +151,10 @@ const TableManagement = () => {
         try {
             const response = await fetch(`${API_BASE_URL}/api/tables/${id}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
             });
             if (response.ok) {
-                setTables(tables.filter(t => t.id !== id));
+                setTables(tables.filter((t) => t.id !== id));
                 toast.success('Table deleted');
             }
         } catch (err) {
@@ -124,18 +166,17 @@ const TableManagement = () => {
         const token = localStorage.getItem('restroToken');
         try {
             const response = await fetch(`${API_BASE_URL}/api/orders/table/${table.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
             });
             const order = await response.json();
             if (response.ok && order) {
-                // Issue #7: Guard — only allow billing for Served/Ready orders
                 if (!['Served', 'Ready'].includes(order.status)) {
-                    toast.error(`Cannot bill yet — order is still "${order.status}". Wait until it's Served.`);
+                    toast.error(`Cannot bill — order is still "${order.status}".`);
                     return;
                 }
                 setCheckoutOrder({ ...order, tableNumber: table.number });
             } else {
-                toast.error('No active order found for this table.');
+                toast.error('No active order on this table.');
             }
         } catch (err) {
             toast.error('Connection error');
@@ -149,60 +190,178 @@ const TableManagement = () => {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ status: 'Paid' })
+                body: JSON.stringify({ 
+                    status: 'Paid',
+                    paymentMethod: paymentMethod
+                }),
             });
             if (response.ok) {
                 setCheckoutOrder(null);
-                fetchTables();
-                toast.success('Payment processed successfully');
+                fetchTables(true);
+                toast.success('Payment processed');
             }
         } catch (err) {
-            toast.error('Payment connection error');
+            toast.error('Payment error');
         }
     };
 
-    const filteredTables = tables.filter(t => filter === 'All' || t.status === filter);
+    const handleTransferTable = async (targetTable) => {
+        const token = localStorage.getItem('restroToken');
+        try {
+            // Find the active order for the table to transfer
+            const orderRes = await fetch(`${API_BASE_URL}/api/orders/table/${tableToTransfer.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const order = await orderRes.json();
 
-    if (loading) return (
-        <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <Loader2 className="animate-spin" size={48} color="var(--primary)" />
-            <p style={{ color: 'var(--text-muted)' }}>Loading floor plan...</p>
-        </div>
-    );
+            if (!order) {
+                toast.error('No active order found to transfer');
+                return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/api/orders/${order.id}/transfer`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ targetTableId: targetTable.id }),
+            });
+
+            if (response.ok) {
+                toast.success(`Transferred to Table ${targetTable.number}`);
+                setIsTransferModalOpen(false);
+                setTableToTransfer(null);
+                fetchTables(true);
+            } else {
+                const data = await response.json();
+                toast.error(data.error || 'Transfer failed');
+            }
+        } catch (err) {
+            toast.error('Connection error during transfer');
+        }
+    };
+
+    const toggleReservation = async (table) => {
+        const newStatus = table.status === 'Reserved' ? 'Available' : 'Reserved';
+        const token = localStorage.getItem('restroToken');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/tables/${table.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (response.ok) {
+                toast.success(`Table ${table.number} is now ${newStatus}`);
+                fetchTables(true);
+            } else {
+                toast.error('Failed to update table status');
+            }
+        } catch (err) {
+            toast.error('Connection error');
+        }
+    };
+
+    const handlePrint = (order) => {
+        setPrintingOrder(order);
+        setTimeout(() => {
+            window.print();
+            setPrintingOrder(null);
+        }, 300);
+    };
+
+    const handleDownload = async (order) => {
+        setPrintingOrder(order);
+        setTimeout(async () => {
+            if (!receiptRef.current) return;
+            try {
+                const canvas = await html2canvas(receiptRef.current, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                });
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: [80, (canvas.height * 80) / canvas.width],
+                });
+                pdf.addImage(imgData, 'PNG', 0, 0, 80, (canvas.height * 80) / canvas.width);
+                pdf.save(`Receipt-${order.id.slice(-6).toUpperCase()}.pdf`);
+            } catch (err) {
+                console.error('PDF generation failed:', err);
+                toast.error('Failed to generate PDF');
+            } finally {
+                setPrintingOrder(null);
+            }
+        }, 300);
+    };
+
+    const filteredTables = tables.filter((t) => filter === 'All' || t.status === filter);
+
+    const availCount = tables.filter(t => t.status === 'Available').length;
+    const occCount = tables.filter(t => t.status === 'Occupied').length;
+    const resCount = tables.filter(t => t.status === 'Reserved').length;
+
+    if (loading) {
+        return (
+            <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+                <p style={{ color: 'var(--text-muted)' }}>Loading floor plan...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="page-container animate-fade">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Table Management</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Real-time floor plan for <strong style={{ color: 'var(--text-main)' }}>{user?.clientName}</strong></p>
+            {/* ── Header ── */}
+            <div className="tm-header">
+                <div className="tm-header-top">
+                    <div>
+                        <h1>Table Management</h1>
+                        <p className="tm-subtitle">
+                            Real-time floor plan for <strong style={{ color: 'var(--text-heading)' }}>{user?.clientName}</strong>
+                        </p>
+                    </div>
+                    <button onClick={() => setIsModalOpen(true)} className="tm-add-btn">
+                        <Plus size={16} />
+                        <span>Add Table</span>
+                    </button>
                 </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="nav-item active"
-                    style={{ border: 'none', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
-                >
-                    <Plus size={20} />
-                    <span>Add Table</span>
-                </button>
             </div>
 
-            <div className="premium-glass" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
-                {['All', 'Available', 'Occupied', 'Reserved'].map(status => (
+            {/* ── Summary Stats ── */}
+            <div className="tm-summary-bar">
+                <div className="tm-stat-pill">
+                    <span className="dot green" />
+                    <span className="count">{availCount}</span>
+                    <span className="label">Available</span>
+                </div>
+                <div className="tm-stat-pill">
+                    <span className="dot blue" />
+                    <span className="count">{occCount}</span>
+                    <span className="label">Occupied</span>
+                </div>
+                <div className="tm-stat-pill">
+                    <span className="dot amber" />
+                    <span className="count">{resCount}</span>
+                    <span className="label">Reserved</span>
+                </div>
+            </div>
+
+            {/* ── Filter Chips ── */}
+            <div className="tm-filters" style={{ marginBottom: '1.25rem' }}>
+                {['All', 'Available', 'Occupied', 'Reserved'].map((status) => (
                     <button
                         key={status}
                         onClick={() => setFilter(status)}
-                        style={{
-                            padding: '0.5rem 1.25rem',
-                            borderRadius: '10px',
-                            background: filter === status ? 'var(--primary)' : 'var(--glass-shine)',
-                            border: '1px solid var(--glass-border)',
-                            color: filter === status ? 'white' : 'var(--text-muted)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                        }}
+                        className={`tm-chip${filter === status ? ' active' : ''}`}
                     >
                         {status}
                     </button>
@@ -211,166 +370,244 @@ const TableManagement = () => {
 
             {error && <div className="error-message" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.5rem' }}>
-                {filteredTables.map(table => (
+            {/* ── Table Cards Grid ── */}
+            <div className="tm-grid">
+                {filteredTables.map((table, idx) => (
                     <div
                         key={table.id}
-                        className="stat-card"
-                        style={{
-                            borderLeft: `4px solid ${table.status === 'Available' ? 'var(--accent)' :
-                                table.status === 'Occupied' ? 'var(--primary)' : 'var(--warning)'
-                                }`,
-                            position: 'relative'
-                        }}
+                        className={`tm-card status-${table.status.toLowerCase()}`}
+                        style={{ animationDelay: `${idx * 0.05}s` }}
                     >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        {/* Card top */}
+                        <div className="tm-card-top">
                             <div>
-                                <h3 style={{ fontSize: '1.25rem' }}>Table {table.number}</h3>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cap: {table.capacity} Persons</span>
+                                <div className="tm-card-title">Table {table.number}</div>
+                                <div className="tm-card-capacity">
+                                    <Users size={13} />
+                                    <span>Capacity {table.capacity}</span>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button
-                                    onClick={() => setQrModalTable(table)}
-                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', opacity: 0.6 }}
-                                    title="View QR Code"
-                                >
-                                    <QrCode size={16} />
+                            <div className="tm-card-icons">
+                                <button onClick={() => setQrModalTable(table)} className="tm-card-icon-btn" title="QR Code">
+                                    <QrCode size={15} />
                                 </button>
-                                <button
-                                    onClick={() => deleteTable(table.id)}
-                                    style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', opacity: 0.6 }}
-                                >
-                                    <Trash2 size={16} />
+                                {table.status === 'Occupied' && (
+                                    <button onClick={() => {
+                                        setTableToTransfer(table);
+                                        setIsTransferModalOpen(true);
+                                    }} className="tm-card-icon-btn" title="Transfer Guest">
+                                        <MoveHorizontal size={15} />
+                                    </button>
+                                )}
+                                <button onClick={() => deleteTable(table.id)} className="tm-card-icon-btn danger" title="Delete">
+                                    <Trash2 size={15} />
                                 </button>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Users size={16} color="var(--text-muted)" />
-                                <span style={{ fontSize: '0.875rem' }}>{table.status === 'Occupied' ? 'In Use' : 'Ready to seat'}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Clock size={16} color="var(--text-muted)" />
-                                <span style={{ fontSize: '0.875rem' }}>{table.status === 'Available' ? 'Available now' : `Status: ${table.status}`}</span>
-                            </div>
+                        {/* Status */}
+                        <div className="tm-card-status">
+                            <span className={`status-dot ${table.status === 'Available' ? 'green' : table.status === 'Occupied' ? 'blue' : 'amber'}`} />
+                            <span>{table.status === 'Available' ? 'Ready — Available now' : table.status === 'Occupied' ? 'In Use' : 'Reserved'}</span>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {/* Actions */}
+                        <div className="tm-card-actions">
                             {table.status === 'Available' ? (
-                                <button
-                                    onClick={() => setSelectedTable(table)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.6rem',
-                                        borderRadius: '10px',
-                                        background: 'var(--primary)',
-                                        border: 'none',
-                                        color: 'white',
-                                        fontWeight: 600,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Seat Guest
-                                </button>
+                                <div style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }}>
+                                    <button
+                                        onClick={() => setSelectedTable(table)}
+                                        className="tm-action-btn seat"
+                                        style={{ flex: 1 }}
+                                    >
+                                        <Utensils size={15} />
+                                        <span>Seat Guest</span>
+                                    </button>
+                                    <button
+                                        onClick={() => toggleReservation(table)}
+                                        className="tm-action-btn view"
+                                        title="Reserve Table"
+                                        style={{ 
+                                            flex: '0 0 40px', 
+                                            height: '40px', 
+                                            padding: 0, 
+                                            borderRadius: 'var(--radius-md)',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <Calendar size={16} />
+                                    </button>
+                                </div>
+                            ) : table.status === 'Reserved' ? (
+                                <div style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }}>
+                                    <button
+                                        onClick={() => setSelectedTable(table)}
+                                        className="tm-action-btn seat"
+                                        style={{ flex: 1 }}
+                                    >
+                                        <Utensils size={15} />
+                                        <span>Seat Guest</span>
+                                    </button>
+                                    <button
+                                        onClick={() => toggleReservation(table)}
+                                        className="tm-action-btn bill"
+                                        title="Cancel Reservation"
+                                        style={{ 
+                                            flex: '0 0 40px', 
+                                            height: '40px', 
+                                            padding: 0, 
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--warning)',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-input)',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <CalendarX size={16} />
+                                    </button>
+                                </div>
                             ) : (
                                 <>
                                     <button
                                         onClick={() => setSelectedTable(table)}
-                                        className="premium-glass"
-                                        style={{
-                                            flex: 1,
-                                            padding: '0.6rem',
-                                            borderRadius: '10px',
-                                            color: 'white',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 600,
-                                            cursor: 'pointer'
-                                        }}
+                                        className="tm-action-btn view"
                                     >
-                                        View Order
+                                        <Edit2 size={15} />
+                                        <span>View Order</span>
                                     </button>
                                     <button
                                         onClick={() => handleBill(table)}
-                                        style={{
-                                            padding: '0.6rem',
-                                            borderRadius: '10px',
-                                            background: 'rgba(239, 68, 11, 0.1)',
-                                            border: '1px solid rgba(239, 68, 11, 0.2)',
-                                            color: 'var(--warning)',
-                                            fontWeight: 600,
-                                            cursor: 'pointer'
-                                        }}
+                                        className="tm-action-btn bill"
                                     >
-                                        Bill
+                                        <DollarSign size={15} />
+                                        <span>Bill</span>
                                     </button>
                                 </>
                             )}
                         </div>
                     </div>
                 ))}
+
                 {filteredTables.length === 0 && (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-                        <TableProperties size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
-                        <p>{filter === 'All' ? 'No tables found. Add a new table to get started.' : `No tables are currently ${filter.toLowerCase()}.`}</p>
+                    <div className="tm-empty">
+                        <TableProperties size={56} style={{ opacity: 0.2 }} />
+                        <p>{filter === 'All' ? 'No tables yet. Add your first table.' : `No ${filter.toLowerCase()} tables right now.`}</p>
                     </div>
                 )}
             </div>
 
-            {/* Checkout Modal */}
+            {/* ── Order Taking Overlay ── */}
+            {selectedTable && (
+                <OrderTaking
+                    table={selectedTable}
+                    onClose={() => setSelectedTable(null)}
+                    onOrderPlaced={() => fetchTables(true)}
+                />
+            )}
+
+            {/* ── Checkout / Payment Modal ── */}
             {checkoutOrder && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
-                    <div className="premium-glass animate-fade-in" style={{ width: '400px', padding: '2rem', border: '1px solid var(--glass-border)' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '1px dashed var(--glass-border)', paddingBottom: '1rem' }}>
-                            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Final Receipt</h2>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Order #{checkoutOrder.id.slice(-6).toUpperCase()} | Table {checkoutOrder.tableNumber}</p>
+                <div className="ol-payment-overlay">
+                    <div className="ol-payment-sheet">
+                        <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '1px dashed var(--border)', paddingBottom: '1rem' }}>
+                            <h2 style={{ fontSize: '1.3rem', marginBottom: '0.35rem' }}>Checkout</h2>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                Table {checkoutOrder.tableNumber} — Order #{checkoutOrder.id?.slice(-6).toUpperCase()}
+                            </p>
                         </div>
 
                         <div style={{ marginBottom: '1.5rem', maxHeight: '200px', overflowY: 'auto' }}>
-                            {checkoutOrder.items.filter(i => i.status !== 'Waste').map(item => (
-                                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                                    <span>{item.quantity}x {item.menuItem?.name || 'Unknown Item'}</span>
-                                    <span>{formatCurrency((item.price || 0) * item.quantity)}</span>
+                            {checkoutOrder.items?.filter(i => i.status !== 'Waste').map(item => (
+                                <div key={item.id} className="ol-item-row">
+                                    <span><span className="qty">{item.quantity}</span>{item.menuItem?.name || 'Unknown'}</span>
+                                    <span className="price">{formatCurrency((item.price || 0) * item.quantity)}</span>
                                 </div>
                             ))}
                         </div>
 
-                        <div style={{ borderTop: '2px solid var(--glass-border)', paddingTop: '1rem', marginBottom: '2rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Subtotal</span>
-                                <span>{formatCurrency(checkoutOrder.subtotal || 0)}</span>
-                            </div>
-                            {checkoutOrder.taxAmount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>VAT</span>
-                                    <span>{formatCurrency(checkoutOrder.taxAmount)}</span>
-                                </div>
-                            )}
-                            {checkoutOrder.serviceChargeAmount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Service Charge</span>
-                                    <span>{formatCurrency(checkoutOrder.serviceChargeAmount)}</span>
-                                </div>
-                            )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.25rem', color: 'var(--primary)', marginTop: '0.5rem', borderTop: '1px dashed var(--glass-border)', paddingTop: '0.5rem' }}>
-                                <span>Grand Total</span>
+                        <div style={{ borderTop: '2px solid var(--border)', paddingTop: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary)' }}>
+                                <span>Total</span>
                                 <span>{formatCurrency(checkoutOrder.totalAmount ?? 0)}</span>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <button
-                                onClick={() => processPayment(checkoutOrder.id)}
-                                className="nav-item active"
-                                style={{ padding: '1rem', borderRadius: '12px', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                            >
-                                <DollarSign size={20} />
-                                Pay with Cash
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                {[
+                                    { id: 'Cash', label: 'Cash', icon: DollarSign },
+                                    { id: 'Card', label: 'Card', icon: CreditCard },
+                                    { id: 'UPI', label: 'Online', icon: QrCode }
+                                ].map(m => (
+                                    <button
+                                        key={m.id}
+                                        onClick={() => setPaymentMethod(m.id)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.6rem',
+                                            borderRadius: '10px',
+                                            border: `1px solid ${paymentMethod === m.id ? 'var(--primary)' : 'var(--border)'}`,
+                                            background: paymentMethod === m.id ? 'var(--primary-glow)' : 'var(--bg-card)',
+                                            color: paymentMethod === m.id ? 'var(--primary)' : 'var(--text-muted)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <m.icon size={16} />
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 800 }}>{m.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {paymentMethod === 'UPI' && (
+                                <div className="premium-glass animate-fade" style={{ 
+                                    padding: '1rem', 
+                                    marginBottom: '0.5rem', 
+                                    textAlign: 'center',
+                                    border: '1px solid var(--primary)',
+                                    background: 'rgba(59, 130, 246, 0.05)'
+                                }}>
+                                    <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem' }}>
+                                        SCAN TO PAY ONLINE
+                                    </div>
+                                    {user?.client?.qrCode ? (
+                                        <div style={{ background: 'white', padding: '8px', borderRadius: '10px', display: 'inline-block' }}>
+                                            <img src={user.client.qrCode} alt="Online Payment QR" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                                            <QrCode size={32} style={{ opacity: 0.2, marginBottom: '0.4rem' }} />
+                                            <p>QR Code not set</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <button onClick={() => processPayment(checkoutOrder.id)} className="ol-action-btn pay" style={{ padding: '0.85rem' }}>
+                                <DollarSign size={18} />
+                                <span>Confirm {paymentMethod === 'UPI' ? 'Online' : paymentMethod} Payment</span>
                             </button>
-                            <button
-                                onClick={() => setCheckoutOrder(null)}
-                                style={{ padding: '1rem', borderRadius: '12px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'white', cursor: 'pointer' }}
-                            >
+                            <button onClick={() => handlePrint(checkoutOrder)} className="ol-action-btn cook" style={{ padding: '0.85rem', border: '1px solid var(--border)' }}>
+                                <Printer size={18} />
+                                <span>Print Receipt</span>
+                            </button>
+                            <button onClick={() => setSplitOrder(checkoutOrder)} className="ol-action-btn cook" style={{ padding: '0.85rem', border: '1px solid var(--border)' }}>
+                                <Split size={18} />
+                                <span>Split Bill</span>
+                            </button>
+                            <button onClick={() => handleDownload(checkoutOrder)} className="ol-action-btn cook" style={{ padding: '0.85rem', border: '1px solid var(--border)' }}>
+                                <Download size={18} />
+                                <span>Download PDF</span>
+                            </button>
+                            <button onClick={() => setCheckoutOrder(null)} className="btn-ghost" style={{ width: '100%' }}>
                                 Back
                             </button>
                         </div>
@@ -378,107 +615,60 @@ const TableManagement = () => {
                 </div>
             )}
 
-            {/* Order Taking View */}
-            {selectedTable && (
-                <OrderTaking
-                    table={selectedTable}
-                    onClose={() => setSelectedTable(null)}
-                    onOrderPlaced={fetchTables}
-                />
-            )}
-
-            {/* Add Table Modal */}
+            {/* ── Add Table Modal ── */}
             {isModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="modal-card" style={{ width: '350px' }}>
-                        <h2 style={{ marginBottom: '1.5rem' }}>Add New Table</h2>
+                <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+                    <div className="modal-card" style={{ width: '100%', maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
+                        <h2 style={{ fontSize: '1.3rem', marginBottom: '1.5rem' }}>Add New Table</h2>
                         <form onSubmit={handleAddTable} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <input
-                                className="auth-input"
-                                placeholder="Table Number (e.g. 101)"
-                                required
-                                value={newTable.number}
-                                onChange={e => setNewTable({ ...newTable, number: e.target.value })}
-                            />
-                            <input
-                                className="auth-input"
-                                type="number"
-                                placeholder="Seating Capacity"
-                                required
-                                value={newTable.capacity}
-                                onChange={e => setNewTable({ ...newTable, capacity: e.target.value })}
-                            />
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" className="nav-item active" style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>Create Table</button>
+                            <div className="input-group">
+                                <label>Table Number</label>
+                                <input
+                                    className="form-input"
+                                    type="number"
+                                    placeholder="e.g. 1"
+                                    value={newTable.number}
+                                    onChange={(e) => setNewTable({ ...newTable, number: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label>Capacity</label>
+                                <input
+                                    className="form-input"
+                                    type="number"
+                                    placeholder="e.g. 4"
+                                    value={newTable.capacity}
+                                    onChange={(e) => setNewTable({ ...newTable, capacity: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="btn-ghost" style={{ flex: 1 }}>Cancel</button>
+                                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Add Table</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* QR Code Modal */}
+            {/* ── QR Modal ── */}
             {qrModalTable && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
-                    <div className="premium-glass animate-fade-in" style={{ width: '450px', padding: '2.5rem', textAlign: 'center', position: 'relative' }}>
-                        <button onClick={() => setQrModalTable(null)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', border: 'none', color: '#555', cursor: 'pointer' }}>
-                            <X size={24} />
-                        </button>
-
-                        <div style={{ marginBottom: '2rem' }}>
-                            <div style={{ background: 'var(--primary)', display: 'inline-flex', padding: '0.75rem', borderRadius: '12px', marginBottom: '1rem' }}>
-                                <QrCode size={32} color="white" />
-                            </div>
-                            <h2 style={{ fontSize: '1.75rem', fontWeight: 900 }}>Table {qrModalTable.number}</h2>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Scan to view digital menu</p>
-                        </div>
-
-                        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '24px', display: 'inline-block', marginBottom: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+                <div className="modal-overlay" onClick={() => setQrModalTable(null)}>
+                    <div className="modal-card" style={{ width: '100%', maxWidth: '340px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                        <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>QR Code — Table {qrModalTable.number}</h2>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
                             <QRCodeCanvas
-                                id={`qr-${qrModalTable.id}`}
-                                value={`${window.location.origin}/menu/p/${localStorage.getItem('restroClientId')}/${qrModalTable.id}`}
-                                size={220}
-                                level="H"
-                                includeMargin={true}
-                                imageSettings={{
-                                    src: "/logo-icon.png", // Fallback if exists
-                                    x: undefined,
-                                    y: undefined,
-                                    height: 40,
-                                    width: 40,
-                                    excavate: true,
-                                }}
+                                value={`${window.location.origin}/menu/${user?.clientId}?table=${qrModalTable.number}`}
+                                size={200}
+                                bgColor="transparent"
+                                fgColor="var(--text-main)"
                             />
                         </div>
-
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button
-                                onClick={() => {
-                                    const canvas = document.getElementById(`qr-${qrModalTable.id}`);
-                                    const url = canvas.toDataURL("image/png");
-                                    const link = document.createElement("a");
-                                    link.href = url;
-                                    link.download = `QR_Table_${qrModalTable.number}.png`;
-                                    link.click();
-                                    toast.success('Downloading QR Code...');
-                                }}
-                                className="nav-item active"
-                                style={{ flex: 1, padding: '1rem', borderRadius: '12px', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}
-                            >
-                                <Download size={20} />
-                                Download PNG
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const url = `${window.location.origin}/menu/p/${localStorage.getItem('restroClientId')}/${qrModalTable.id}`;
-                                    navigator.clipboard.writeText(url);
-                                    toast.success('Link copied to clipboard!');
-                                }}
-                                style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', cursor: 'pointer' }}
-                            >
-                                Copy Link
-                            </button>
-                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                            Scan to view menu for Table {qrModalTable.number}
+                        </p>
+                        <button onClick={() => setQrModalTable(null)} className="btn-ghost" style={{ width: '100%' }}>Close</button>
                     </div>
                 </div>
             )}
@@ -491,9 +681,98 @@ const TableManagement = () => {
                 message={confirmAction.message}
                 variant="danger"
             />
+
+            {splitOrder && (
+                <SplitBillModal
+                    order={splitOrder}
+                    onClose={() => setSplitOrder(null)}
+                    onPaymentProcessed={() => {
+                        setSplitOrder(null);
+                        fetchTables(true);
+                    }}
+                />
+            )}
+
+            {/* ── Transfer Table Modal ── */}
+            {isTransferModalOpen && (
+                <div className="modal-overlay" onClick={() => setIsTransferModalOpen(false)}>
+                    <div className="modal-card" style={{ width: '100%', maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ fontSize: '1.3rem', margin: 0 }}>Shift Table {tableToTransfer?.number}</h2>
+                            <button onClick={() => setIsTransferModalOpen(false)} className="btn-ghost" style={{ padding: '0.5rem' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                            Move guest and active order to an available or reserved table:
+                        </p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', padding: '0.25rem' }}>
+                            {tables.filter(t => ['Available', 'Reserved'].includes(t.status) && t.id !== tableToTransfer?.id).map(table => (
+                                <button
+                                    key={table.id}
+                                    onClick={() => handleTransferTable(table)}
+                                    className="tm-chip"
+                                    style={{
+                                        width: '100%',
+                                        height: '60px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        background: table.status === 'Reserved' ? 'rgba(245, 158, 11, 0.05)' : 'var(--bg-input)',
+                                        border: `1px solid ${table.status === 'Reserved' ? 'var(--warning)' : 'var(--border)'}`,
+                                        borderRadius: 'var(--radius-md)',
+                                        cursor: 'pointer',
+                                        margin: 0,
+                                        position: 'relative'
+                                    }}
+                                >
+                                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>{table.number}</span>
+                                    <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>{table.status === 'Reserved' ? 'Reserved' : `Cap: ${table.capacity}`}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {tables.filter(t => ['Available', 'Reserved'].includes(t.status) && t.id !== tableToTransfer?.id).length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                                <TableProperties size={32} style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
+                                <p>No available tables to shift to.</p>
+                            </div>
+                        )}
+
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <button onClick={() => setIsTransferModalOpen(false)} className="btn-ghost" style={{ width: '100%' }}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Hidden print area */}
+            {createPortal(
+                <div
+                    id="printable-receipt-container"
+                    style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '80mm', background: 'white' }}
+                >
+                    {printingOrder && (
+                        <Receipt
+                            ref={receiptRef}
+                            order={printingOrder}
+                            client={{
+                                name: user?.clientName,
+                                email: user?.email,
+                                taxRate: user?.client?.taxRate,
+                                serviceChargeRate: user?.client?.serviceChargeRate,
+                            }}
+                        />
+                    )}
+                </div>,
+                document.body
+            )}
         </div>
     );
 };
 
 export default TableManagement;
-

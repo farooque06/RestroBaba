@@ -7,14 +7,14 @@ datasource db {
 }
 
 model Client {
-  id             String         @id @default(uuid())
-  name           String
-  email          String         @unique
-  subdomain      String?        @unique
-  shopCode       String?        @unique
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                    String                 @id @default(uuid())
+  name                  String
+  email                 String                 @unique
+  subdomain             String?                @unique
+  shopCode              String?                @unique
+  isActive              Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
   categories            MenuCategory[]
   menus                 MenuItem[]
   orders                Order[]
@@ -25,35 +25,119 @@ model Client {
   inventoryTransactions InventoryTransaction[]
   activityLogs          ActivityLog[]
   customers             Customer[]
-  useTax                Boolean        @default(false)
-  taxRate               Float          @default(0)
-  useServiceCharge      Boolean        @default(false)
-  serviceChargeRate     Float          @default(0)
+  shifts                FinancialShift[]
+  staffTransactions     StaffTransaction[]
+  useTax                Boolean                @default(false)
+  taxRate               Float                  @default(0)
+  useServiceCharge      Boolean                @default(false)
+  serviceChargeRate     Float                  @default(0)
+  plan                  String                 @default("SILVER") // SILVER, GOLD, DIAMOND
+  planDuration          String?                @default("1m") // 1m, 3m, 12m
+  planId                String?
+  subscriptionPlan      SubscriptionPlan?      @relation(fields: [planId], references: [id])
+  subscriptionStart     DateTime?              @default(now())
+  subscriptionEnd       DateTime?
+  paymentStatus         String                 @default("PAID") // PAID, PENDING, OVERDUE
+  lastPaymentDate       DateTime?              @default(now())
+  qrCode                String?
+}
+
+model SubscriptionPlan {
+  id   String @id @default(uuid())
+  tier String // SILVER, GOLD, DIAMOND
+  name String // e.g. "Early Bird Silver"
+
+  // Base Prices
+  monthlyPrice   Float @default(0)
+  quarterlyPrice Float @default(0)
+  yearlyPrice    Float @default(0)
+
+  // Offer Prices (Promotional)
+  offerMonthly   Float?
+  offerQuarterly Float?
+  offerYearly    Float?
+
+  // Offer Labels
+  discountLabel String? // e.g. "Save 33%"
+  offerTag      String? // e.g. "Limited Time"
+
+  // Limits
+  maxStaff  Int @default(2)
+  maxTables Int @default(10)
+
+  // Features (Toggleable)
+  hasKDS         Boolean @default(false)
+  hasInventory   Boolean @default(true) // Basic for all
+  hasAdvancedInv Boolean @default(false)
+  hasAnalytics   Boolean @default(false)
+  hasMultiUnit   Boolean @default(false)
+
+  // Custom Features List (JSON stored as string or array if supported)
+  features String[] // ["Standard Reports", "Priority Support"]
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clients Client[]
 }
 
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  password    String
-  name        String
-  role        String   // SUPER_ADMIN, ADMIN, WAITER, CHEF
-  pin         String?  // 4-digit PIN for quick staff login
-  totpSecret  String?  // TOTP secret for Google Authenticator 2FA
-  isActive    Boolean  @default(true)
-  clientId    String?  // Optional for SUPER_ADMIN
-  client      Client?  @relation(fields: [clientId], references: [id])
+  id         String  @id @default(uuid())
+  email      String  @unique
+  password   String
+  name       String
+  role       String // SUPER_ADMIN, ADMIN, MANAGER, WAITER, CHEF
+  pin        String? // 4-digit PIN for quick staff login
+  totpSecret String? // TOTP secret for Google Authenticator 2FA
+  isActive   Boolean @default(true)
+
+  // Accountancy Fields
+  salary      Float?    @default(0)
+  salaryType  String?   @default("MONTHLY") // MONTHLY, DAILY
+  joiningDate DateTime? @default(now())
+
+  clientId              String? // Optional for SUPER_ADMIN
+  client                Client?                @relation(fields: [clientId], references: [id])
   inventoryTransactions InventoryTransaction[]
+  staffTransactions     StaffTransaction[]
   activityLogs          ActivityLog[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 
   @@unique([pin, clientId])
+  @@index([clientId])
+}
+
+model StaffTransaction {
+  id          String   @id @default(uuid())
+  type        String // ADVANCE, PAYMENT, BONUS, FINE
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  shiftId String?
+  shift   FinancialShift? @relation(fields: [shiftId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([clientId])
 }
 
 model MenuCategory {
   id        String     @id @default(uuid())
   name      String
   station   String?    @default("Kitchen") // Kitchen, Bar, Grill, etc.
+  isDeleted Boolean    @default(false)
+  deletedAt DateTime?
   clientId  String
   client    Client     @relation(fields: [clientId], references: [id])
   items     MenuItem[]
@@ -61,6 +145,7 @@ model MenuCategory {
   updatedAt DateTime   @updatedAt
 
   @@unique([name, clientId])
+  @@index([clientId])
 }
 
 model MenuItem {
@@ -70,6 +155,8 @@ model MenuItem {
   price       Float
   image       String?
   available   Boolean      @default(true)
+  isDeleted   Boolean      @default(false)
+  deletedAt   DateTime?
   categoryId  String
   category    MenuCategory @relation(fields: [categoryId], references: [id])
   clientId    String
@@ -78,12 +165,15 @@ model MenuItem {
   updatedAt   DateTime     @updatedAt
   orderItems  OrderItem[]
   recipe      RecipeItem[]
+
+  @@index([clientId])
+  @@index([categoryId])
 }
 
 model InventoryItem {
   id           String                 @id @default(uuid())
   name         String
-  unit         String                 // kg, liter, pcs, etc.
+  unit         String // kg, liter, pcs, etc.
   quantity     Float                  @default(0)
   minThreshold Float                  @default(10) // For low stock alerts
   unitPrice    Float                  @default(0) // Cost per unit for profit calculation
@@ -95,34 +185,44 @@ model InventoryItem {
   updatedAt    DateTime               @updatedAt
 
   @@unique([name, clientId])
+  @@index([clientId])
 }
 
 model InventoryTransaction {
   id              String        @id @default(uuid())
   inventoryItemId String
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  type            String        // IN, OUT, WASTE, ORDER_DEDUCTION, ORDER_CANCELLED
+  type            String // IN, OUT, WASTE, ORDER_DEDUCTION, ORDER_CANCELLED
   quantity        Float
   reason          String?
-  userId          String?       // Who performed the transaction
+  userId          String? // Who performed the transaction
   user            User?         @relation(fields: [userId], references: [id])
-  orderId         String?       // Linked to an order if applicable
+  orderId         String? // Linked to an order if applicable
   order           Order?        @relation(fields: [orderId], references: [id])
   clientId        String
   client          Client        @relation(fields: [clientId], references: [id])
   createdAt       DateTime      @default(now())
+
+  @@index([clientId])
+  @@index([inventoryItemId])
+  @@index([orderId])
 }
 
 model ActivityLog {
   id        String   @id @default(uuid())
-  action    String   // LOGIN, LOGOUT, PIN_CHANGE, ORDER_CREATED, STATUS_CHANGE, etc.
+  action    String // LOGIN, LOGOUT, PIN_CHANGE, ORDER_CREATED, STATUS_CHANGE, etc.
   details   String?
+  type      String   @default("OPERATIONAL") // PLATFORM, OPERATIONAL
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   role      String
   clientId  String
   client    Client   @relation(fields: [clientId], references: [id])
   createdAt DateTime @default(now())
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([type])
 }
 
 model RecipeItem {
@@ -131,7 +231,7 @@ model RecipeItem {
   menuItem        MenuItem      @relation(fields: [menuItemId], references: [id])
   inventoryItemId String
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  quantity        Float         // Quantity of inventory item used for 1 portion of menu item
+  quantity        Float // Quantity of inventory item used for 1 portion of menu item
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -150,6 +250,7 @@ model Table {
   updatedAt DateTime @updatedAt
 
   @@unique([number, clientId])
+  @@index([clientId])
 }
 
 model Customer {
@@ -165,50 +266,118 @@ model Customer {
   updatedAt DateTime @updatedAt
 
   @@unique([phone, clientId])
+  @@index([clientId])
 }
 
 model Order {
-  id          String      @id @default(uuid())
-  orderNumber Int         @default(autoincrement())
-  status      String      @default("Pending") // Pending, Cooking, Ready, Served, Paid, Cancelled
-  totalAmount Float
-  tableId     String?
-  table       Table?      @relation(fields: [tableId], references: [id])
+  id                  String                 @id @default(uuid())
+  orderNumber         Int                    @default(autoincrement())
+  status              String                 @default("Pending") // Pending, Cooking, Ready, Served, Paid, Cancelled
+  totalAmount         Float
+  tableId             String?
+  table               Table?                 @relation(fields: [tableId], references: [id])
   customerId          String?
-  customer            Customer?   @relation(fields: [customerId], references: [id])
+  customer            Customer?              @relation(fields: [customerId], references: [id])
   clientId            String
-  client              Client      @relation(fields: [clientId], references: [id])
-  subtotal            Float       @default(0)
-  taxAmount           Float       @default(0)
-  serviceChargeAmount Float       @default(0)
-  items         OrderItem[]
-  transactions  InventoryTransaction[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  client              Client                 @relation(fields: [clientId], references: [id])
+  subtotal            Float                  @default(0)
+  taxAmount           Float                  @default(0)
+  serviceChargeAmount Float                  @default(0)
+  paymentMethod       String? // Cash, Card, UPI, Split
+  shiftId             String?
+  shift               FinancialShift?        @relation(fields: [shiftId], references: [id])
+  items               OrderItem[]
+  payments            Payment[]
+  transactions        InventoryTransaction[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([tableId])
+  @@index([customerId])
+  @@index([createdAt])
 }
 
 model OrderItem {
-  id         String   @id @default(uuid())
-  orderId    String
-  order      Order    @relation(fields: [orderId], references: [id])
-  menuItemId String
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
-  quantity   Int
-  price      Float
-  notes      String?
-  status     String   @default("Pending") // Pending, Ready, Waste
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               String    @id @default(uuid())
+  orderId          String
+  order            Order     @relation(fields: [orderId], references: [id])
+  menuItemId       String
+  menuItem         MenuItem  @relation(fields: [menuItemId], references: [id])
+  quantity         Int
+  price            Float
+  notes            String?
+  status           String    @default("Pending") // Pending, Cooking, Ready, Served, Waste
+  cookingStartedAt DateTime?
+  readyAt          DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@index([status])
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  amount    Float
+  method    String // Cash, Card, UPI
+  label     String? // "Person 1", "Guest A", etc.
+  itemIds   String? // JSON array of orderItem IDs (for by-item splits)
+  clientId  String
+  createdAt DateTime @default(now())
+
+  @@index([clientId])
+  @@index([orderId])
 }
 
 model Expense {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   description String
   amount      Float
-  category    String   // Ingredients, Salary, Utilities, Rent, Others
-  date        DateTime @default(now())
+  category    String // Ingredients, Salary, Utilities, Rent, Others
+  date        DateTime        @default(now())
+  shiftId     String?
+  shift       FinancialShift? @relation(fields: [shiftId], references: [id])
   clientId    String
-  client      Client   @relation(fields: [clientId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  client      Client          @relation(fields: [clientId], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([clientId])
+  @@index([date])
+}
+
+model FinancialShift {
+  id         String    @id @default(uuid())
+  openedAt   DateTime  @default(now())
+  closedAt   DateTime?
+  openedById String
+  closedById String?
+  status     String    @default("OPEN") // OPEN, CLOSED
+
+  // Financial Data
+  openingCash   Float  @default(0)
+  closingCash   Float? // Declared by manager
+  expectedCash  Float? // Calculated (opening + cash sales)
+  totalSales    Float? @default(0)
+  totalExpenses Float? @default(0)
+  cashSales     Float? @default(0)
+  cardSales     Float? @default(0)
+  upiSales      Float? @default(0)
+
+  clientId          String
+  client            Client             @relation(fields: [clientId], references: [id])
+  orders            Order[]
+  expenses          Expense[]
+  staffTransactions StaffTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([status])
 }

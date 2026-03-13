@@ -1,6 +1,6 @@
-# RestroFlow
+# RestroBaBa
 
-RestroFlow is a professional, multi-tenant restaurant management system designed for high-performance and modern aesthetic.
+RestroBaBa is a professional, multi-tenant restaurant management system designed for high-performance and modern aesthetic.
 
 ## 🚀 Getting Started
 

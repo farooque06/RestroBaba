@@ -78,7 +78,7 @@ router.post('/login', async (req: Request, res: Response) => {
     try {
         const user = await prisma.user.findUnique({
             where: { email },
-            include: { client: true }
+            include: { client: { include: { subscriptionPlan: true } } }
         });
 
         if (!user) {
@@ -102,15 +102,25 @@ router.post('/login', async (req: Request, res: Response) => {
 
         // ── Super Admin → TOTP 2FA ──
         if (user.role === 'SUPER_ADMIN') {
+            console.log('DEBUG: Super Admin login, checking TOTP...');
             // First time? Generate TOTP secret and return QR code for setup
             if (!user.totpSecret) {
-                const secret = speakeasy.generateSecret({ name: `RestroFlow (${user.email})` });
+                const secret = speakeasy.generateSecret({ 
+                    name: `RestroFlow (${user.email})`,
+                    issuer: 'RestroFlow',
+                    otpauth_url: true
+                });
+                
+                if (!secret.otpauth_url) {
+                    throw new Error('Failed to generate TOTP auth URL');
+                }
+
                 await prisma.user.update({
                     where: { id: user.id },
                     data: { totpSecret: secret.base32 }
                 });
 
-                const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url!);
+                const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url);
 
                 return res.json({
                     requiresTOTP: true,
@@ -152,7 +162,8 @@ router.post('/login', async (req: Request, res: Response) => {
                 role: user.role,
                 clientId: user.clientId,
                 clientName: user.client?.name || 'System',
-                shopCode: user.client?.shopCode || null
+                shopCode: user.client?.shopCode || null,
+                client: user.client
             }
         });
     } catch (error) {
@@ -290,7 +301,7 @@ router.post('/pin-login', async (req: Request, res: Response) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            include: { client: true }
+            include: { client: { include: { subscriptionPlan: true } } }
         });
 
         if (!user || user.pin !== pin || !user.isActive) {
@@ -323,7 +334,9 @@ router.post('/pin-login', async (req: Request, res: Response) => {
                 email: user.email,
                 role: user.role,
                 clientId: user.clientId,
-                clientName: user.client?.name || 'System'
+                clientName: user.client?.name || 'System',
+                shopCode: user.client?.shopCode || null,
+                client: user.client
             }
         });
     } catch (error) {
@@ -444,7 +457,7 @@ router.get('/me', authenticate, async (req: any, res: Response) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.userId },
-            include: { client: true }
+            include: { client: { include: { subscriptionPlan: true } } }
         });
 
         if (!user) {

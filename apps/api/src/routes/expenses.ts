@@ -22,13 +22,19 @@ router.post('/', async (req: Request, res: Response) => {
     const { description, amount, category, date } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
     try {
+        const currentShift = await prisma.financialShift.findFirst({
+            where: { clientId: req.clientId!, status: 'OPEN' },
+            orderBy: { openedAt: 'desc' }
+        });
+
         const expense = await prisma.expense.create({
             data: {
                 description,
                 amount: parseFloat(amount),
                 category,
                 date: date ? new Date(date) : new Date(),
-                clientId: req.clientId
+                clientId: req.clientId!,
+                shiftId: currentShift?.id
             }
         });
 

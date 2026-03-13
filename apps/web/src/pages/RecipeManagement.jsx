@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { ChefHat, Plus, Save, Trash2, ArrowLeft, Loader2, Package } from 'lucide-react';
+import { ChefHat, Plus, Save, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const RecipeManagement = ({ menuItem, onBack }) => {
@@ -92,40 +92,46 @@ const RecipeManagement = ({ menuItem, onBack }) => {
     };
 
     if (loading) return (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
+        <div className="page-container flex-center" style={{ flexDirection: 'column', gap: '1rem' }}>
             <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+            <p style={{ color: 'var(--text-muted)' }}>Loading ingredients...</p>
         </div>
     );
 
     return (
-        <div className="animate-fade">
-            <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginBottom: '1.5rem', fontSize: '1rem' }}>
+        <div className="page-container rm-container">
+            <button onClick={onBack} className="rm-back-btn">
                 <ArrowLeft size={18} />
-                Back to Menu
+                <span>Back to Menu Management</span>
             </button>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
-                <div>
-                    <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>Define Recipe: {menuItem.name}</h2>
-                    <p style={{ color: 'var(--text-muted)' }}>Specify the exact ingredients used for one portion of this dish.</p>
+            <div className="rm-header">
+                <div className="rm-title-section">
+                    <h2>Define Recipe: {menuItem.name}</h2>
+                    <p>Specify the exact ingredients used for one portion of this dish to automate stock tracking.</p>
                 </div>
-                <button onClick={handleSave} disabled={submitting} className="nav-item active" style={{ border: 'none', padding: '0.75rem 2rem', borderRadius: '12px', display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                <button 
+                    onClick={handleSave} 
+                    disabled={submitting} 
+                    className="nav-item active rm-save-btn"
+                    style={{ border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' }}
+                >
                     {submitting ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                     <span>Save Recipe</span>
                 </button>
             </div>
 
-            <div className="premium-glass" style={{ padding: '2rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div className="premium-glass rm-content-glass">
+                <div className="rm-ingredients-list">
                     {ingredients.map((ing, index) => (
-                        <div key={index} style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-end', padding: '1.5rem', background: 'var(--glass-shine)', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                            <div className="input-group" style={{ flex: 2 }}>
+                        <div key={index} className="rm-ingredient-row">
+                            <div className="input-group rm-input-item">
                                 <label>Ingredient (from Inventory)</label>
                                 <select
                                     className="auth-input"
                                     value={ing.inventoryItemId}
                                     onChange={e => updateIngredient(index, 'inventoryItemId', e.target.value)}
-                                    style={{ appearance: 'none' }}
+                                    style={{ appearance: 'auto' }}
                                 >
                                     <option value="">Select Item...</option>
                                     {inventory.map(item => (
@@ -133,8 +139,8 @@ const RecipeManagement = ({ menuItem, onBack }) => {
                                     ))}
                                 </select>
                             </div>
-                            <div className="input-group" style={{ flex: 1 }}>
-                                <label>Quantity per Portion</label>
+                            <div className="input-group rm-input-qty">
+                                <label>Qty per Portion</label>
                                 <input
                                     className="auth-input"
                                     type="number"
@@ -146,48 +152,24 @@ const RecipeManagement = ({ menuItem, onBack }) => {
                             </div>
                             <button
                                 onClick={() => removeIngredient(index)}
-                                style={{
-                                    padding: '0.8rem',
-                                    borderRadius: '12px',
-                                    background: 'rgba(239, 68, 68, 0.1)',
-                                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                                    color: 'var(--danger)',
-                                    cursor: 'pointer'
-                                }}
+                                className="rm-remove-btn"
+                                title="Remove Ingredient"
                             >
                                 <Trash2 size={20} />
                             </button>
                         </div>
                     ))}
 
-                    <button
-                        onClick={addIngredient}
-                        style={{
-                            padding: '1.5rem',
-                            borderRadius: '16px',
-                            border: '2px dashed var(--glass-border)',
-                            background: 'transparent',
-                            color: 'var(--text-muted)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.75rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            marginTop: '0.5rem'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--glass-border)'}
-                    >
-                        <Plus size={20} />
-                        <span style={{ fontWeight: 600 }}>Add Ingredient</span>
+                    <button onClick={addIngredient} className="rm-add-btn">
+                        <Plus size={22} />
+                        <span>Add Ingredient to Recipe</span>
                     </button>
                 </div>
 
                 {ingredients.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                        <ChefHat size={48} style={{ opacity: 0.1, marginBottom: '1rem' }} />
-                        <p>No ingredients defined yet. Add the first one to track stock!</p>
+                    <div className="rm-empty-state">
+                        <ChefHat size={64} />
+                        <p>No ingredients defined yet. Add the first one to start tracking stock automatically!</p>
                     </div>
                 )}
             </div>

@@ -24,6 +24,26 @@ router.post('/', async (req, res) => {
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
 
     try {
+        // --- Subscription Plan Limits ---
+        const client = await prisma.client.findUnique({
+            where: { id: req.clientId },
+            include: { subscriptionPlan: true }
+        });
+
+        if (!client) return res.status(404).json({ error: 'Client not found' });
+
+        const tableCount = await prisma.table.count({
+            where: { clientId: req.clientId }
+        });
+
+        const planLimit = client.subscriptionPlan?.maxTables || 10;
+
+        if (tableCount >= planLimit) {
+            return res.status(403).json({
+                error: `Table limit reached. Your plan allows maximum ${planLimit} tables. Please upgrade to add more.`
+            });
+        }
+
         const table = await prisma.table.create({
             data: {
                 number,

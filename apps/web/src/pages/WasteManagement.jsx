@@ -317,8 +317,8 @@ const WasteManagement = () => {
 
                         {!selectedItem ? (
                             <>
-                                <div className="search-bar" style={{ marginBottom: '1.5rem', width: '100%' }}>
-                                    <Search size={18} color="var(--text-muted)" />
+                                <div className="search-bar" style={{ marginBottom: '1.5rem' }}>
+                                    <Search size={18} />
                                     <input
                                         type="text"
                                         placeholder="Search inventory items..."

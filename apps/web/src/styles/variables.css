@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Serif+Display&display=swap');
+
+/* =====================================================
+   ARTISAN DESIGN SYSTEM v2
+   3 Themes: Gilded Slate (default), Soft Linen, Ethereal Blue
+   ===================================================== */
+
+:root,
+.theme-slate {
+  --primary: #d4a853;
+  --primary-hover: #c49a42;
+  --primary-glow: rgba(212, 168, 83, 0.2);
+  --primary-gradient: linear-gradient(135deg, #d4a853, #b8922e);
+
+  --bg-main: #111318;
+  --bg-side: #181b22;
+  --bg-card: #1e2128;
+  --bg-card-hover: #252930;
+  --bg-input: #1a1d24;
+  --bg-modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --text-main: #e8e6e3;
+  --text-muted: #8b8d93;
+  --text-heading: #f5f4f2;
+
+  --accent: #5bb98c;
+  --danger: #e35d6a;
+  --warning: #e5a84b;
+  --success: #5bb98c;
+
+  --border: #2a2d35;
+  --border-light: #333640;
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-shine: rgba(255, 255, 255, 0.02);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --shadow-glow: 0 0 20px var(--primary-glow);
+
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'DM Serif Display', serif;
+}
+
+.theme-linen {
+  --primary: #8b6e4e;
+  --primary-hover: #7a5f42;
+  --primary-glow: rgba(139, 110, 78, 0.15);
+  --primary-gradient: linear-gradient(135deg, #8b6e4e, #6d5640);
+
+  --bg-main: #f5f2ee;
+  --bg-side: #edeae5;
+  --bg-card: #ffffff;
+  --bg-card-hover: #faf8f5;
+  --bg-input: #f0ede8;
+  --bg-modal-overlay: rgba(0, 0, 0, 0.35);
+
+  --text-main: #2c2825;
+  --text-muted: #8a8480;
+  --text-heading: #1a1715;
+
+  --accent: #4a9e70;
+  --danger: #c9424e;
+  --warning: #c48a2c;
+  --success: #4a9e70;
+
+  --border: #ddd8d2;
+  --border-light: #e8e4de;
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-shine: rgba(0, 0, 0, 0.02);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 20px var(--primary-glow);
+}
+
+.theme-blue {
+  --primary: #60a5fa;
+  --primary-hover: #4e94e8;
+  --primary-glow: rgba(96, 165, 250, 0.2);
+  --primary-gradient: linear-gradient(135deg, #60a5fa, #3b82f6);
+
+  --bg-main: #0b1120;
+  --bg-side: #0f1628;
+  --bg-card: #141c2e;
+  --bg-card-hover: #1a2438;
+  --bg-input: #111827;
+  --bg-modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --text-main: #d1d5db;
+  --text-muted: #6b7280;
+  --text-heading: #f3f4f6;
+
+  --accent: #34d399;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --success: #34d399;
+
+  --border: #1e293b;
+  --border-light: #293548;
+  --glass-border: rgba(96, 165, 250, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.02);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 25px var(--primary-glow);
+}

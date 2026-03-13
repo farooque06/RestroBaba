@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../services/prisma.js';
 import { notifyClient } from '../services/socket.js';
+import { createOrderSchema, updateOrderStatusSchema, paymentSchema } from '../validations/orderSchema.js';
 
 const router = express.Router();
 
@@ -8,17 +9,28 @@ const router = express.Router();
 const VALID_TRANSITIONS: Record<string, string[]> = {
     'Pending': ['Cooking', 'Cancelled'],
     'Cooking': ['Ready', 'Cancelled'],
-    'Ready': ['Served', 'Cancelled'],
-    'Served': ['Paid', 'Cancelled'],
+    'Ready': ['Served', 'Cooking', 'Cancelled'],
+    'Served': ['Paid', 'Cooking', 'Cancelled'],
 };
 
 // Create or Update an order
 router.post('/', async (req, res) => {
-    const { tableId, items, customerId } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
+
+    const validation = createOrderSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ error: 'Validation Error', details: validation.error.issues });
+    }
+    const { tableId, items, customerId } = validation.data;
 
     try {
         const order = await prisma.$transaction(async (tx) => {
+            // 0. Get current open shift
+            const currentShift = await tx.financialShift.findFirst({
+                where: { clientId: req.clientId!, status: 'OPEN' },
+                orderBy: { openedAt: 'desc' }
+            });
+
             // 1. Check for existing active order for this table
             let existingOrder = null;
             if (tableId) {
@@ -35,29 +47,38 @@ router.post('/', async (req, res) => {
             // 2. Fetch client settings
             const client = await tx.client.findUnique({
                 where: { id: req.clientId! },
-                select: { useTax: true, taxRate: true, useServiceCharge: true, serviceChargeRate: true }
+                select: { 
+                    useTax: true, 
+                    taxRate: true, 
+                    useServiceCharge: true, 
+                    serviceChargeRate: true,
+                    plan: true,
+                    subscriptionPlan: true
+                }
             });
             if (!client) throw new Error('Client not found');
+
+            const hasKDS = client.subscriptionPlan?.hasKDS !== false; // Default to true if not set
+            const initialStatus = hasKDS ? 'Pending' : 'Served';
 
             let orderId: string;
             let action: string;
 
             if (existingOrder) {
-                // UPDATE EXISTING ORDER
+                // UPDATE EXISTING ORDER — only add new items, don't touch existing ones
                 orderId = existingOrder.id;
-                action = 'ORDER_UPDATE';
+                action = 'ORDER_ITEMS_ADDED';
 
                 // Add NEW items to the existing order
-                await tx.orderItem.createMany({
-                    data: items.map((item: any) => ({
-                        orderId,
-                        menuItemId: item.menuItemId,
-                        quantity: parseInt(item.quantity),
-                        price: parseFloat(item.price),
-                        notes: item.notes,
-                        status: 'Pending'
-                    }))
-                });
+                const newItemsData = items.map((item: any) => ({
+                    orderId,
+                    menuItemId: item.menuItemId,
+                    quantity: parseInt(item.quantity),
+                    price: parseFloat(item.price),
+                    notes: item.notes,
+                    status: initialStatus
+                }));
+                await tx.orderItem.createMany({ data: newItemsData });
             } else {
                 // CREATE NEW ORDER
                 action = 'ORDER_NEW';
@@ -68,15 +89,17 @@ router.post('/', async (req, res) => {
                         subtotal: 0,
                         totalAmount: 0,
                         clientId: req.clientId!,
-                        status: 'Pending',
+                        status: initialStatus,
                         items: {
                             create: items.map((item: any) => ({
                                 menuItemId: item.menuItemId,
                                 quantity: parseInt(item.quantity),
                                 price: parseFloat(item.price),
-                                notes: item.notes
+                                notes: item.notes,
+                                status: initialStatus
                             }))
-                        }
+                        },
+                        shiftId: currentShift?.id
                     }
                 });
                 orderId = newOrder.id;
@@ -109,11 +132,7 @@ router.post('/', async (req, res) => {
                     taxAmount,
                     serviceChargeAmount,
                     totalAmount,
-                    // If order was already Ready or Served, move it back to Cooking 
-                    // so the chef sees the additions in the right column.
-                    status: (existingOrder?.status === 'Ready' || existingOrder?.status === 'Served')
-                        ? 'Cooking'
-                        : (existingOrder?.status || 'Pending')
+                    status: initialStatus
                 },
                 include: { items: { include: { menuItem: { include: { category: true } } } }, table: true }
             });
@@ -142,10 +161,26 @@ router.post('/', async (req, res) => {
                 }
             });
 
-            return { finalOrder, action };
+            // Collect only the newly-added items (status='Pending' just created)
+            const newlyAddedItems = action === 'ORDER_ITEMS_ADDED'
+                ? finalOrder.items.filter((i: any) => i.status === 'Pending')
+                : [];
+
+            return { finalOrder, action, newlyAddedItems };
         });
 
-        notifyClient(req.clientId!, order.action, order.finalOrder);
+        // Emit the correct socket event
+        if (order.action === 'ORDER_ITEMS_ADDED') {
+            // Send specific event with only the new items + order context
+            notifyClient(req.clientId!, 'ORDER_ITEMS_ADDED', {
+                orderId: order.finalOrder.id,
+                tableNumber: order.finalOrder.table?.number || 'Walk-in',
+                newItems: order.newlyAddedItems,
+                order: order.finalOrder
+            });
+        } else {
+            notifyClient(req.clientId!, 'ORDER_NEW', order.finalOrder);
+        }
         res.status(order.action === 'ORDER_NEW' ? 201 : 200).json(order.finalOrder);
     } catch (error) {
         console.error('Order processing error:', error);
@@ -184,9 +219,14 @@ router.get('/', async (req, res) => {
 
 // Update order status with VALIDATION (Issue #1, #2, #3)
 router.put('/:id/status', async (req, res) => {
-    const { id } = req.params;
-    const { status, paymentMethod } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
+
+    const validation = updateOrderStatusSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ error: 'Validation Error', details: validation.error.issues });
+    }
+    const { id } = req.params;
+    const { status, paymentMethod } = validation.data;
     const user = (req as any).user;
 
     try {
@@ -210,6 +250,8 @@ router.put('/:id/status', async (req, res) => {
                 data: { status },
                 include: { items: { include: { menuItem: { include: { recipe: true, category: true } } } }, table: true }
             });
+
+            const now = new Date();
 
             // --- Issue #2: Item-level inventory deduction (only Pending items) ---
             if (status === 'Cooking') {
@@ -238,9 +280,26 @@ router.put('/:id/status', async (req, res) => {
                     // Mark item as Cooking so it doesn't get deducted again
                     await tx.orderItem.update({
                         where: { id: item.id },
-                        data: { status: 'Cooking' }
+                        data: { status: 'Cooking', cookingStartedAt: now }
                     });
                 }
+            }
+
+            // --- Sync item statuses on order transitions ---
+            if (status === 'Ready') {
+                // Mark all actionable items as 'Ready'
+                await tx.orderItem.updateMany({
+                    where: { orderId: id as string, status: { in: ['Pending', 'Cooking'] } },
+                    data: { status: 'Ready', readyAt: now }
+                });
+            }
+
+            if (status === 'Served') {
+                // Mark all prepared items as 'Served'
+                await tx.orderItem.updateMany({
+                    where: { orderId: id as string, status: { in: ['Pending', 'Cooking', 'Ready'] } },
+                    data: { status: 'Served' }
+                });
             }
 
             // --- Issue #3: Only restore non-waste items on cancel ---
@@ -287,19 +346,42 @@ router.put('/:id/status', async (req, res) => {
                 }
             }
 
-            // If status is Paid, free up the table
-            if (status === 'Paid' && updatedOrder.tableId) {
-                await tx.table.update({
-                    where: { id: updatedOrder.tableId },
-                    data: { status: 'Available' }
+            // If status is Paid, free up the table and save payment method
+            if (status === 'Paid') {
+                const updateData: any = { status };
+                if (paymentMethod) updateData.paymentMethod = paymentMethod;
+
+                await tx.order.update({
+                    where: { id: id as string, clientId: req.clientId! },
+                    data: updateData
                 });
+
+                // --- NEW: Ensure a Payment record exists for shift reconciliation ---
+                const existingPayments = await tx.payment.count({ where: { orderId: id as string } });
+                if (existingPayments === 0) {
+                    await tx.payment.create({
+                        data: {
+                            orderId: id as string,
+                            amount: currentOrder.totalAmount,
+                            method: paymentMethod || 'Cash',
+                            clientId: req.clientId!
+                        }
+                    });
+                }
+
+                if (updatedOrder.tableId) {
+                    await tx.table.update({
+                        where: { id: updatedOrder.tableId },
+                        data: { status: 'Available' }
+                    });
+                }
             }
 
             // --- Activity Log ---
             await tx.activityLog.create({
                 data: {
                     action: 'STATUS_CHANGE',
-                    details: `Order #${updatedOrder.id.slice(-4).toUpperCase()} changed to ${status}`,
+                    details: `Order #${updatedOrder.id.slice(-4).toUpperCase()} changed to ${status}${paymentMethod ? ` via ${paymentMethod}` : ''}`,
                     userId: user.userId,
                     role: user.role,
                     clientId: req.clientId!
@@ -352,17 +434,28 @@ router.patch('/item/:itemId/status', async (req, res) => {
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
 
     try {
+        const now = new Date();
+        const updateData: any = { status };
+        
+        if (status === 'Cooking') updateData.cookingStartedAt = now;
+        if (status === 'Ready') updateData.readyAt = now;
+
         const orderItem = await prisma.orderItem.update({
             where: { id: itemId },
-            data: { status },
-            include: { order: true }
+            data: updateData,
+            include: { 
+                order: { include: { table: true } },
+                menuItem: true
+            }
         });
 
         // Notify client about the update
         notifyClient(req.clientId!, 'ORDER_ITEM_UPDATE', {
             orderId: orderItem.orderId,
             itemId: orderItem.id,
-            status
+            status,
+            itemName: orderItem.menuItem.name,
+            tableNumber: orderItem.order.table?.number || 'Walk-in'
         });
 
         res.json(orderItem);
@@ -465,6 +558,163 @@ router.post('/item/:itemId/remake', async (req, res) => {
     } catch (error: any) {
         console.error('Remake error:', error);
         res.status(500).json({ error: error.message || 'Failed to trigger remake' });
+    }
+});
+
+// Handle Split/Partial Payments
+router.post('/:id/pay', async (req, res) => {
+    if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
+
+    const validation = paymentSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ error: 'Validation Error', details: validation.error.issues });
+    }
+    const { id } = req.params;
+    const { payments } = validation.data; // Array of { amount, method, label, itemIds }
+    const user = (req as any).user;
+
+    try {
+        const order = await prisma.$transaction(async (tx) => {
+            const currentOrder = await tx.order.findUnique({
+                where: { id: id as string },
+                include: { items: true }
+            });
+
+            if (!currentOrder) throw new Error('Order not found');
+            if (currentOrder.clientId !== req.clientId) throw new Error('Unauthorized');
+
+            const totalPaid = payments.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
+
+            // Allow a tiny margin for float precision
+            if (totalPaid < currentOrder.totalAmount - 0.01) {
+                throw new Error(`Insufficient payment: Total required ${currentOrder.totalAmount}, provided ${totalPaid}`);
+            }
+
+            // 1. Create payment records
+            await tx.payment.createMany({
+                data: payments.map((p: any) => ({
+                    orderId: id,
+                    amount: parseFloat(p.amount),
+                    method: p.method,
+                    label: p.label,
+                    itemIds: p.itemIds ? JSON.stringify(p.itemIds) : null,
+                    clientId: req.clientId!
+                }))
+            });
+
+            // 2. Update order status and method
+            const updatedOrder = await tx.order.update({
+                where: { id: id as string },
+                data: {
+                    status: 'Paid',
+                    paymentMethod: payments.length > 1 ? 'Split' : payments[0].method
+                },
+                include: { table: true }
+            });
+
+            // 3. Free the table
+            if (updatedOrder.tableId) {
+                await tx.table.update({
+                    where: { id: updatedOrder.tableId },
+                    data: { status: 'Available' }
+                });
+            }
+
+            // 4. Log Activity
+            await tx.activityLog.create({
+                data: {
+                    action: 'PAYMENT_RECEIVED',
+                    details: `Payment received for Order #${updatedOrder.id.slice(-4).toUpperCase()} - Total: ${totalPaid.toFixed(2)} (${updatedOrder.paymentMethod})`,
+                    userId: user.userId,
+                    role: user.role,
+                    clientId: req.clientId!
+                }
+            });
+
+            return updatedOrder;
+        });
+
+        notifyClient(req.clientId!, 'ORDER_UPDATE', order);
+        res.json(order);
+    } catch (error: any) {
+        console.error('Payment processing error:', error);
+        res.status(500).json({ error: error.message || 'Failed to process payment' });
+    }
+});
+
+// Transfer order to a new table
+router.post('/:id/transfer', async (req, res) => {
+    const { id } = req.params;
+    const { targetTableId } = req.body;
+    if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
+    const user = (req as any).user;
+
+    try {
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Get current order and target table
+            const order = await tx.order.findUnique({
+                where: { id: id as string, clientId: req.clientId! },
+                include: { table: true }
+            });
+
+            if (!order) throw new Error('Order not found');
+            if (order.status === 'Paid' || order.status === 'Cancelled') {
+                throw new Error('Cannot transfer a completed or cancelled order');
+            }
+
+            const targetTable = await tx.table.findUnique({
+                where: { id: targetTableId, clientId: req.clientId! }
+            });
+
+            if (!targetTable) throw new Error('Target table not found');
+            if (!['Available', 'Reserved'].includes(targetTable.status)) {
+                throw new Error('Target table is not available or reserved');
+            }
+
+            // 2. Update order with new tableId
+            const updatedOrder = await tx.order.update({
+                where: { id: id as string },
+                data: { tableId: targetTableId },
+                include: { table: true }
+            });
+
+            // 3. Set source table to Available (if it exists)
+            if (order.tableId) {
+                await tx.table.update({
+                    where: { id: order.tableId },
+                    data: { status: 'Available' }
+                });
+            }
+
+            // 4. Set target table to Occupied
+            await tx.table.update({
+                where: { id: targetTableId },
+                data: { status: 'Occupied' }
+            });
+
+            // 5. Activity Log
+            await tx.activityLog.create({
+                data: {
+                    action: 'TABLE_TRANSFER',
+                    details: `Transferred Order #${order.id.slice(-4).toUpperCase()} from Table #${order.table?.number || 'Walk-in'} to Table #${targetTable.number}`,
+                    userId: user.userId,
+                    role: user.role,
+                    clientId: req.clientId!
+                }
+            });
+
+            return updatedOrder;
+        });
+
+        // Notify client about the update
+        notifyClient(req.clientId!, 'ORDER_UPDATE', result);
+        // Also notify about table updates
+        notifyClient(req.clientId!, 'TABLE_UPDATE', { orderId: result.id });
+
+        res.json({ message: 'Transfer successful', order: result });
+    } catch (error: any) {
+        console.error('Transfer error:', error);
+        res.status(500).json({ error: error.message || 'Failed to transfer table' });
     }
 });
 

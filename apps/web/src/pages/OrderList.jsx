@@ -116,214 +116,216 @@ const OrderList = () => {
 
     return (
         <div className="page-container animate-fade">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Orders & KOT</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Track kitchen preparation and service for <strong style={{ color: 'var(--text-main)' }}>{user?.clientName}</strong></p>
+            {/* ── Header ── */}
+            <div className="ol-header">
+                <div className="ol-header-top">
+                    <div>
+                        <h1>
+                            Orders & KOT
+                            <span className="ol-count-badge">{filteredOrders.length}</span>
+                        </h1>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px' }}>
+                            Track kitchen preparation for <strong style={{ color: 'var(--text-heading)' }}>{user?.clientName}</strong>
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div className="premium-glass" style={{ padding: '1rem', marginBottom: '2rem', display: 'flex', gap: '1rem', overflowX: 'auto' }}>
+            {/* ── Filter Chips ── */}
+            <div className="ol-filters">
                 {['All', 'Pending', 'Cooking', 'Ready', 'Served', 'Paid', 'Cancelled'].map(s => (
                     <button
                         key={s}
                         onClick={() => setFilter(s)}
-                        style={{
-                            padding: '0.5rem 1.25rem',
-                            borderRadius: '10px',
-                            background: filter === s ? 'var(--primary)' : 'var(--glass-shine)',
-                            border: '1px solid var(--glass-border)',
-                            color: filter === s ? 'white' : 'var(--text-muted)',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
-                        }}
+                        className={`ol-chip${filter === s ? ' active' : ''}`}
                     >
                         {s}
                     </button>
                 ))}
             </div>
 
-            <div className="search-bar" style={{ width: '350px', marginBottom: '2rem' }}>
-                <Search size={18} color="var(--text-muted)" />
-                <input
-                    type="text"
-                    placeholder="Search by Order ID or Table..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ color: 'var(--text-main)' }}
-                />
+            {/* ── Search ── */}
+            <div className="ol-search">
+                <div className="search-bar">
+                    <Search size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search by Order ID or Table..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                {filteredOrders.map(order => (
-                    <div key={order.id} className="stat-card" style={{ padding: '1.5rem', position: 'relative' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+            {/* ── Order Cards Grid ── */}
+            <div className="ol-grid">
+                {filteredOrders.map((order, idx) => (
+                    <div key={order.id} className="ol-card" style={{ animationDelay: `${idx * 0.05}s` }}>
+                        {/* Header */}
+                        <div className="ol-card-header">
                             <div>
-                                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>Order #{order.id.slice(-4).toUpperCase()}</h3>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Clock size={14} color="var(--text-muted)" />
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                <div className="ol-order-id">Order #{order.id.slice(-4).toUpperCase()}</div>
+                                <div className="ol-order-time">
+                                    <Clock size={12} />
+                                    <span>{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
                             </div>
-                            <div style={{
-                                padding: '0.4rem 0.8rem',
-                                borderRadius: '20px',
-                                background: `${getStatusColor(order.status)}20`,
-                                color: getStatusColor(order.status),
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                border: `1px solid ${getStatusColor(order.status)}40`
-                            }}>
+                            <div
+                                className="ol-status-badge"
+                                style={{
+                                    background: `${getStatusColor(order.status)}18`,
+                                    color: getStatusColor(order.status),
+                                    border: `1px solid ${getStatusColor(order.status)}35`,
+                                }}
+                            >
+                                {['Pending', 'Cooking'].includes(order.status) && <span className="pulse" />}
                                 {order.status}
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.75rem', textTransform: 'uppercase' }}>Items</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {order.items.filter(i => i.status !== 'Waste').map(item => (
-                                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                                        <span>{item.quantity}x {item.menuItem?.name || 'Unknown Item'}</span>
-                                        <span style={{ color: 'var(--text-muted)' }}>{formatCurrency((item.price || 0) * item.quantity)}</span>
-                                    </div>
-                                ))}
-                            </div>
+                        {/* Items */}
+                        <div className="ol-items">
+                            <div className="ol-items-label">Items</div>
+                            {order.items.filter(i => i.status !== 'Waste').map(item => (
+                                <div key={item.id} className="ol-item-row">
+                                    <span>
+                                        <span className="qty">{item.quantity}</span>
+                                        {item.menuItem?.name || 'Unknown Item'}
+                                    </span>
+                                    <span className="price">{formatCurrency((item.price || 0) * item.quantity)}</span>
+                                </div>
+                            ))}
                         </div>
 
-                        <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        {/* Footer */}
+                        <div className="ol-card-footer">
                             <div>
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Table</p>
-                                <p style={{ fontWeight: 700 }}>{order.table?.number || 'Walk-in'}</p>
+                                <div className="ol-table-label">Table</div>
+                                <div className="ol-table-value">{order.table?.number || 'Walk-in'}</div>
                             </div>
-                            <div style={{ textAlign: 'right' }}>
+                            <div>
                                 {(order.taxAmount > 0 || order.serviceChargeAmount > 0) && (
-                                    <div style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                    <div style={{ marginBottom: '0.35rem' }}>
+                                        <div className="ol-tax-row">
                                             <span>Sub:</span>
                                             <span>{formatCurrency(order.subtotal || 0)}</span>
                                         </div>
                                         {order.taxAmount > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                            <div className="ol-tax-row">
                                                 <span>VAT:</span>
                                                 <span>{formatCurrency(order.taxAmount)}</span>
                                             </div>
                                         )}
                                         {order.serviceChargeAmount > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                            <div className="ol-tax-row">
                                                 <span>SC:</span>
                                                 <span>{formatCurrency(order.serviceChargeAmount)}</span>
                                             </div>
                                         )}
                                     </div>
                                 )}
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Total</p>
-                                <p style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.2rem', lineHeight: 1 }}>{formatCurrency(order.totalAmount ?? 0)}</p>
+                                <div className="ol-total-label">Total</div>
+                                <div className="ol-total-value">{formatCurrency(order.totalAmount ?? 0)}</div>
                             </div>
                         </div>
 
                         {/* Action Buttons */}
-                        <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem' }}>
+                        <div className="ol-card-actions">
                             {order.status === 'Pending' && (
                                 <>
-                                    <button onClick={() => updateStatus(order.id, 'Cooking')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px', background: 'var(--glass-shine)', border: '1px solid var(--glass-border)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                        <ChefHat size={16} />
+                                    <button onClick={() => updateStatus(order.id, 'Cooking')} className="ol-action-btn cook">
+                                        <ChefHat size={15} />
                                         <span>Start Cooking</span>
                                     </button>
-                                    <button onClick={() => handleCancel(order.id)} style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 500, fontSize: '0.85rem' }} title="Cancel Order">
-                                        <XCircle size={16} />
-                                        <span>Cancel</span>
+                                    <button onClick={() => handleCancel(order.id)} className="ol-action-btn cancel" title="Cancel Order">
+                                        <XCircle size={15} />
                                     </button>
                                 </>
                             )}
                             {order.status === 'Cooking' && (
                                 <>
-                                    <button onClick={() => updateStatus(order.id, 'Ready')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px', background: 'var(--warning)', border: 'none', color: 'black', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                        <Clock size={16} />
+                                    <button onClick={() => updateStatus(order.id, 'Ready')} className="ol-action-btn ready">
+                                        <Clock size={15} />
                                         <span>Mark Ready</span>
                                     </button>
-                                    <button onClick={() => handleCancel(order.id)} style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Cancel Order">
-                                        <XCircle size={16} />
+                                    <button onClick={() => handleCancel(order.id)} className="ol-action-btn cancel" title="Cancel Order">
+                                        <XCircle size={15} />
                                     </button>
                                 </>
                             )}
                             {order.status === 'Ready' && (
-                                <button onClick={() => updateStatus(order.id, 'Served')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: 'white', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                    <CheckCircle size={16} />
+                                <button onClick={() => updateStatus(order.id, 'Served')} className="ol-action-btn served">
+                                    <CheckCircle size={15} />
                                     <span>Served</span>
                                 </button>
                             )}
-                            {/* Issue #5/#8: Collect Payment for Served orders (walk-in or table) */}
                             {order.status === 'Served' && (
-                                <button onClick={() => setPaymentOrder(order)} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: 'white', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                    <DollarSign size={16} />
+                                <button onClick={() => setPaymentOrder(order)} className="ol-action-btn pay">
+                                    <DollarSign size={15} />
                                     <span>Collect Payment</span>
                                 </button>
                             )}
                         </div>
                     </div>
                 ))}
+
                 {filteredOrders.length === 0 && (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-                        <ClipboardList size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
+                    <div className="ol-empty">
+                        <ClipboardList size={48} style={{ opacity: 0.2 }} />
                         <p>{filter === 'All' ? 'No orders found.' : `No ${filter.toLowerCase()} orders found.`}</p>
                     </div>
                 )}
             </div>
 
-            {/* Payment Modal for walk-in/served orders */}
+            {/* ── Payment Modal ── */}
             {paymentOrder && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
-                    <div className="premium-glass animate-fade-in" style={{ width: '400px', padding: '2rem', border: '1px solid var(--glass-border)' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '1px dashed var(--glass-border)', paddingBottom: '1rem' }}>
-                            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Collect Payment</h2>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Order #{paymentOrder.id.slice(-6).toUpperCase()} | {paymentOrder.table ? `Table ${paymentOrder.table.number}` : 'Walk-in'}</p>
+                <div className="ol-payment-overlay">
+                    <div className="ol-payment-sheet">
+                        <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '1px dashed var(--border)', paddingBottom: '1rem' }}>
+                            <h2 style={{ fontSize: '1.3rem', marginBottom: '0.35rem' }}>Collect Payment</h2>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                Order #{paymentOrder.id.slice(-6).toUpperCase()} | {paymentOrder.table ? `Table ${paymentOrder.table.number}` : 'Walk-in'}
+                            </p>
                         </div>
 
                         <div style={{ marginBottom: '1.5rem', maxHeight: '200px', overflowY: 'auto' }}>
                             {paymentOrder.items.filter(i => i.status !== 'Waste').map(item => (
-                                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                                    <span>{item.quantity}x {item.menuItem?.name || 'Unknown'}</span>
-                                    <span>{formatCurrency((item.price || 0) * item.quantity)}</span>
+                                <div key={item.id} className="ol-item-row">
+                                    <span><span className="qty">{item.quantity}</span>{item.menuItem?.name || 'Unknown'}</span>
+                                    <span className="price">{formatCurrency((item.price || 0) * item.quantity)}</span>
                                 </div>
                             ))}
                         </div>
 
-                        <div style={{ borderTop: '2px solid var(--glass-border)', paddingTop: '1rem', marginBottom: '2rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
+                        <div style={{ borderTop: '2px solid var(--border)', paddingTop: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
                                 <span style={{ color: 'var(--text-muted)' }}>Subtotal</span>
                                 <span>{formatCurrency(paymentOrder.subtotal || 0)}</span>
                             </div>
                             {paymentOrder.taxAmount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>VAT</span>
                                     <span>{formatCurrency(paymentOrder.taxAmount)}</span>
                                 </div>
                             )}
                             {paymentOrder.serviceChargeAmount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Service Charge</span>
                                     <span>{formatCurrency(paymentOrder.serviceChargeAmount)}</span>
                                 </div>
                             )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.25rem', color: 'var(--primary)', marginTop: '0.5rem', borderTop: '1px dashed var(--glass-border)', paddingTop: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary)', marginTop: '0.5rem', borderTop: '1px dashed var(--border)', paddingTop: '0.5rem' }}>
                                 <span>Grand Total</span>
                                 <span>{formatCurrency(paymentOrder.totalAmount ?? 0)}</span>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <button
-                                onClick={() => updateStatus(paymentOrder.id, 'Paid')}
-                                className="nav-item active"
-                                style={{ padding: '1rem', borderRadius: '12px', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                            >
-                                <DollarSign size={20} />
-                                Confirm Payment
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <button onClick={() => updateStatus(paymentOrder.id, 'Paid')} className="ol-action-btn pay" style={{ padding: '0.85rem' }}>
+                                <DollarSign size={18} />
+                                <span>Confirm Payment</span>
                             </button>
-                            <button
-                                onClick={() => setPaymentOrder(null)}
-                                style={{ padding: '1rem', borderRadius: '12px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer' }}
-                            >
+                            <button onClick={() => setPaymentOrder(null)} className="btn-ghost" style={{ width: '100%' }}>
                                 Back
                             </button>
                         </div>

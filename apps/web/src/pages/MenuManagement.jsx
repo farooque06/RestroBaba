@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { API_BASE_URL } from '../config';
-import { Search, Plus, Filter, Tag, CheckCircle2, XCircle, Loader2, Trash2, Edit2 } from 'lucide-react';
+import { Search, Plus, Tag, XCircle, Loader2, Trash2, Edit2, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import RecipeManagement from './RecipeManagement';
 import ConfirmModal from '../components/ConfirmModal';
 import { formatCurrency } from '../utils/formatters';
-import OptimizedImage from '../components/common/OptimizedImage';
 import toast from 'react-hot-toast';
-import foodPlaceholder from '../assets/food-placeholder.png';
+import MenuCard from '../components/menuManagement/MenuCard';
+import CategoryTabs from '../components/menuManagement/CategoryTabs';
 
 const MenuManagement = () => {
     const { user } = useAuth();
@@ -15,6 +15,8 @@ const MenuManagement = () => {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [visibleCount, setVisibleCount] = useState(20);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -34,36 +36,89 @@ const MenuManagement = () => {
     const [quickInventory, setQuickInventory] = useState({ name: '', unit: 'pcs', quantity: 0 });
     const [uploadingImg, setUploadingImg] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const observerLoader = useRef(null);
 
     useEffect(() => {
         fetchMenuData();
     }, []);
 
+    const filteredItems = useMemo(() => {
+        return items.filter(item => {
+            const matchesCategory = selectedCategory === 'All' || item.category.name === selectedCategory;
+            const matchesSearch = item.name.toLowerCase().includes(debouncedSearch.toLowerCase());
+            return matchesCategory && matchesSearch;
+        });
+    }, [items, selectedCategory, debouncedSearch]);
+
+    const displayItems = filteredItems.slice(0, visibleCount);
+
+    // Debounce search query
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setVisibleCount(20); // Reset visible count on search
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Infinite Scroll Observer
+    useEffect(() => {
+        const options = {
+            root: null,
+            rootMargin: '20px',
+            threshold: 0.1
+        };
+
+        const handleObserver = (entities) => {
+            const target = entities[0];
+            if (target.isIntersecting && filteredItems.length > visibleCount) {
+                setVisibleCount(prev => prev + 20);
+            }
+        };
+
+        const observer = new IntersectionObserver(handleObserver, options);
+        if (observerLoader.current) {
+            observer.observe(observerLoader.current);
+        }
+
+        return () => {
+            if (observerLoader.current) observer.unobserve(observerLoader.current);
+        };
+    }, [filteredItems.length, visibleCount]);
+
     const fetchMenuData = async () => {
         setLoading(true);
         const token = localStorage.getItem('restroToken');
         try {
-            const [itemsRes, catsRes, invRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/menu/items`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch(`${API_BASE_URL}/api/menu/categories`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch(`${API_BASE_URL}/api/inventory`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
-            ]);
+            const fetchPromises = [
+                fetch(`${API_BASE_URL}/api/menu/items`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${API_BASE_URL}/api/menu/categories`, { headers: { 'Authorization': `Bearer ${token}` } })
+            ];
 
-            const itemsData = await itemsRes.json();
-            const catsData = await catsRes.json();
-            const invData = await invRes.json();
+            // Waiters cannot access inventory, so don't fetch it
+            if (user?.role !== 'WAITER') {
+                fetchPromises.push(
+                    fetch(`${API_BASE_URL}/api/inventory`, { headers: { 'Authorization': `Bearer ${token}` } })
+                );
+            }
 
-            if (itemsRes.ok && catsRes.ok && invRes.ok) {
+            const responses = await Promise.all(fetchPromises);
+            const itemsRes = responses[0];
+            const catsRes = responses[1];
+            const invRes = responses[2]; // Will be undefined for Waiters
+
+            if (itemsRes.ok && catsRes.ok && (!invRes || invRes.ok)) {
+                const itemsData = await itemsRes.json();
+                const catsData = await catsRes.json();
+
                 setItems(itemsData);
                 setRawCategories(catsData);
-                setInventoryItems(invData);
                 setCategories(['All', ...catsData.map(c => c.name)]);
+
+                if (invRes) {
+                    const invData = await invRes.json();
+                    setInventoryItems(invData);
+                }
             } else {
                 setError('Failed to load menu data');
             }
@@ -305,11 +360,7 @@ const MenuManagement = () => {
             toast.error('Network error. Please try again.');
         }
     };
-    const filteredItems = items.filter(item => {
-        const matchesCategory = selectedCategory === 'All' || item.category.name === selectedCategory;
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
+
 
     if (loading) return (
         <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -330,330 +381,215 @@ const MenuManagement = () => {
                     <p style={{ color: 'var(--text-muted)' }}>Manage dishes for <strong style={{ color: 'var(--text-main)' }}>{user?.clientName}</strong></p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button
-                        onClick={() => {
-                            setNewCategory({ name: '', station: 'Kitchen' });
-                            setEditingCategoryId(null);
-                            setIsCategoryModalOpen(true);
-                        }}
-                        className="now-item"
-                        style={{ border: '1px solid var(--glass-border)', background: 'var(--glass-shine)', color: 'var(--text-main)', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
-                    >
-                        <Tag size={20} />
-                        <span>Manage Categories</span>
-                    </button>
-                    <button
-                        onClick={() => {
-                            setEditingItem(null);
-                            setNewItem({ name: '', description: '', price: '', categoryId: '', image: '' });
-                            setIsItemModalOpen(true);
-                        }}
-                        className="nav-item active"
-                        style={{ border: 'none', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
-                    >
-                        <Plus size={20} />
-                        <span>Add New Item</span>
-                    </button>
+                    {user?.role !== 'WAITER' && (
+                        <>
+                            <button
+                                onClick={() => {
+                                    setNewCategory({ name: '', station: 'Kitchen' });
+                                    setEditingCategoryId(null);
+                                    setIsCategoryModalOpen(true);
+                                }}
+                                className="nav-item"
+                                style={{ border: '1px solid var(--glass-border)', background: 'var(--glass-shine)', color: 'var(--text-main)', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
+                            >
+                                <Tag size={20} />
+                                <span>Manage Categories</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setEditingItem(null);
+                                    setNewItem({ name: '', description: '', price: '', categoryId: '', image: '' });
+                                    setIsItemModalOpen(true);
+                                }}
+                                className="nav-item active"
+                                style={{ border: 'none', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
+                            >
+                                <Plus size={20} />
+                                <span>Add New Item</span>
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
-            <div className="premium-glass" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', flex: 1, paddingBottom: '0.5rem' }}>
-                    {categories.map(cat => (
-                        <button
-                            key={cat}
-                            onClick={() => setSelectedCategory(cat)}
-                            style={{
-                                padding: '0.5rem 1.25rem',
-                                borderRadius: '10px',
-                                background: selectedCategory === cat ? 'var(--primary)' : 'var(--glass-shine)',
-                                border: '1px solid var(--glass-border)',
-                                color: selectedCategory === cat ? 'white' : 'var(--text-muted)',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                                transition: 'all 0.2s ease'
-                            }}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
-                <div className="search-bar" style={{ width: '300px' }}>
-                    <Search size={18} color="var(--text-muted)" />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center', marginBottom: '3rem', justifyContent: 'space-between' }}>
+                <CategoryTabs 
+                    categories={categories} 
+                    selectedCategory={selectedCategory} 
+                    onSelect={setSelectedCategory} 
+                />
+                
+                <div className="search-bar" style={{ width: '350px' }}>
+                    <Search size={20} />
                     <input
                         type="text"
-                        placeholder="Search items..."
+                        placeholder="Search for a dish..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{ color: 'var(--text-main)' }}
                     />
                 </div>
             </div>
 
             {error && <div className="error-message" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                {filteredItems.map(item => (
-                    <div key={item.id} className="stat-card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)', background: 'var(--bg-card)' }}>
-                        <div style={{ height: '180px', width: '100%', position: 'relative' }}>
-                            <OptimizedImage
-                                src={item.image || foodPlaceholder}
-                                alt={item.name}
-                                style={{ width: '100%', height: '100%', opacity: item.available ? 1 : 0.6 }}
-                            />
-                            <div style={{
-                                position: 'absolute',
-                                top: '12px',
-                                right: '12px',
-                                padding: '0.35rem 0.8rem',
-                                borderRadius: '20px',
-                                background: item.available ? 'rgba(16, 185, 129, 0.9)' : 'rgba(239, 68,  red, 0.9)',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                fontSize: '0.7rem',
-                                fontWeight: 800,
-                                color: 'white',
-                                backdropFilter: 'blur(8px)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
-                            }}>
-                                {item.available ? 'In Stock' : 'Out of Stock'}
-                            </div>
-                            <div style={{
-                                position: 'absolute',
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                padding: '2rem 1rem 0.75rem',
-                                background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-end'
-                            }}>
-                                <div style={{
-                                    padding: '0.2rem 0.6rem',
-                                    background: 'var(--primary)',
-                                    borderRadius: '6px',
-                                    fontSize: '0.65rem',
-                                    fontWeight: 700,
-                                    color: 'white'
-                                }}>
-                                    {item.category?.name}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ padding: '1.25rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>{item.name}</h3>
-                                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)' }}>{formatCurrency(item.price)}</span>
-                            </div>
-
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.4rem', lineHeight: '1.2rem' }}>
-                                {item.description || 'No description available for this item.'}
-                            </p>
-
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', marginBottom: '1.25rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.recipe?.length > 0 ? 'var(--primary)' : 'var(--text-muted)' }}></div>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                                        {item.recipe?.length > 0 ? 'Tracked Item' : 'Service Item'}
-                                    </span>
-                                </div>
-                                {item.recipe && item.recipe.length > 0 && (
-                                    <div style={{ textAlign: 'right' }}>
-                                        {/* Quantity display removed as requested */}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                <button
-                                    onClick={() => openEditItem(item)}
-                                    className="premium-glass"
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.7rem',
-                                        borderRadius: '10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '8px',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 700,
-                                        cursor: 'pointer',
-                                        border: '1px solid var(--glass-border)',
-                                        color: 'var(--text-main)'
-                                    }}
-                                >
-                                    <Edit2 size={16} />
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => setSelectedItemForRecipe(item)}
-                                    className="premium-glass"
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.6rem',
-                                        borderRadius: '10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '6px',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        color: 'var(--primary)'
-                                    }}
-                                >
-                                    <Tag size={14} />
-                                    Recipe
-                                </button>
-                                <button
-                                    onClick={() => toggleAvailability(item)}
-                                    className="premium-glass"
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.6rem',
-                                        borderRadius: '10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '6px',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        color: item.available ? 'var(--danger)' : 'var(--accent)',
-                                    }}
-                                >
-                                    {item.available ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
-                                    {item.available ? 'Disable' : 'Enable'}
-                                </button>
-                                <button
-                                    onClick={() => deleteItem(item.id)}
-                                    style={{
-                                        width: '40px',
-                                        padding: '0.6rem',
-                                        borderRadius: '10px',
-                                        background: 'rgba(239, 68, 68, 0.1)',
-                                        border: '1px solid rgba(239, 68, 68, 0.2)',
-                                        color: 'var(--danger)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem' }}>
+                {displayItems.map(item => (
+                    <MenuCard
+                        key={item.id}
+                        item={item}
+                        onEdit={openEditItem}
+                        onRecipe={setSelectedItemForRecipe}
+                        onDelete={deleteItem}
+                        onToggleAvailability={toggleAvailability}
+                        userRole={user?.role}
+                    />
                 ))}
             </div>
 
-            {/* Add Item Modal */}
+            {/* Infinite Scroll Sentinel */}
+            <div ref={observerLoader} style={{ height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '1rem' }}>
+                {filteredItems.length > visibleCount && (
+                    <Loader2 className="animate-spin" size={24} color="var(--primary)" />
+                )}
+            </div>
+
             {isItemModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="modal-card" style={{ width: '450px' }}>
-                        <h2 style={{ marginBottom: '1.5rem' }}>{editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}</h2>
-                        <form onSubmit={handleAddItem} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <input
-                                className="auth-input"
-                                placeholder="Item Name"
-                                required
-                                value={newItem.name}
-                                onChange={e => setNewItem({ ...newItem, name: e.target.value })}
-                            />
-                            <textarea
-                                className="auth-input"
-                                placeholder="Description"
-                                style={{ minHeight: '80px', paddingTop: '10px' }}
-                                value={newItem.description}
-                                onChange={e => setNewItem({ ...newItem, description: e.target.value })}
-                            />
-                            <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }} className="animate-fade">
+                    <div className="premium-glass" style={{ width: '100%', maxWidth: '550px', padding: '2.5rem', borderRadius: '24px', position: 'relative' }}>
+                        <button 
+                            onClick={() => setIsItemModalOpen(false)}
+                            style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                        >
+                            <XCircle size={24} />
+                        </button>
+
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-heading)' }}>
+                            {editingItem ? 'Edit Dish' : 'New Dish'}
+                        </h2>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>
+                            {editingItem ? 'Update the details of your menu item.' : 'Add a new culinary masterpiece to your menu.'}
+                        </p>
+
+                        <form onSubmit={handleAddItem} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div className="input-group">
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem', display: 'block' }}>ITEM NAME</label>
                                 <input
-                                    className="auth-input"
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="Price"
+                                    className="mm-search-input"
+                                    style={{ paddingLeft: '1.5rem', borderRadius: '12px' }}
+                                    placeholder="Enter dish name..."
                                     required
-                                    value={newItem.price}
-                                    onChange={e => setNewItem({ ...newItem, price: e.target.value })}
+                                    value={newItem.name}
+                                    onChange={e => setNewItem({ ...newItem, name: e.target.value })}
                                 />
-                                <select
-                                    className="auth-input"
-                                    required
-                                    value={newItem.categoryId}
-                                    onChange={e => setNewItem({ ...newItem, categoryId: e.target.value })}
-                                    style={{ appearance: 'none' }}
-                                >
-                                    <option value="">Select Category</option>
-                                    {rawCategories.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                    ))}
-                                </select>
                             </div>
+
+                            <div className="input-group">
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem', display: 'block' }}>DESCRIPTION</label>
+                                <textarea
+                                    className="mm-search-input"
+                                    style={{ paddingLeft: '1.5rem', borderRadius: '12px', minHeight: '100px', resize: 'none', paddingTop: '10px' }}
+                                    placeholder="Describe the flavors, ingredients..."
+                                    value={newItem.description}
+                                    onChange={e => setNewItem({ ...newItem, description: e.target.value })}
+                                />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem', display: 'block' }}>PRICE</label>
+                                    <input
+                                        className="mm-search-input"
+                                        style={{ paddingLeft: '1.5rem', borderRadius: '12px' }}
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        required
+                                        value={newItem.price}
+                                        onChange={e => setNewItem({ ...newItem, price: e.target.value })}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem', display: 'block' }}>CATEGORY</label>
+                                    <select
+                                        className="mm-search-input"
+                                        style={{ paddingLeft: '1.5rem', borderRadius: '12px', appearance: 'auto' }}
+                                        required
+                                        value={newItem.categoryId}
+                                        onChange={e => setNewItem({ ...newItem, categoryId: e.target.value })}
+                                    >
+                                        <option value="">Select Category</option>
+                                        {rawCategories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
                             <div style={{
                                 width: '100%',
-                                padding: '1.5rem',
-                                border: '2px dashed #333',
-                                borderRadius: '12px',
+                                padding: '2rem',
+                                border: '2px dashed var(--border)',
+                                borderRadius: '16px',
                                 textAlign: 'center',
-                                position: 'relative',
-                                background: 'rgba(255,255,255,0.02)'
-                            }}>
+                                background: 'rgba(255,255,255,0.02)',
+                                transition: 'all 0.3s ease'
+                            }} onDragOver={e => e.preventDefault()}>
                                 {uploadingImg ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Loader2 className="animate-spin" size={24} color="var(--primary)" />
-                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Uploading to cloud...</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                                        <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Uploading image...</span>
                                     </div>
                                 ) : newItem.image ? (
-                                    <div style={{ position: 'relative' }}>
-                                        <img src={newItem.image} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} />
+                                    <div style={{ position: 'relative', width: '100%', height: '150px' }}>
+                                        <img src={newItem.image} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
                                         <button
                                             type="button"
                                             onClick={() => setNewItem({ ...newItem, image: '' })}
-                                            style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            style={{ position: 'absolute', top: '-10px', right: '-10px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
                                         >
-                                            <XCircle size={14} />
+                                            <XCircle size={16} />
                                         </button>
                                     </div>
                                 ) : (
-                                    <label style={{ cursor: 'pointer' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                            <Plus size={24} color="var(--text-muted)" />
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Click to upload dish photo</span>
-                                            <span style={{ fontSize: '0.7rem', color: '#555' }}>Supports PNG, JPG, WebP</span>
+                                    <label style={{ cursor: 'pointer', display: 'block' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--glass-shine)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Plus size={24} color="var(--primary)" />
+                                            </div>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)' }}>Upload Photo</span>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Drag and drop or click to browse</span>
                                         </div>
                                         <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
                                     </label>
                                 )}
                             </div>
 
-                            <div className="input-group" style={{
-                                padding: '1rem',
+                            <div style={{
+                                padding: '1.25rem',
                                 background: 'rgba(255,255,255,0.03)',
-                                borderRadius: '12px',
+                                borderRadius: '16px',
                                 border: '1px solid var(--border)'
                             }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>INVENTORY LINKING</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Package size={16} color="var(--primary)" />
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.05em' }}>INVENTORY LINKING</label>
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => setShowQuickAddInventory(!showQuickAddInventory)}
-                                        style={{ fontSize: '0.7rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                                        style={{ fontSize: '0.7rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 800, textTransform: 'uppercase' }}
                                     >
-                                        {showQuickAddInventory ? 'Back to select' : '+ Create New Stock Item'}
+                                        {showQuickAddInventory ? 'Cancel' : '+ New Stock Item'}
                                     </button>
                                 </div>
 
                                 {!showQuickAddInventory ? (
                                     <select
-                                        className="auth-input"
+                                        className="mm-search-input"
+                                        style={{ paddingLeft: '1.5rem', borderRadius: '12px', marginBottom: 0, appearance: 'auto' }}
                                         value={linkedInventoryId}
                                         onChange={e => setLinkedInventoryId(e.target.value)}
-                                        style={{ appearance: 'none', marginBottom: 0 }}
                                     >
                                         <option value="">-- No Tracking (Service Item) --</option>
                                         {inventoryItems.map(inv => (
@@ -661,43 +597,39 @@ const MenuManagement = () => {
                                         ))}
                                     </select>
                                 ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }} className="animate-fade">
                                         <input
-                                            className="auth-input"
-                                            placeholder="Stock Item Name (e.g. Mineral Water Bottle)"
+                                            className="mm-search-input"
+                                            style={{ paddingLeft: '1.5rem', borderRadius: '12px' }}
+                                            placeholder="Stock name (e.g. Cola 300ml)"
                                             value={quickInventory.name}
                                             onChange={e => setQuickInventory({ ...quickInventory, name: e.target.value })}
-                                            style={{ marginBottom: 0 }}
                                         />
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', gap: '0.75rem' }}>
                                             <input
-                                                className="auth-input"
+                                                className="mm-search-input"
+                                                style={{ paddingLeft: '1.5rem', borderRadius: '12px', flex: 1 }}
                                                 type="number"
                                                 placeholder="Initial Qty"
                                                 value={quickInventory.quantity}
                                                 onChange={e => setQuickInventory({ ...quickInventory, quantity: e.target.value })}
-                                                style={{ flex: 1, marginBottom: 0 }}
                                             />
                                             <input
-                                                className="auth-input"
+                                                className="mm-search-input"
+                                                style={{ paddingLeft: '1.5rem', borderRadius: '12px', flex: 1 }}
                                                 placeholder="Unit (pcs/kg)"
                                                 value={quickInventory.unit}
                                                 onChange={e => setQuickInventory({ ...quickInventory, unit: e.target.value })}
-                                                style={{ flex: 1, marginBottom: 0 }}
                                             />
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="button" onClick={() => {
-                                    setIsItemModalOpen(false);
-                                    setEditingItem(null);
-                                    setNewItem({ name: '', description: '', price: '', categoryId: '', image: '' });
-                                }} style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" className="nav-item active" style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>
-                                    {editingItem ? 'Save Changes' : 'Create Item'}
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                                <button type="button" onClick={() => setIsItemModalOpen(false)} className="mm-action-btn" style={{ flex: 1, height: '48px' }}>Cancel</button>
+                                <button type="submit" className="mm-category-pill active" style={{ flex: 2, height: '48px', border: 'none' }}>
+                                    {editingItem ? 'Update Dish' : 'Create Dish'}
                                 </button>
                             </div>
                         </form>
@@ -705,21 +637,66 @@ const MenuManagement = () => {
                 </div>
             )}
 
-            {/* Manage Categories Modal */}
             {isCategoryModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="modal-card" style={{ width: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h2 style={{ marginBottom: '1.5rem' }}>Manage Categories</h2>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }} className="animate-fade">
+                    <div className="premium-glass" style={{ width: '100%', maxWidth: '600px', borderRadius: '24px', padding: '2.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-heading)', marginBottom: '0.5rem' }}>Categories</h2>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Organize your menu for better guest discovery.</p>
+                            </div>
+                            <button 
+                                onClick={() => setIsCategoryModalOpen(false)}
+                                style={{ background: 'var(--glass-shine)', border: '1px solid var(--glass-border)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
+                            >
+                                <XCircle size={20} />
+                            </button>
+                        </div>
 
-                        {/* List of existing categories */}
-                        <div style={{ marginBottom: '2rem' }}>
-                            <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Existing Categories</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                        <form onSubmit={handleSaveCategory} style={{ marginBottom: '2.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', gap: '1rem', alignItems: 'flex-end' }}>
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem', display: 'block' }}>CATEGORY NAME</label>
+                                    <input
+                                        className="mm-search-input"
+                                        style={{ paddingLeft: '1.25rem', height: '44px', borderRadius: '10px' }}
+                                        placeholder="Appetizers, Desserts..."
+                                        required
+                                        value={newCategory.name}
+                                        onChange={e => setNewCategory({ ...newCategory, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem', display: 'block' }}>STATION</label>
+                                    <select
+                                        className="mm-search-input"
+                                        style={{ paddingLeft: '1.25rem', height: '44px', borderRadius: '10px', appearance: 'auto' }}
+                                        value={newCategory.station}
+                                        onChange={e => setNewCategory({ ...newCategory, station: e.target.value })}
+                                    >
+                                        <option value="Kitchen">Kitchen</option>
+                                        <option value="Bar">Bar</option>
+                                        <option value="Pizzeria">Pizzeria</option>
+                                        <option value="Bakery">Bakery</option>
+                                    </select>
+                                </div>
+                                <button type="submit" className="mm-category-pill active" style={{ height: '44px', border: 'none', padding: 0 }}>
+                                    {editingCategoryId ? 'Save' : 'Add'}
+                                </button>
+                            </div>
+                        </form>
+
+                        <div>
+                            <h3 style={{ fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '1rem' }}>CURRENT CATEGORIES</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
                                 {rawCategories.map(cat => (
-                                    <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px' }}>
-                                        <div>
-                                            <span style={{ fontWeight: 600, display: 'block' }}>{cat.name}</span>
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Station: {cat.station || 'Kitchen'}</span>
+                                    <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '12px', transition: 'all 0.2s ease' }} className="mm-category-item-row">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)', boxShadow: '0 0 10px var(--primary-glow)' }}></div>
+                                            <div>
+                                                <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1rem' }}>{cat.name}</span>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Routing: {cat.station || 'Kitchen'}</span>
+                                            </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <button
@@ -727,15 +704,15 @@ const MenuManagement = () => {
                                                     setEditingCategoryId(cat.id);
                                                     setNewCategory({ name: cat.name, station: cat.station || 'Kitchen' });
                                                 }}
-                                                className="premium-glass"
-                                                style={{ padding: '0.5rem', borderRadius: '6px', color: 'var(--text-main)', cursor: 'pointer', border: '1px solid var(--glass-border)' }}
+                                                className="mm-action-btn"
+                                                style={{ width: '40px', padding: 0 }}
                                             >
                                                 <Edit2 size={14} />
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                                                className="premium-glass"
-                                                style={{ padding: '0.5rem', borderRadius: '6px', color: 'var(--danger)', cursor: 'pointer', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.1)' }}
+                                                className="mm-action-btn danger"
+                                                style={{ width: '40px', padding: 0 }}
                                             >
                                                 <Trash2 size={14} />
                                             </button>
@@ -746,67 +723,6 @@ const MenuManagement = () => {
                                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem 0' }}>No categories found.</p>
                                 )}
                             </div>
-                        </div>
-
-                        {/* Form to Add/Edit */}
-                        <div style={{ paddingTop: '1.5rem', borderTop: '1px solid var(--glass-border)' }}>
-                            <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                                {editingCategoryId ? 'Edit Category' : 'Create New Category'}
-                            </h3>
-                            <form onSubmit={handleSaveCategory} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <div className="input-group">
-                                    <label>Category Name</label>
-                                    <input
-                                        className="auth-input"
-                                        placeholder="e.g. Drinks, Appetizers"
-                                        required
-                                        value={newCategory.name}
-                                        onChange={e => setNewCategory({ ...newCategory, name: e.target.value })}
-                                    />
-                                </div>
-                                <div className="input-group">
-                                    <label>Kitchen Station</label>
-                                    <select
-                                        className="auth-input"
-                                        value={newCategory.station}
-                                        onChange={e => setNewCategory({ ...newCategory, station: e.target.value })}
-                                        style={{ appearance: 'none' }}
-                                    >
-                                        <option value="Kitchen">Main Kitchen</option>
-                                        <option value="Bar">Bar Area</option>
-                                        <option value="Grill">Grill Station</option>
-                                        <option value="Dessert">Dessert / Bakery</option>
-                                    </select>
-                                </div>
-                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                    {editingCategoryId && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setEditingCategoryId(null);
-                                                setNewCategory({ name: '', station: 'Kitchen' });
-                                            }}
-                                            style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', background: 'var(--glass-shine)', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer' }}
-                                        >
-                                            Cancel Edit
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsCategoryModalOpen(false)}
-                                        style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer' }}
-                                    >
-                                        Close
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="nav-item active"
-                                        style={{ flex: editingCategoryId ? 2 : 1, padding: '0.8rem', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
-                                    >
-                                        {editingCategoryId ? 'Save Changes' : 'Create Category'}
-                                    </button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </div>

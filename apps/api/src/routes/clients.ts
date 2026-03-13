@@ -58,7 +58,7 @@ router.get('/', authorize(['SUPER_ADMIN']), async (req: Request, res: Response) 
 
 // ─── Create New Client (Restaurant) ──────────────────────────────────────────
 router.post('/', authorize(['SUPER_ADMIN']), async (req: Request, res: Response) => {
-    const { name, email, adminName, adminPassword, useTax, taxRate, useServiceCharge, serviceChargeRate } = req.body;
+    const { name, email, adminName, adminPassword, useTax, taxRate, useServiceCharge, serviceChargeRate, plan, planDuration } = req.body;
 
     if (!name || !email || !adminName || !adminPassword) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -76,6 +76,28 @@ router.post('/', authorize(['SUPER_ADMIN']), async (req: Request, res: Response)
         const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
         const result = await prisma.$transaction(async (tx) => {
+            // Find plan ID for the selected tier
+            const subPlan = await tx.subscriptionPlan.findFirst({
+                where: { tier: plan || 'SILVER', isActive: true },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            // Robust Date Parsing
+            const parseDate = (val: any, fallbackMonths: number = 1) => {
+                if (val) {
+                    const d = new Date(val);
+                    if (!isNaN(d.getTime())) return d;
+                }
+                const d = new Date();
+                d.setMonth(d.getMonth() + fallbackMonths);
+                return d;
+            };
+
+            const sStart = req.body.subscriptionStart ? new Date(req.body.subscriptionStart) : new Date();
+            const sEnd = parseDate(req.body.subscriptionEnd, planDuration === '12m' ? 12 : planDuration === '3m' ? 3 : 1);
+
+            console.log('Calculated Expiry for Prisma:', sEnd);
+
             const client = await tx.client.create({
                 data: {
                     name,
@@ -85,9 +107,18 @@ router.post('/', authorize(['SUPER_ADMIN']), async (req: Request, res: Response)
                     useTax: useTax === true,
                     taxRate: parseFloat(taxRate) || 0,
                     useServiceCharge: useServiceCharge === true,
-                    serviceChargeRate: parseFloat(serviceChargeRate) || 0
+                    serviceChargeRate: parseFloat(serviceChargeRate) || 0,
+                    plan: plan || 'SILVER',
+                    planDuration: planDuration || '1m',
+                    planId: subPlan?.id,
+                    subscriptionStart: sStart,
+                    subscriptionEnd: sEnd,
+                    paymentStatus: req.body.paymentStatus || 'PAID',
+                    lastPaymentDate: req.body.lastPaymentDate ? new Date(req.body.lastPaymentDate) : new Date()
                 }
             });
+
+            console.log('Database Result (Expiry):', client.subscriptionEnd);
 
             await tx.user.create({
                 data: {
@@ -95,6 +126,17 @@ router.post('/', authorize(['SUPER_ADMIN']), async (req: Request, res: Response)
                     email: email,
                     password: hashedPassword,
                     role: 'ADMIN',
+                    clientId: client.id
+                }
+            });
+
+            await tx.activityLog.create({
+                data: {
+                    action: 'CLIENT_CREATED',
+                    details: `Created new node: ${name}`,
+                    type: 'PLATFORM',
+                    userId: (req as any).user.userId,
+                    role: (req as any).user.role,
                     clientId: client.id
                 }
             });
@@ -112,9 +154,19 @@ router.post('/', authorize(['SUPER_ADMIN']), async (req: Request, res: Response)
 // ─── Update Client Status/Details ───────────────────────────────────────────
 router.patch('/:id', authorize(['SUPER_ADMIN']), async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const { name, email, shopCode, isActive } = req.body;
+    const { name, email, shopCode, isActive, plan, planDuration } = req.body;
 
     try {
+        // Find plan ID if plan is changing
+        let planId = undefined;
+        if (plan) {
+            const subPlan = await prisma.subscriptionPlan.findFirst({
+                where: { tier: plan, isActive: true },
+                orderBy: { createdAt: 'desc' }
+            });
+            planId = subPlan?.id;
+        }
+
         const client = await prisma.client.update({
             where: { id },
             data: {
@@ -126,9 +178,29 @@ router.patch('/:id', authorize(['SUPER_ADMIN']), async (req: Request, res: Respo
                 useTax: req.body.useTax !== undefined ? req.body.useTax === true : undefined,
                 taxRate: req.body.taxRate !== undefined ? parseFloat(req.body.taxRate) : undefined,
                 useServiceCharge: req.body.useServiceCharge !== undefined ? req.body.useServiceCharge === true : undefined,
-                serviceChargeRate: req.body.serviceChargeRate !== undefined ? parseFloat(req.body.serviceChargeRate) : undefined
+                serviceChargeRate: req.body.serviceChargeRate !== undefined ? parseFloat(req.body.serviceChargeRate) : undefined,
+                plan: plan,
+                planId: planId,
+                planDuration: planDuration,
+                // Add these fields
+                subscriptionStart: req.body.subscriptionStart ? new Date(req.body.subscriptionStart) : undefined,
+                subscriptionEnd: req.body.subscriptionEnd ? new Date(req.body.subscriptionEnd) : undefined,
+                paymentStatus: req.body.paymentStatus,
+                lastPaymentDate: req.body.lastPaymentDate ? new Date(req.body.lastPaymentDate) : undefined
             }
         });
+
+        await prisma.activityLog.create({
+            data: {
+                action: plan && plan !== client.plan ? 'PLAN_UPGRADED' : 'CLIENT_UPDATED',
+                details: plan && plan !== client.plan ? `Upgraded to ${plan} tier` : `Updated settings for ${client.name}`,
+                type: 'PLATFORM',
+                userId: (req as any).user.userId,
+                role: (req as any).user.role,
+                clientId: id
+            }
+        });
+
         res.json(client);
     } catch (error) {
         res.status(500).json({ error: 'Update failed' });
@@ -203,7 +275,7 @@ router.patch('/my-shop/regenerate', authorize(['ADMIN']), async (req: any, res: 
 
 // ─── Update Own Client Settings (ADMIN) ──────────────────────────────────────
 router.patch('/settings/me', authorize(['ADMIN']), async (req: any, res: Response) => {
-    const { useTax, taxRate, useServiceCharge, serviceChargeRate, restaurantName } = req.body;
+    const { useTax, taxRate, useServiceCharge, serviceChargeRate, restaurantName, qrCode } = req.body;
 
     try {
         const client = await prisma.client.update({
@@ -213,13 +285,98 @@ router.patch('/settings/me', authorize(['ADMIN']), async (req: any, res: Respons
                 useTax: useTax !== undefined ? useTax === true : undefined,
                 taxRate: taxRate !== undefined ? parseFloat(taxRate) : undefined,
                 useServiceCharge: useServiceCharge !== undefined ? useServiceCharge === true : undefined,
-                serviceChargeRate: serviceChargeRate !== undefined ? parseFloat(serviceChargeRate) : undefined
+                serviceChargeRate: serviceChargeRate !== undefined ? parseFloat(serviceChargeRate) : undefined,
+                qrCode: qrCode !== undefined ? qrCode : undefined
             }
         });
         res.json(client);
     } catch (error) {
         console.error('Update own settings error:', error);
         res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
+// ─── Upgrade Own Plan (ADMIN) ────────────────────────────────────────────────
+router.patch('/my-shop/upgrade', authorize(['ADMIN']), async (req: any, res: Response) => {
+    const { plan, duration } = req.body;
+
+    if (!['SILVER', 'GOLD', 'DIAMOND'].includes(plan)) {
+        return res.status(400).json({ error: 'Invalid subscription plan level' });
+    }
+
+    if (duration && !['1m', '3m', '12m'].includes(duration)) {
+        return res.status(400).json({ error: 'Invalid subscription duration' });
+    }
+
+    try {
+        const subPlan = await prisma.subscriptionPlan.findFirst({
+            where: { tier: plan, isActive: true },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        const currentClient = await prisma.client.findUnique({
+            where: { id: req.user.clientId },
+            select: { subscriptionEnd: true }
+        });
+
+        // ─── Expiry Logic ───────────────────────────────────────────────────────
+        let newEnd: Date;
+        const now = new Date();
+        const monthsToAdd = duration === '12m' ? 12 : duration === '3m' ? 3 : 1;
+
+        if (!currentClient?.subscriptionEnd || new Date(currentClient.subscriptionEnd) < now) {
+            // Expired or never set: Start from now
+            newEnd = new Date(now);
+            newEnd.setMonth(newEnd.getMonth() + monthsToAdd);
+        } else {
+            // Active: Extend from existing end date
+            newEnd = new Date(currentClient.subscriptionEnd);
+            newEnd.setMonth(newEnd.getMonth() + monthsToAdd);
+        }
+
+        const client = await prisma.client.update({
+            where: { id: req.user.clientId },
+            data: {
+                plan,
+                planId: subPlan?.id,
+                planDuration: duration || undefined,
+                subscriptionEnd: newEnd,
+                lastPaymentDate: now,
+                paymentStatus: 'PAID'
+            }
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                action: 'PLAN_UPGRADED',
+                details: `Self-upgraded to ${plan} tier for ${duration || '1m'}`,
+                type: 'PLATFORM',
+                userId: req.user.userId,
+                role: req.user.role,
+                clientId: req.user.clientId
+            }
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                action: 'PLAN_UPGRADED',
+                details: `Self-upgraded to ${plan} tier for ${duration || '1m'}`,
+                type: 'PLATFORM',
+                userId: req.user.userId,
+                role: req.user.role,
+                clientId: req.user.clientId
+            }
+        });
+
+        res.json({
+            message: `Successfully updated to ${plan}`,
+            plan: client.plan,
+            planDuration: client.planDuration,
+            subscriptionEnd: client.subscriptionEnd
+        });
+    } catch (error) {
+        console.error('Plan upgrade/renewal error:', error);
+        res.status(500).json({ error: 'Internal server error during upgrade/renewal' });
     }
 });
 

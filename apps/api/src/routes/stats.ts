@@ -143,6 +143,42 @@ router.get('/top-items', roleMiddleware(['ADMIN']), async (req, res, next) => {
     }
 });
 
+// Sales by Category
+router.get('/category-sales', roleMiddleware(['ADMIN']), async (req, res, next) => {
+    if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
+    try {
+        const orderItems = await prisma.orderItem.findMany({
+            where: {
+                order: {
+                    clientId: req.clientId,
+                    status: 'Paid'
+                }
+            },
+            include: {
+                menuItem: {
+                    include: {
+                        category: true
+                    }
+                }
+            }
+        });
+
+        const categorySales = orderItems.reduce((acc: any, item) => {
+            const catName = item.menuItem?.category?.name || 'Uncategorized';
+            acc[catName] = (acc[catName] || 0) + (item.price * item.quantity);
+            return acc;
+        }, {});
+
+        const formatted = Object.entries(categorySales)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a: any, b: any) => b.value - a.value);
+
+        res.json(formatted);
+    } catch (error) {
+        next(error);
+    }
+});
+
 // Staff activity ranking
 router.get('/staff-performance', roleMiddleware(['ADMIN']), async (req, res, next) => {
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
@@ -171,6 +207,109 @@ router.get('/staff-performance', roleMiddleware(['ADMIN']), async (req, res, nex
         }));
 
         res.json(performanceWithNames);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Get Super Admin platform-wide stats
+router.get('/super-admin', roleMiddleware(['SUPER_ADMIN']), async (req, res, next) => {
+    try {
+        const [totalClients, activeClients, inactiveClients, recentClients, planStats, upcomingRenewals, pendingPayments] = await Promise.all([
+            prisma.client.count(),
+            prisma.client.count({ where: { isActive: true } }),
+            prisma.client.count({ where: { isActive: false } }),
+            prisma.client.findMany({
+                take: 5,
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    plan: true,
+                    isActive: true,
+                    createdAt: true
+                }
+            }),
+            prisma.client.groupBy({
+                by: ['plan'],
+                where: { isActive: true },
+                _count: {
+                    id: true
+                }
+            }),
+            prisma.client.findMany({
+                where: {
+                    isActive: true,
+                    subscriptionEnd: {
+                        lte: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // Next 15 days
+                        gte: new Date()
+                    }
+                },
+                select: { id: true, name: true, subscriptionEnd: true, plan: true }
+            }),
+            prisma.client.findMany({
+                where: {
+                    paymentStatus: { in: ['PENDING', 'OVERDUE'] }
+                },
+                select: { id: true, name: true, paymentStatus: true, plan: true }
+            })
+        ]);
+
+        // Revenue Forecast (MRR - Monthly Recurring Revenue)
+        // We fetch active clients with their linked plans to calculate accurate revenue
+        const subscriptionData = await prisma.client.findMany({
+            where: { isActive: true },
+            select: {
+                planDuration: true,
+                subscriptionPlan: {
+                    select: {
+                        monthlyPrice: true,
+                        quarterlyPrice: true,
+                        yearlyPrice: true,
+                        offerMonthly: true,
+                        offerQuarterly: true,
+                        offerYearly: true
+                    }
+                }
+            }
+        });
+
+        let estimatedMRR = 0;
+        subscriptionData.forEach(client => {
+            if (!client.subscriptionPlan) return;
+            
+            const sp = client.subscriptionPlan;
+            if (client.planDuration === '12m') {
+                estimatedMRR += (sp.offerYearly || sp.yearlyPrice) / 12;
+            } else if (client.planDuration === '3m') {
+                estimatedMRR += (sp.offerQuarterly || sp.quarterlyPrice) / 3;
+            } else {
+                estimatedMRR += (sp.offerMonthly || sp.monthlyPrice);
+            }
+        });
+
+        res.json({
+            clientKPIs: {
+                total: totalClients,
+                active: activeClients,
+                inactive: inactiveClients,
+                growth: 0,
+                upcomingRenewalsCount: upcomingRenewals.length,
+                pendingPaymentsCount: pendingPayments.length,
+                upcomingRenewals, // List of clients
+                pendingPayments   // List of clients
+            },
+            revenue: {
+                estimatedMRR: Math.round(estimatedMRR),
+                annualForecast: Math.round(estimatedMRR * 12)
+            },
+            distribution: planStats.reduce((acc: any, curr) => {
+                acc[curr.plan] = curr._count.id;
+                return acc;
+            }, {}),
+            recentClients
+        });
     } catch (error) {
         next(error);
     }

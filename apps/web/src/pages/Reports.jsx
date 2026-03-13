@@ -20,6 +20,7 @@ const Reports = () => {
     const [salesData, setSalesData] = useState({});
     const [topItems, setTopItems] = useState([]);
     const [staffStats, setStaffStats] = useState([]);
+    const [categorySales, setCategorySales] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -31,21 +32,24 @@ const Reports = () => {
         const headers = { 'Authorization': `Bearer ${token}` };
 
         try {
-            const [salesRes, itemsRes, staffRes] = await Promise.all([
+            const [salesRes, itemsRes, staffRes, categoryRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/stats/daily-sales`, { headers }),
                 fetch(`${API_BASE_URL}/api/stats/top-items`, { headers }),
-                fetch(`${API_BASE_URL}/api/stats/staff-performance`, { headers })
+                fetch(`${API_BASE_URL}/api/stats/staff-performance`, { headers }),
+                fetch(`${API_BASE_URL}/api/stats/category-sales`, { headers })
             ]);
 
-            const [sales, items, staff] = await Promise.all([
+            const [sales, items, staff, category] = await Promise.all([
                 salesRes.json(),
                 itemsRes.json(),
-                staffRes.json()
+                staffRes.json(),
+                categoryRes.json()
             ]);
 
             setSalesData(sales);
             setTopItems(items);
             setStaffStats(staff);
+            setCategorySales(category);
         } catch (err) {
             console.error('Failed to fetch analytics', err);
         } finally {
@@ -107,29 +111,85 @@ const Reports = () => {
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Last 7 Days (NPR)</div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', height: '240px', paddingBottom: '2.5rem', position: 'relative' }}>
-                        {Object.entries(salesData).map(([date, amount]) => {
-                            const height = (amount / maxSale) * 100;
-                            return (
-                                <div key={date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{
-                                        width: '100%',
-                                        height: `${height}%`,
-                                        background: 'var(--primary-gradient)',
-                                        borderRadius: '6px 6px 2px 2px',
-                                        transition: 'height 1s cubic-bezier(0.16, 1, 0.3, 1)',
-                                        position: 'relative'
-                                    }}>
-                                        <div style={{ position: 'absolute', top: '-25px', width: '100%', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
-                                            {formatCurrency(amount)}
+                    <div style={{ position: 'relative', height: '240px', paddingBottom: '2.5rem', width: '100%', marginTop: '2rem' }}>
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                            <defs>
+                                <linearGradient id="lineColor" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.6" />
+                                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="1" />
+                                </linearGradient>
+                                <linearGradient id="areaColor" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
+                                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+                                </linearGradient>
+                            </defs>
+
+                            {/* Subtle Grid lines */}
+                            <line x1="0" y1="25" x2="100" y2="25" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5" />
+                            <line x1="0" y1="50" x2="100" y2="50" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5" />
+                            <line x1="0" y1="75" x2="100" y2="75" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5" />
+
+                            {Object.entries(salesData).length > 0 && (
+                                <>
+                                    <polygon 
+                                        points={`0,100 ${Object.entries(salesData).map(([date, amount], i, arr) => `${(i / (arr.length - 1 || 1)) * 100},${100 - (amount / (maxSale || 1)) * 100}`).join(' ')} 100,100`} 
+                                        fill="url(#areaColor)" 
+                                    />
+                                    <polyline 
+                                        points={Object.entries(salesData).map(([date, amount], i, arr) => `${(i / (arr.length - 1 || 1)) * 100},${100 - (amount / (maxSale || 1)) * 100}`).join(' ')} 
+                                        fill="none" 
+                                        stroke="url(#lineColor)" 
+                                        strokeWidth="2.5" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                    />
+                                </>
+                            )}
+                        </svg>
+
+                        {/* Interactive Data Points and Labels */}
+                        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                            {Object.entries(salesData).map(([date, amount], i, arr) => {
+                                const x = (i / (arr.length - 1 || 1)) * 100;
+                                const y = 100 - (amount / (maxSale || 1)) * 100;
+                                const isFirst = i === 0;
+                                const isLast = i === arr.length - 1;
+                                
+                                return (
+                                    <div key={date}>
+                                        {/* Point on Line */}
+                                        <div style={{ 
+                                            position: 'absolute', left: `${x}%`, top: `${y}%`, 
+                                            width: '12px', height: '12px', borderRadius: '50%', 
+                                            background: 'var(--bg-main)', border: '2px solid var(--primary)', 
+                                            transform: 'translate(-50%, -50%)', 
+                                            boxShadow: '0 0 12px rgba(212, 175, 55, 0.4)', zIndex: 2 
+                                        }}>
+                                            {/* Hover Tooltip / Label */}
+                                            <div style={{ 
+                                                position: 'absolute', bottom: '16px', left: '50%', 
+                                                transform: `translateX(${isFirst ? '0' : isLast ? '-100%' : '-50%'})`, 
+                                                background: 'var(--bg-card)', padding: '4px 8px', borderRadius: '6px', 
+                                                fontSize: '0.7rem', fontWeight: 800, color: 'white', 
+                                                border: '1px solid var(--glass-border)', whiteSpace: 'nowrap',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)', pointerEvents: 'none'
+                                            }}>
+                                                {formatCurrency(amount)}
+                                            </div>
+                                        </div>
+                                        {/* X-Axis Date Label */}
+                                        <div style={{ 
+                                            position: 'absolute', left: `${x}%`, bottom: '-28px', 
+                                            transform: `translateX(${isFirst ? '0%' : isLast ? '-100%' : '-50%'})`, 
+                                            fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap',
+                                            fontWeight: 600
+                                        }}>
+                                            {new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                         </div>
                                     </div>
-                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', transform: 'rotate(-45deg)', whiteSpace: 'nowrap', marginTop: '10px' }}>
-                                        {new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
@@ -158,40 +218,97 @@ const Reports = () => {
                     </div>
                 </div>
 
-                {/* Staff Performance */}
-                <div className="premium-glass" style={{ padding: '2rem' }}>
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                        <Users size={20} color="var(--primary)" />
-                        Staff Activity Ranking
+            {/* Lower Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
+                {/* Sales by Category Donut Chart */}
+                <div className="premium-glass animate-fade-in" style={{ padding: '2rem' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+                        <BarChart3 size={20} color="var(--primary)" />
+                        Sales by Category
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {staffStats.map((staff, index) => (
-                            <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)' }}>
-                                <div style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '50%',
-                                    background: index === 0 ? 'var(--primary-glow)' : 'var(--bg-card)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontWeight: 700,
-                                    color: index === 0 ? 'var(--primary)' : 'var(--text-muted)'
-                                }}>
-                                    {index === 0 ? <Award size={18} /> : index + 1}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{staff.name}</div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{staff.role}</div>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary)' }}>{staff.actions}</div>
-                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Actions</div>
-                                </div>
+
+                    {categorySales.length === 0 ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '240px', color: 'var(--text-muted)' }}>
+                            No category data available.
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                            {/* SVG Donut */}
+                            <div style={{ position: 'relative', width: '200px', height: '200px', flexShrink: 0 }}>
+                                <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                                    {categorySales.reduce((acc, cat, idx) => {
+                                        // Calculate total value to find percentages
+                                        const total = categorySales.reduce((sum, item) => sum + item.value, 0);
+                                        const percentage = (cat.value / total) * 100;
+                                        
+                                        // SVG Circle math: Circumference of circle with r=40 is ~251.3
+                                        const r = 40;
+                                        const c = 2 * Math.PI * r;
+                                        const dashArray = (percentage * c) / 100;
+                                        const dashOffset = acc.currentOffset;
+                                        
+                                        // Colors mapping
+                                        const colors = ['#d4af37', '#38bdf8', '#a855f7', '#10b981', '#f43f5e', '#f97316'];
+                                        const color = colors[idx % colors.length];
+
+                                        const segment = (
+                                            <circle
+                                                key={cat.name}
+                                                cx="50"
+                                                cy="50"
+                                                r={r}
+                                                fill="transparent"
+                                                stroke={color}
+                                                strokeWidth="16"
+                                                strokeDasharray={`${dashArray} ${c}`}
+                                                strokeDashoffset={-dashOffset}
+                                                style={{ transition: 'all 1s ease', cursor: 'pointer' }}
+                                                className="chart-segment"
+                                            />
+                                        );
+
+                                        // Update offset for next segment
+                                        acc.currentOffset += dashArray;
+                                        acc.segments.push(segment);
+                                        return acc;
+                                    }, { currentOffset: 0, segments: [] }).segments}
+                                    
+                                    {/* Inner Text Center Hole */}
+                                    <text x="50" y="48" textAnchor="middle" fill="var(--text-main)" fontSize="10" transform="rotate(90 50 50)" fontWeight="800">
+                                        Total
+                                    </text>
+                                    <text x="50" y="60" textAnchor="middle" fill="var(--primary)" fontSize="12" transform="rotate(90 50 50)" fontWeight="900">
+                                        {formatCurrency(categorySales.reduce((sum, item) => sum + item.value, 0))}
+                                    </text>
+                                </svg>
                             </div>
-                        ))}
-                    </div>
+
+                            {/* Custom Legend */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                                {categorySales.map((cat, idx) => {
+                                    const colors = ['#d4af37', '#38bdf8', '#a855f7', '#10b981', '#f43f5e', '#f97316'];
+                                    const color = colors[idx % colors.length];
+                                    const total = categorySales.reduce((sum, item) => sum + item.value, 0);
+                                    const percent = ((cat.value / Math.max(total, 1)) * 100).toFixed(1);
+
+                                    return (
+                                        <div key={cat.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <div style={{ width: '12px', height: '12px', borderRadius: '4px', background: color }} />
+                                                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{cat.name}</span>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>{formatCurrency(cat.value)}</div>
+                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{percent}%</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
+            </div>
 
                 {/* Quick Insights */}
                 <div className="premium-glass" style={{ padding: '2rem' }}>

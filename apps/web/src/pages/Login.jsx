@@ -148,7 +148,7 @@ const Login = () => {
                     <div className="login-header">
                         <div className="logo-section">
                             <div className="logo-icon"><Shield size={24} /></div>
-                            <h1>RestroFlow</h1>
+                            <h1>RestroBaBa</h1>
                         </div>
                         <p className="login-subtitle">Two-Factor Authentication Setup</p>
                     </div>
@@ -192,7 +192,7 @@ const Login = () => {
                     </div>
 
                     <div className="login-footer">
-                        <p>© 2024 RestroFlow · Secure Access</p>
+                        <p>© 2024 RestroBaBa · Secure Access</p>
                     </div>
                 </div>
             </div>
@@ -209,7 +209,7 @@ const Login = () => {
                     <div className="login-header">
                         <div className="logo-section">
                             <div className="logo-icon"><Shield size={24} /></div>
-                            <h1>RestroFlow</h1>
+                            <h1>RestroBaBa</h1>
                         </div>
                         <p className="login-subtitle">Two-Factor Authentication</p>
                     </div>
@@ -245,7 +245,7 @@ const Login = () => {
                     </div>
 
                     <div className="login-footer">
-                        <p>© 2024 RestroFlow · Secure Access</p>
+                        <p>© 2024 RestroBaBa · Secure Access</p>
                     </div>
                 </div>
             </div>
@@ -262,7 +262,7 @@ const Login = () => {
                 <div className="login-header">
                     <div className="logo-section">
                         <div className="logo-icon"><Shield size={24} /></div>
-                        <h1>RestroFlow</h1>
+                        <h1>RestroBaBa</h1>
                     </div>
                     <p className="login-subtitle">
                         {mode === 'email' ? 'System Administrator' :
@@ -363,7 +363,7 @@ const Login = () => {
                 )}
 
                 <div className="login-footer">
-                    <p>© 2024 RestroFlow · Multi-Tenant System</p>
+                    <p>© 2024 RestroBaBa · Multi-Tenant System</p>
                 </div>
             </div>
         </div>

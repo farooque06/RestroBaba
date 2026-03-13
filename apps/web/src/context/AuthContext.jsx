@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { API_BASE_URL } from '../config';
+import apiClient from '../api/apiClient';
 
 const AuthContext = createContext();
 
@@ -25,80 +25,72 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            const data = await apiClient('/api/auth/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
 
-            const data = await response.json();
-            if (response.ok) {
-                if (data.requiresTOTP) {
-                    return { success: true, requiresTOTP: true, userId: data.userId, needsSetup: data.needsSetup, qrCode: data.qrCode, secret: data.secret };
-                }
+            if (data?.requiresTOTP) {
+                return { success: true, requiresTOTP: true, userId: data.userId, needsSetup: data.needsSetup, qrCode: data.qrCode, secret: data.secret };
+            }
+
+            if (data) {
                 handleAuthSuccess(data);
                 return { success: true };
-            } else {
-                return { success: false, error: data.error || 'Login failed' };
             }
+            return { success: false, error: 'Login failed' };
         } catch (err) {
-            return { success: false, error: 'Cannot connect to server' };
+            return { success: false, error: err.message || 'Cannot connect to server' };
         }
     };
 
     const verifyTotp = async (userId, code) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/verify-totp`, {
+            const data = await apiClient('/api/auth/verify-totp', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, code }),
             });
-            const data = await response.json();
-            if (response.ok) {
+
+            if (data) {
                 handleAuthSuccess(data);
                 return { success: true };
-            } else {
-                return { success: false, error: data.error || 'Invalid code' };
             }
+            return { success: false, error: 'Invalid code' };
         } catch (err) {
-            return { success: false, error: 'Cannot connect to server' };
+            return { success: false, error: err.message || 'Cannot connect to server' };
         }
     };
 
     const resolveShop = async (shopCode) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/resolve-shop`, {
+            const data = await apiClient('/api/auth/resolve-shop', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ shopCode }),
             });
-            const data = await response.json();
-            if (response.ok) {
+
+            if (data) {
                 return { success: true, data };
-            } else {
-                return { success: false, error: data.error || 'Invalid Shop Code' };
             }
+            return { success: false, error: 'Invalid Shop Code' };
         } catch (err) {
-            return { success: false, error: 'Cannot connect to server' };
+            return { success: false, error: err.message || 'Cannot connect to server' };
         }
     };
 
     const loginWithPin = async (userId, pin) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/pin-login`, {
+            const data = await apiClient('/api/auth/pin-login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, pin }),
             });
-            const data = await response.json();
-            if (response.ok) {
+
+            if (data) {
                 handleAuthSuccess(data);
                 return { success: true };
-            } else {
-                return { success: false, error: data.error || 'Invalid PIN' };
             }
+            return { success: false, error: 'Invalid PIN' };
         } catch (err) {
-            return { success: false, error: 'Cannot connect to server' };
+            return { success: false, error: err.message || 'Cannot connect to server' };
         }
     };
 

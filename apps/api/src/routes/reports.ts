@@ -1,9 +1,10 @@
 import express, { Request, Response } from 'express';
 import prisma from '../services/prisma.js';
+import { roleMiddleware as authorize } from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
 
-router.get('/profit', async (req: Request, res: Response) => {
+router.get('/profit', authorize(['ADMIN']), async (req: Request, res: Response) => {
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
 
     try {

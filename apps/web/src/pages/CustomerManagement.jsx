@@ -146,14 +146,13 @@ const CustomerManagement = () => {
             </div>
 
             {/* Search Bar */}
-            <div className="search-bar" style={{ width: '400px', marginBottom: '2rem' }}>
-                <Search size={18} color="var(--text-muted)" />
+            <div className="search-bar">
+                <Search size={18} />
                 <input
                     type="text"
-                    placeholder="Search by name or phone number..."
+                    placeholder="Search customers by name or phone..."
                     value={searchQuery}
-                    onChange={handleSearch}
-                    style={{ color: 'var(--text-main)' }}
+                    onChange={e => setSearchQuery(e.target.value)}
                 />
             </div>
 

@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
-import { Utensils, ShoppingCart, X, Minus, Plus, CheckCircle2, Loader2, UserPlus, Search as SearchIcon, Award, RotateCcw } from 'lucide-react';
+import {
+    Utensils, ShoppingCart, X, Minus, Plus, CheckCircle2, Loader2,
+    UserPlus, Search as SearchIcon, Award, RotateCcw, ChevronUp, ChevronDown, Heart
+} from 'lucide-react';
 import OptimizedImage from './common/OptimizedImage';
 
 const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
@@ -12,7 +16,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [cart, setCart] = useState([]);
-    const [originalQuantities, setOriginalQuantities] = useState({}); // Track what was already ordered
+    const [originalQuantities, setOriginalQuantities] = useState({});
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [existingOrderId, setExistingOrderId] = useState(null);
@@ -23,13 +27,25 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     const [quickAddModal, setQuickAddModal] = useState(false);
     const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
     const [menuSearch, setMenuSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [visibleCount, setVisibleCount] = useState(12);
+    const [showCart, setShowCart] = useState(false);
     const [clientSettings, setClientSettings] = useState({
-        useTax: false,
-        taxRate: 0,
-        useServiceCharge: false,
-        serviceChargeRate: 0
+        useTax: false, taxRate: 0,
+        useServiceCharge: false, serviceChargeRate: 0
     });
 
+    const observerLoader = useRef(null);
+    const categoryScrollRef = useRef(null);
+
+    // ─── CART CALCULATIONS ──────────────────────────────────────────
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const taxAmount = clientSettings.useTax ? (subtotal * (clientSettings.taxRate / 100)) : 0;
+    const serviceChargeAmount = clientSettings.useServiceCharge ? (subtotal * (clientSettings.serviceChargeRate / 100)) : 0;
+    const finalTotal = subtotal + taxAmount + serviceChargeAmount;
+    const newItemCount = cart.filter(i => !i.isExisting).reduce((sum, i) => sum + i.quantity, 0);
+
+    // ─── INITIALIZATION ──────────────────────────────────────────────
     useEffect(() => {
         const init = async () => {
             await Promise.all([fetchMenu(), fetchClientSettings()]);
@@ -40,6 +56,30 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
         init();
     }, []);
 
+    // ─── SEARCH & SCROLL LOGIC ────────────────────────────────────────
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(menuSearch);
+            setVisibleCount(12); // Reset count on new search
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [menuSearch]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && visibleCount < menuItems.length) {
+                setVisibleCount(prev => prev + 12);
+            }
+        }, { threshold: 0.1 });
+
+        if (observerLoader.current) {
+            observer.observe(observerLoader.current);
+        }
+
+        return () => observer.disconnect();
+    }, [visibleCount, menuItems.length]);
+
+    // ─── DATA FETCHING ──────────────────────────────────────────────
     const fetchClientSettings = async () => {
         const token = localStorage.getItem('restroToken');
         try {
@@ -84,7 +124,6 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                             isExisting: true
                         }));
 
-                    // Track original quantities per menuItemId
                     const quantities = {};
                     cartItems.forEach(item => {
                         quantities[item.id] = (quantities[item.id] || 0) + item.quantity;
@@ -123,24 +162,21 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
         }
     };
 
+    // ─── CART ACTIONS ───────────────────────────────────────────────
     const addToCart = (item) => {
-        // Always add new items as separate cart entries
         const existingNew = cart.find(i => i.id === item.id && !i.isExisting);
         if (existingNew) {
             setCart(cart.map(i => i.cartKey === existingNew.cartKey ? { ...i, quantity: i.quantity + 1 } : i));
         } else {
             setCart([...cart, { ...item, cartKey: `new-${item.id}-${Date.now()}`, quantity: 1, isExisting: false }]);
         }
+        toast.success(`Added ${item.name}`, { icon: '🍽️', position: 'bottom-center' });
     };
 
     const removeFromCart = (cartKey) => {
         const existing = cart.find(i => i.cartKey === cartKey);
-        if (!existing) return;
-        // Don't allow removing existing order items
-        if (existing.isExisting) {
-            toast.error('Cannot remove already-ordered items from here');
-            return;
-        }
+        if (!existing || existing.isExisting) return;
+
         if (existing.quantity > 1) {
             setCart(cart.map(i => i.cartKey === cartKey ? { ...i, quantity: i.quantity - 1 } : i));
         } else {
@@ -148,11 +184,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
         }
     };
 
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const taxAmount = clientSettings.useTax ? (subtotal * (clientSettings.taxRate / 100)) : 0;
-    const serviceChargeAmount = clientSettings.useServiceCharge ? (subtotal * (clientSettings.serviceChargeRate / 100)) : 0;
-    const finalTotal = subtotal + taxAmount + serviceChargeAmount;
-
+    // ─── CUSTOMER ACTIONS ───────────────────────────────────────────
     const handleCustomerSearch = async (query) => {
         setCustomerSearch(query);
         if (query.length < 2) {
@@ -172,6 +204,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
 
     const handleQuickAdd = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
         const token = localStorage.getItem('restroToken');
         try {
             const response = await fetch(`${API_BASE_URL}/api/customers`, {
@@ -184,12 +217,14 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                 setSelectedCustomer(data);
                 setQuickAddModal(false);
                 setShowCustomerSearch(false);
-                toast.success('Customer registered and selected');
+                toast.success('Customer registered');
             } else {
-                toast.error(data.error);
+                toast.error(data.error || 'Failed to add customer');
             }
         } catch (err) {
-            toast.error('Failed to register customer');
+            toast.error('Connection error');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -205,7 +240,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
 
             if (response.ok) {
                 toast.success('Remake triggered! Sent to kitchen.');
-                fetchExistingOrder(); // Refresh the order items
+                fetchExistingOrder(); 
             } else {
                 toast.error('Failed to trigger remake');
             }
@@ -214,26 +249,16 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
         }
     };
 
+    // ─── ORDER SUBMISSION ───────────────────────────────────────────
     const handleSubmitOrder = async () => {
-        if (cart.length === 0) return;
-        setSubmitting(true);
-        const token = localStorage.getItem('restroToken');
-
-        // Only send items that are NEW (not existing order items)
-        const newItems = cart
-            .filter(item => !item.isExisting)
-            .map(item => ({
-                menuItemId: item.id,
-                quantity: item.quantity,
-                price: item.price,
-                notes: item.notes
-            }));
-
-        if (existingOrderId && newItems.length === 0) {
-            toast.error('No new items added to order');
-            setSubmitting(false);
+        const newItems = cart.filter(item => !item.isExisting);
+        if (newItems.length === 0) {
+            toast.error('No new items to send');
             return;
         }
+        
+        setSubmitting(true);
+        const token = localStorage.getItem('restroToken');
 
         try {
             const response = await fetch(`${API_BASE_URL}/api/orders`, {
@@ -246,326 +271,363 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                     tableId: table.id,
                     totalAmount: finalTotal,
                     customerId: selectedCustomer?.id,
-                    items: existingOrderId ? newItems : cart.map(item => ({
+                    items: newItems.map(item => ({
                         menuItemId: item.id,
                         quantity: item.quantity,
-                        price: item.price,
-                        notes: item.notes
+                        price: item.price
                     }))
                 })
             });
 
             if (response.ok) {
-                toast.success('Order placed successfully!');
+                toast.success('Sent to kitchen!', { duration: 3000 });
                 onOrderPlaced();
                 onClose();
             } else {
-                toast.error('Failed to place order');
+                const err = await response.json();
+                toast.error(err.error || 'Failed to place order');
             }
         } catch (err) {
-            toast.error('Connection error');
+            toast.error('Network error');
         } finally {
             setSubmitting(false);
         }
     };
 
-    if (loading) return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
-            <Loader2 className="animate-spin" size={48} color="var(--primary)" />
-        </div>
-    );
+    if (loading) {
+        return (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                <Loader2 className="animate-spin text-amber-500" size={64} />
+            </div>
+        );
+    }
 
-    const filteredItems = menuItems.filter(item => {
-        const matchesCategory = selectedCategory === 'All' || item.category.name === selectedCategory;
-        const matchesSearch = item.name.toLowerCase().includes(menuSearch.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
-
-    return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', zIndex: 2000 }}>
-            <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                    <div>
-                        <h2 style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Utensils color="var(--primary)" />
-                            Table {table.number} - {existingOrderId ? 'Current Order' : 'New Order'}
-                        </h2>
+    return createPortal(
+        <div className="ot-overlay">
+            {/* HEADER */}
+            <header className="ot-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="ot-table-badge">
+                        <Utensils size={16} />
+                        <span>Table {table.number}</span>
                     </div>
                 </div>
+                <div className="ot-header-actions">
+                    <button onClick={onClose} className="ot-close-btn">
+                        <X size={24} />
+                    </button>
+                </div>
+            </header>
 
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <div style={{ position: 'relative', flex: 1, minWidth: '300px' }}>
-                        <SearchIcon size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                        <input
-                            type="text"
-                            placeholder="Search dishes..."
-                            value={menuSearch}
-                            onChange={(e) => setMenuSearch(e.target.value)}
-                            className="auth-input"
-                            style={{ paddingLeft: '2.5rem', marginBottom: 0, width: '100%' }}
-                        />
+            <div className="ot-main-layout">
+                {/* MENU SECTION */}
+                <div className="ot-menu-section">
+                    {/* Search */}
+                    <div className="ot-search-container">
+                        <div className="ot-search-wrapper">
+                            <SearchIcon className="ot-search-icon" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Find items..."
+                                className="ot-search-input"
+                                value={menuSearch}
+                                onChange={e => setMenuSearch(e.target.value)}
+                            />
+                        </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: '4px' }}>
+                    {/* Categories */}
+                    <div className="ot-category-bar">
                         {categories.map(cat => (
                             <button
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat)}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '12px',
-                                    background: selectedCategory === cat ? 'var(--primary)' : 'var(--glass-shine)',
-                                    border: '1px solid var(--glass-border)',
-                                    color: 'white',
-                                    cursor: 'pointer'
-                                }}
+                                className={`ot-category-pill ${selectedCategory === cat ? 'active' : ''}`}
                             >
                                 {cat}
                             </button>
                         ))}
                     </div>
-                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                    {filteredItems.map(item => (
-                        <div
-                            key={item.id}
-                            onClick={() => addToCart(item)}
-                            className="premium-glass"
-                            style={{
-                                padding: '1rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                position: 'relative',
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'}
-                            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                        >
-                            <OptimizedImage
-                                src={item.image}
-                                alt={item.name}
-                                style={{ width: '100%', height: '110px', borderRadius: '10px', marginBottom: '0.75rem' }}
-                            />
-                            <div style={{ flex: 1 }}>
-                                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.25rem', lineHeight: 1.2 }}>{item.name}</h4>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <p style={{ color: 'var(--primary)', fontWeight: 800 }}>{formatCurrency(item.price)}</p>
-                                    {item.recipe && item.recipe.length > 0 && (
-                                        <span style={{
-                                            fontSize: '0.65rem',
-                                            fontWeight: 700,
-                                            color: item.recipe[0].inventoryItem.quantity > 5 ? 'var(--success)' : 'var(--danger)',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            padding: '2px 6px',
-                                            borderRadius: '4px'
-                                        }}>
-                                            {item.recipe[0].inventoryItem.quantity} {item.recipe[0].inventoryItem.unit}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
+                    {/* Scrollable Menu Area */}
+                    <div className="ot-scroll-area">
+                        <div className="ot-menu-grid">
+                            {menuItems
+                                .filter(item => {
+                                    const catMatch = selectedCategory === 'All' || item.category.name === selectedCategory;
+                                    const searchMatch = item.name.toLowerCase().includes(debouncedSearch.toLowerCase());
+                                    return catMatch && searchMatch;
+                                })
+                                .slice(0, visibleCount)
+                                .map(item => {
+                                    const inCart = cart.find(c => c.id === item.id && !c.isExisting);
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => addToCart(item)}
+                                            className="ot-item-card"
+                                        >
+                                            <div className="ot-item-image-wrapper">
+                                                <OptimizedImage
+                                                    src={item.image}
+                                                    alt={item.name}
+                                                    className="ot-item-image"
+                                                />
+                                                {inCart && (
+                                                    <div className="ot-qty-badge">
+                                                        {inCart.quantity}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="ot-item-info">
+                                                <h3 className="ot-item-name">{item.name}</h3>
+                                                <div className="ot-item-price-row">
+                                                    <span className="ot-item-price">{formatCurrency(item.price)}</span>
+                                                    <div className="ot-add-btn">
+                                                        <Plus size={16} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                         </div>
-                    ))}
-                </div>
-            </div>
 
-            <div className="premium-glass" style={{ width: '380px', height: '100%', borderLeft: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', padding: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <ShoppingCart color="var(--primary)" />
-                        <h3 style={{ fontSize: '1.25rem' }}>Your Basket</h3>
+                        {/* Infinite Scroll trigger */}
+                        <div ref={observerLoader} style={{ height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '1rem' }}>
+                            {visibleCount < menuItems.length && <Loader2 className="animate-spin text-amber-500" size={24} />}
+                        </div>
                     </div>
-                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                        <X size={24} />
-                    </button>
                 </div>
 
-                {/* Customer Selection */}
-                <div className="premium-glass" style={{ padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--glass-border)' }}>
-                    {!selectedCustomer ? (
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => setShowCustomerSearch(!showCustomerSearch)}
-                                style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--glass-border)', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer' }}
-                            >
-                                <UserPlus size={16} />
-                                Link Customer (Loyalty)
+                {/* SIDE BASKET (Desktop) / BOTTOM SHEET (Mobile) */}
+                <div className={`ot-side-basket ${showCart ? 'mobile-show' : ''}`}>
+                    <div className="ot-basket-content">
+                        <div className="ot-basket-header">
+                            <h3>Current Order</h3>
+                            <button className="ot-mobile-only" onClick={() => setShowCart(false)}>
+                                <X size={20} />
                             </button>
+                        </div>
 
-                            {showCustomerSearch && (
-                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1a1a1c', border: '1px solid #333', borderRadius: '8px', marginTop: '4px', zIndex: 10, boxShadow: '0 10px 20px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
-                                    <div style={{ padding: '0.5rem', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <SearchIcon size={14} color="#555" />
-                                        <input
-                                            autoFocus
-                                            placeholder="Search name or phone..."
-                                            value={customerSearch}
-                                            onChange={(e) => handleCustomerSearch(e.target.value)}
-                                            style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '0.85rem', width: '100%', outline: 'none' }}
-                                        />
-                                    </div>
-                                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                                        {searchResults.map(c => (
-                                            <div
-                                                key={c.id}
-                                                onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }}
-                                                style={{ padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #222', fontSize: '0.85rem' }}
-                                                className="hover-bg"
-                                            >
-                                                <div style={{ fontWeight: 600 }}>{c.name}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#777' }}>{c.phone} · {c.points} Pts</div>
-                                            </div>
-                                        ))}
-                                        {customerSearch.length > 2 && searchResults.length === 0 && (
-                                            <div
-                                                onClick={() => setQuickAddModal(true)}
-                                                style={{ padding: '1rem', textAlign: 'center', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
-                                            >
-                                                + Register "{customerSearch}"
-                                            </div>
-                                        )}
-                                    </div>
+                        {/* Customer Section */}
+                        {selectedCustomer ? (
+                            <div className="ot-customer-card">
+                                <div>
+                                    <p style={{ fontWeight: 800 }}>{selectedCustomer.name}</p>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>{selectedCustomer.points} Points Available</p>
                                 </div>
+                                <X size={20} onClick={() => setSelectedCustomer(null)} style={{ cursor: 'pointer', opacity: 0.6 }} />
+                            </div>
+                        ) : (
+                            <button onClick={() => setShowCustomerSearch(true)} className="ot-customer-btn">
+                                <UserPlus size={18} />
+                                <span>Add Guest Info</span>
+                            </button>
+                        )}
+
+                        {/* Items List */}
+                        <div className="ot-basket-items">
+                            {cart.length === 0 ? (
+                                <div className="ot-empty-basket">
+                                    <ShoppingCart size={48} strokeWidth={1} />
+                                    <p>Your basket is empty</p>
+                                </div>
+                            ) : (
+                                cart.map(item => (
+                                    <div key={item.cartKey || item.id} className="ol-item-row" style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div className="qty">{item.quantity}</div>
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                                                    {item.name}
+                                                    {item.isExisting && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', padding: '1px 4px', background: 'var(--bg-input)', borderRadius: '4px' }}>{item.status}</span>}
+                                                </p>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatCurrency(item.price)}</p>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            {!item.isExisting ? (
+                                                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                    <button onClick={() => removeFromCart(item.cartKey)} style={{ padding: '4px', background: 'var(--bg-input)', borderRadius: '4px' }}><Minus size={14} /></button>
+                                                    <button onClick={() => addToCart(item)} style={{ padding: '4px', background: 'var(--bg-input)', borderRadius: '4px' }}><Plus size={14} /></button>
+                                                </div>
+                                            ) : (
+                                                <button onClick={() => handleRemake(item.orderItemId)} style={{ color: 'var(--warning)', cursor: 'pointer', padding: '4px' }}><RotateCcw size={16} /></button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
                             )}
                         </div>
-                    ) : (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Award size={16} color="white" />
+
+                        {/* Totals & Confirm */}
+                        <div className="ot-basket-footer">
+                            <div className="ot-totals">
+                                <div className="ot-total-line">
+                                    <span>Subtotal</span>
+                                    <span>{formatCurrency(subtotal)}</span>
                                 </div>
-                                <div>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 800 }}>{selectedCustomer.name}</div>
-                                    <div style={{ fontSize: '0.7rem', color: '#ffd700', fontWeight: 700 }}>{selectedCustomer.points} Loyalty Points</div>
+                                <div className="ot-total-line grand">
+                                    <span>Grand Total</span>
+                                    <span>{formatCurrency(finalTotal)}</span>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedCustomer(null)} style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer' }}>
-                                <X size={16} />
+                            
+                            <button
+                                onClick={handleSubmitOrder}
+                                disabled={newItemCount === 0 || submitting}
+                                className="ot-confirm-btn"
+                            >
+                                {submitting ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                                <span>{existingOrderId ? 'Update Order' : 'Confirm Order'}</span>
                             </button>
                         </div>
-                    )}
-                </div>
-
-                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {cart.map(item => (
-                        <div key={item.cartKey || item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: item.isExisting ? 0.7 : 1 }}>
-                            <div>
-                                <p style={{ fontSize: '0.95rem', fontWeight: 600 }}>
-                                    {item.name}
-                                    {item.isExisting && (
-                                        <span style={{ fontSize: '0.65rem', marginLeft: '6px', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-muted)' }}>
-                                            {item.status || 'Ordered'}
-                                        </span>
-                                    )}
-                                </p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatCurrency(item.price)} each</p>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                {item.orderItemId && (
-                                    <button
-                                        onClick={() => handleRemake(item.orderItemId)}
-                                        className="premium-glass"
-                                        style={{ padding: '6px', borderRadius: '8px', color: 'var(--danger)' }}
-                                        title="Spilled / Remake (Log as Waste)"
-                                    >
-                                        <RotateCcw size={14} />
-                                    </button>
-                                )}
-                                {!item.isExisting && (
-                                    <>
-                                        <button onClick={() => removeFromCart(item.cartKey)} className="premium-glass" style={{ padding: '4px', borderRadius: '6px' }}><Minus size={14} /></button>
-                                        <span style={{ fontWeight: 700 }}>{item.quantity}</span>
-                                        <button onClick={() => addToCart(item)} className="premium-glass" style={{ padding: '4px', borderRadius: '6px' }}><Plus size={14} /></button>
-                                    </>
-                                )}
-                                {item.isExisting && (
-                                    <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>×{item.quantity}</span>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                    {cart.length === 0 && (
-                        <div style={{ textAlign: 'center', marginTop: '4rem', color: 'var(--text-muted)' }}>
-                            <Utensils size={40} style={{ marginBottom: '1rem', opacity: 0.2 }} />
-                            <p>Basket is empty</p>
-                        </div>
-                    )}
-                </div>
-
-                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Subtotal</span>
-                        <span style={{ fontSize: '0.85rem' }}>{formatCurrency(subtotal)}</span>
                     </div>
-
-                    {clientSettings.useTax && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>VAT ({clientSettings.taxRate}%)</span>
-                            <span style={{ fontSize: '0.85rem' }}>{formatCurrency(taxAmount)}</span>
-                        </div>
-                    )}
-
-                    {clientSettings.useServiceCharge && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Service Charge ({clientSettings.serviceChargeRate}%)</span>
-                            <span style={{ fontSize: '0.85rem' }}>{formatCurrency(serviceChargeAmount)}</span>
-                        </div>
-                    )}
-
-                    {selectedCustomer && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', color: '#ffd700', fontSize: '0.8rem', fontWeight: 600 }}>
-                            <span>Points to Earn</span>
-                            <span>+{Math.floor(finalTotal / 100)} Pts</span>
-                        </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', marginBottom: '1.5rem', borderTop: '1px dashed var(--glass-border)', paddingTop: '0.75rem' }}>
-                        <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Total Payable</span>
-                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{formatCurrency(finalTotal)}</span>
-                    </div>
-                    <button
-                        onClick={handleSubmitOrder}
-                        disabled={cart.length === 0 || submitting}
-                        className="nav-item active"
-                        style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: 'none', fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', cursor: submitting ? 'not-allowed' : 'pointer', opacity: cart.length === 0 ? 0.5 : 1 }}
-                    >
-                        {submitting ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
-                        Confirm Order
-                    </button>
                 </div>
-
-                {/* Quick Add Customer Modal */}
-                {quickAddModal && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
-                        <div className="premium-glass animate-fade-in" style={{ width: '320px', padding: '2rem', border: '1px solid var(--glass-border)' }}>
-                            <h3 style={{ marginBottom: '1.5rem' }}>Register Customer</h3>
-                            <form onSubmit={handleQuickAdd} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <input
-                                    className="auth-input"
-                                    placeholder="Customer Name"
-                                    required
-                                    value={newCustomer.name}
-                                    onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                />
-                                <input
-                                    className="auth-input"
-                                    placeholder="Phone Number"
-                                    required
-                                    value={newCustomer.phone}
-                                    onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                                />
-                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                                    <button type="button" onClick={() => setQuickAddModal(false)} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', background: 'transparent', border: '1px solid #333', color: 'white', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" className="nav-item active" style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Register</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
             </div>
-        </div>
+
+            {/* MOBILE QUICK BASKET BAR */}
+            <div className="ot-basket-bar">
+                <div className="ot-basket-left" onClick={() => setShowCart(true)}>
+                    <div className="ot-basket-icon-wrapper">
+                        <ShoppingCart size={24} />
+                        {cart.length > 0 && <span className="ot-basket-count">{cart.length}</span>}
+                    </div>
+                    <div className="ot-basket-summary">
+                        <span className="ot-basket-label">{newItemCount} New Items</span>
+                        <span className="ot-basket-total">{formatCurrency(finalTotal)}</span>
+                    </div>
+                    <ChevronUp size={20} />
+                </div>
+                <button
+                    onClick={handleSubmitOrder}
+                    disabled={newItemCount === 0 || submitting}
+                    className="ot-confirm-btn-mobile"
+                >
+                    {submitting ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                </button>
+            </div>
+
+
+            {/* CUSTOMER SEARCH OVERLAY (Now single modal for search & reg) */}
+            {showCustomerSearch && (
+                <div className="ot-customer-overlay" onClick={(e) => e.target === e.currentTarget && setShowCustomerSearch(false)}>
+                    <div className="ol-payment-sheet" style={{ maxWidth: '440px', borderRadius: 'var(--radius-xl)', minHeight: quickAddModal ? 'auto' : '60vh' }}>
+                        
+                        {/* HEADER */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+                            <h2 style={{ fontSize: '1.2rem', margin: 0 }}>
+                                {quickAddModal ? 'New Guest Registration' : 'Guest Loyalty'}
+                            </h2>
+                            <button 
+                                onClick={() => { setShowCustomerSearch(false); setQuickAddModal(false); }} 
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {quickAddModal ? (
+                            /* REGISTRATION FORM */
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div className="ot-search-wrapper" style={{ boxShadow: 'none' }}>
+                                    <input
+                                        className="ot-search-input"
+                                        placeholder="Full Name"
+                                        value={newCustomer.name}
+                                        onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                        style={{ paddingLeft: '1.25rem' }}
+                                    />
+                                </div>
+                                <div className="ot-search-wrapper" style={{ boxShadow: 'none' }}>
+                                    <input
+                                        className="ot-search-input"
+                                        placeholder="Phone Number"
+                                        value={newCustomer.phone}
+                                        onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                                        style={{ paddingLeft: '1.25rem' }}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                                    <button 
+                                        onClick={() => setQuickAddModal(false)} 
+                                        style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-heading)', fontWeight: 600, cursor: 'pointer' }}
+                                    >
+                                        Back to Search
+                                    </button>
+                                    <button 
+                                        onClick={handleQuickAdd} 
+                                        style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'var(--primary)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer' }}
+                                    >
+                                        Register & Select
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            /* SEARCH VIEW */
+                            <>
+                                <div className="ot-search-wrapper" style={{ marginBottom: '1.5rem' }}>
+                                    <SearchIcon className="ot-search-icon" size={18} />
+                                    <input
+                                        autoFocus
+                                        className="ot-search-input"
+                                        placeholder="Search by name or phone..."
+                                        value={customerSearch}
+                                        onChange={(e) => handleCustomerSearch(e.target.value)}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {searchResults.map(c => (
+                                        <div
+                                            key={c.id}
+                                            onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }}
+                                            className="tm-card"
+                                            style={{ padding: '1rem', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--bg-input)' }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <p style={{ fontWeight: 700, margin: 0 }}>{c.name}</p>
+                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{c.phone}</p>
+                                                </div>
+                                                <div style={{ background: 'var(--primary)', color: 'white', padding: '4px 10px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                                    {c.points} Pts
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {(customerSearch.length > 2 || searchResults.length === 0) && (
+                                        <button 
+                                            onClick={() => {
+                                                setQuickAddModal(true);
+                                                // Pre-fill name or phone if it looks like one
+                                                const looksLikePhone = /^[0-9+]+$/.test(customerSearch);
+                                                setNewCustomer({
+                                                    name: looksLikePhone ? '' : customerSearch,
+                                                    phone: looksLikePhone ? customerSearch : ''
+                                                });
+                                            }} 
+                                            className="ot-customer-btn" 
+                                            style={{ borderStyle: 'dashed', marginTop: '0.5rem' }}
+                                        >
+                                            <UserPlus size={18} />
+                                            <span>
+                                                {searchResults.length === 0 && customerSearch.length > 0 
+                                                  ? `No guest found. Register "${customerSearch}"?`
+                                                  : 'Register New Guest'}
+                                            </span>
+                                        </button>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>,
+        document.body
     );
 };
 

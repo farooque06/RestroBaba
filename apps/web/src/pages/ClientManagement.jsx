@@ -4,7 +4,8 @@ import {
     ArrowUpRight, Users, Loader2, Search,
     Filter, MoreVertical, ShieldCheck,
     AlertCircle, Key, Lock, Unlock, Settings,
-    UserCircle, CheckCircle2, XCircle
+    UserCircle, CheckCircle2, XCircle, CreditCard,
+    Clock, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../config';
@@ -21,20 +22,18 @@ const ClientManagement = () => {
     const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ title: '', message: '', onConfirm: () => { } });
+    const [plans, setPlans] = useState([]);
+    const [activeFilter, setActiveFilter] = useState('ALL');
 
     // Selection state
     const [selectedClient, setSelectedClient] = useState(null);
 
     // Form State for Onboarding
     const [newClient, setNewClient] = useState({
-        name: '',
-        email: '',
-        adminName: '',
-        adminPassword: '',
-        useTax: false,
-        taxRate: 0,
-        useServiceCharge: false,
-        serviceChargeRate: 0
+        name: '', email: '', adminName: '', adminPassword: '',
+        useTax: false, taxRate: 0, useServiceCharge: false, serviceChargeRate: 0,
+        plan: 'SILVER', planDuration: '1m',
+        subscriptionEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     });
 
     // Form State for Editing
@@ -44,7 +43,12 @@ const ClientManagement = () => {
         useTax: false,
         taxRate: 0,
         useServiceCharge: false,
-        serviceChargeRate: 0
+        serviceChargeRate: 0,
+        plan: 'SILVER',
+        planDuration: '1m',
+        subscriptionStart: '',
+        subscriptionEnd: '',
+        paymentStatus: 'PAID'
     });
 
     // Password Reset State
@@ -60,6 +64,25 @@ const ClientManagement = () => {
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
+
+    useEffect(() => {
+        fetchPlans();
+    }, []);
+
+    const fetchPlans = async () => {
+        try {
+            const token = localStorage.getItem('restroToken');
+            const response = await fetch(`${API_BASE_URL}/api/plans`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setPlans(data);
+            }
+        } catch (err) {
+            console.error('Fetch plans error:', err);
+        }
+    };
 
     const fetchClients = async (search = '') => {
         setLoading(true);
@@ -85,8 +108,23 @@ const ClientManagement = () => {
         }
     };
 
+    const calculateExpiry = (duration) => {
+        const date = new Date();
+        if (duration === '12m') date.setFullYear(date.getFullYear() + 1);
+        else if (duration === '3m') date.setMonth(date.getMonth() + 3);
+        else date.setMonth(date.getMonth() + 1);
+        return date.toISOString().split('T')[0];
+    };
+
+    useEffect(() => {
+        if (!isEditModalOpen) {
+            setNewClient(prev => ({ ...prev, subscriptionEnd: calculateExpiry(prev.planDuration) }));
+        }
+    }, [newClient.planDuration, isEditModalOpen]);
+
     const handleCreateClient = async (e) => {
         e.preventDefault();
+        console.log('Dispatching new client data:', newClient);
         setSubmitLoading(true);
         try {
             const token = localStorage.getItem('restroToken');
@@ -104,7 +142,10 @@ const ClientManagement = () => {
                 setIsAddModalOpen(false);
                 setNewClient({
                     name: '', email: '', adminName: '', adminPassword: '',
-                    useTax: false, taxRate: 0, useServiceCharge: false, serviceChargeRate: 0
+                    useTax: false, taxRate: 0, useServiceCharge: false, serviceChargeRate: 0,
+                    plan: 'SILVER', planDuration: '1m',
+                    subscriptionEnd: calculateExpiry('1m'),
+                    paymentStatus: 'PAID'
                 });
                 toast.success('Restaurant onboarded successfully!');
             } else {
@@ -157,7 +198,6 @@ const ClientManagement = () => {
     };
 
     const performToggleStatus = async (client) => {
-
         try {
             const token = localStorage.getItem('restroToken');
             const response = await fetch(`${API_BASE_URL}/api/clients/${client.id}`, {
@@ -280,6 +320,30 @@ const ClientManagement = () => {
         }
     };
 
+    const filteredClients = clients.filter(client => {
+        const matchesSearch = 
+            client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            client.shopCode.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const clientStatus = client.isActive ? 'LIVE' : 'SUSPENDED';
+        
+        let matchesFilter = activeFilter === 'ALL' || 
+                           activeFilter === clientStatus || 
+                           activeFilter === client.plan;
+
+        if (activeFilter === 'EXPIRING_SOON') {
+            const daysLeft = client.subscriptionEnd 
+                ? Math.ceil((new Date(client.subscriptionEnd) - new Date()) / (1000 * 60 * 60 * 24))
+                : Infinity;
+            matchesFilter = daysLeft > 0 && daysLeft <= 15;
+        } else if (activeFilter === 'PENDING_PAYMENT') {
+            matchesFilter = client.paymentStatus === 'PENDING' || client.paymentStatus === 'OVERDUE';
+        }
+                             
+        return matchesSearch && matchesFilter;
+    });
+
     if (loading && clients.length === 0) return (
         <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Loader2 className="animate-spin" size={40} color="var(--primary)" />
@@ -289,238 +353,515 @@ const ClientManagement = () => {
     return (
         <div className="page-container animate-fade">
             {/* Header Section */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3.5rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        Client Ecosystem <span className="status-badge"><ShieldCheck size={14} /> SUPER ADMIN</span>
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        Client Ecosystem 
+                        <span className="status-badge" style={{ fontSize: '0.7rem', padding: '6px 14px', borderRadius: '100px', background: 'var(--primary-glow)', border: '1px solid var(--primary)', color: 'var(--primary)', fontWeight: 800 }}>
+                            <ShieldCheck size={14} /> SUPER ADMIN
+                        </span>
                     </h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Manage your network of restaurant clients and system access.</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Orchestrate your network of restaurant clients and system infrastructure.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className="btn-ghost" onClick={() => setIsSecurityModalOpen(true)} style={{ gap: '8px' }}>
-                        <Settings size={18} /> My Security
+                <div style={{ display: 'flex', gap: '1.25rem' }}>
+                    <button className="btn-ghost" onClick={() => setIsSecurityModalOpen(true)} style={{ gap: '10px', padding: '0.8rem 1.6rem', borderRadius: '14px' }}>
+                        <Lock size={18} /> Credentials
                     </button>
-                    <button className="btn-primary" onClick={() => setIsAddModalOpen(true)} style={{ padding: '0.75rem 1.5rem', gap: '8px' }}>
-                        <Plus size={18} /> Onboard New Restaurant
+                    <button className="btn-primary" onClick={() => setIsAddModalOpen(true)} style={{ padding: '0.8rem 1.8rem', gap: '10px', borderRadius: '14px', boxShadow: '0 10px 20px -5px var(--primary-glow)' }}>
+                        <Plus size={20} /> Onboard Restaurant
                     </button>
                 </div>
             </div>
 
             {/* Stats Row */}
-            <div className="dashboard-grid" style={{ marginBottom: '2.5rem' }}>
-                <div className="stat-card">
-                    <span className="stat-label">Total Clients</span>
-                    <span className="stat-value">{clients.length}</span>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                        <span className="badge badge-primary">{clients.filter(c => c.isActive).length} Active</span>
-                        <span className="badge" style={{ background: 'rgba(255,255,255,0.05)' }}>{clients.filter(c => !c.isActive).length} Off</span>
+            <div className="dashboard-grid" style={{ marginBottom: '3.5rem', gap: '2rem' }}>
+                <div className="stat-card" style={{ padding: '2rem', borderRadius: '24px', background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <span className="stat-label" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Portfolio</span>
+                            <span className="stat-value" style={{ fontSize: '2.5rem', fontWeight: 900, display: 'block', marginTop: '0.5rem' }}>{clients.length}</span>
+                        </div>
+                        <div style={{ background: 'var(--primary-glow)', padding: '12px', borderRadius: '16px' }}>
+                            <Store size={24} color="var(--primary)" />
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: 700, padding: '4px 12px' }}>{clients.filter(c => c.isActive).length} Active</span>
+                        <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', fontWeight: 700, padding: '4px 12px' }}>{clients.filter(c => !c.isActive).length} Inactive</span>
                     </div>
                 </div>
-                <div className="stat-card">
-                    <span className="stat-label">System Health</span>
-                    <span className="stat-value" style={{ color: 'var(--success)' }}>Optimal</span>
-                    <span className="badge badge-success">99.9% Uptime</span>
+                
+                <div className="stat-card" style={{ padding: '2rem', borderRadius: '24px', background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <span className="stat-label" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>System Resilience</span>
+                            <span className="stat-value" style={{ fontSize: '2.5rem', fontWeight: 900, display: 'block', marginTop: '0.5rem', color: '#10b981' }}>99.9%</span>
+                        </div>
+                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '16px' }}>
+                            <ShieldCheck size={24} color="#10b981" />
+                        </div>
+                    </div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block', marginTop: '1.5rem' }}>Infrastructure health is optimal.</span>
                 </div>
-                <div className="stat-card">
-                    <span className="stat-label">Security Protocol</span>
-                    <span className="stat-value" style={{ fontSize: '1.25rem' }}>TOTP 2FA</span>
-                    <span className="badge badge-warning">Enforced</span>
+
+                <div className="stat-card" style={{ padding: '2rem', borderRadius: '24px', background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <span className="stat-label" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Security Layer</span>
+                            <span className="stat-value" style={{ fontSize: '1.8rem', fontWeight: 900, display: 'block', marginTop: '0.5rem' }}>E2EE Active</span>
+                        </div>
+                        <div style={{ background: 'rgba(251, 191, 36, 0.1)', padding: '12px', borderRadius: '16px' }}>
+                            <Key size={24} color="#fbbf24" />
+                        </div>
+                    </div>
+                    <div style={{ marginTop: '1.5rem' }}>
+                        <span className="badge" style={{ background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', fontWeight: 800 }}>AES-256 Enforced</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Client List */}
-            <div className="premium-glass" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
-                    <h3 style={{ fontSize: '1.1rem' }}>Registered Restaurants</h3>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <div className="search-bar" style={{ width: '300px', background: 'var(--bg-main)' }}>
-                            <Search size={16} color="var(--text-muted)" />
-                            <input
-                                type="text"
-                                placeholder="Search name, email, or code..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
+            {/* Client Registry & Filters */}
+            <div style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '2rem' }}>
+                    <div className="search-bar premium-glass shadow-sm" style={{ width: '100%', maxWidth: '500px', background: 'rgba(255,255,255,0.02)', padding: '0.8rem 1.25rem', borderRadius: '16px' }}>
+                        <Search size={20} color="var(--text-muted)" />
+                        <input
+                            type="text"
+                            placeholder="Search by name, email, or shop code..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{ fontSize: '1rem' }}
+                        />
+                        {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}>
+                                <XCircle size={18} />
+                            </button>
+                        )}
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '4px', maxWidth: '60%' }}>
+                        {['ALL', 'LIVE', 'SUSPENDED', 'EXPIRING_SOON', 'PENDING_PAYMENT', 'SILVER', 'GOLD', 'DIAMOND'].map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setActiveFilter(f)}
+                                className={`pill-btn ${activeFilter === f ? 'active' : ''}`}
+                                style={{
+                                    padding: '0.6rem 1.25rem',
+                                    borderRadius: '12px',
+                                    fontSize: '0.7rem',
+                                    whiteSpace: 'nowrap',
+                                    fontWeight: 700,
+                                    border: '1px solid var(--border)',
+                                    background: activeFilter === f ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
+                                    color: activeFilter === f ? 'white' : 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                {f.replace('_', ' ')}
+                            </button>
+                        ))}
                     </div>
                 </div>
+            </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ textAlign: 'left', background: 'rgba(0,0,0,0.02)' }}>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Restaurant</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Shop Code</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Users</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {clients.length === 0 ? (
-                                <tr>
-                                    <td colSpan="5" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                        <Search size={48} style={{ opacity: 0.1, marginBottom: '1rem' }} />
-                                        <p>No restaurants found matching your search.</p>
-                                    </td>
-                                </tr>
-                            ) : (
-                                clients.map(client => (
-                                    <tr key={client.id} className="table-row-hover" style={{ borderBottom: '1px solid var(--border)', opacity: client.isActive ? 1 : 0.6 }}>
-                                        <td style={{ padding: '1.25rem 1.5rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: client.isActive ? 'var(--primary-gradient)' : 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: client.isActive ? 'white' : 'var(--text-muted)' }}>
-                                                    <Store size={20} />
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontWeight: 600, color: 'var(--text-heading)' }}>{client.name}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{client.email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '1.25rem 1.5rem' }}>
-                                            {client.isActive ? (
-                                                <span className="badge badge-success" style={{ gap: '4px' }}><CheckCircle2 size={12} /> Active</span>
-                                            ) : (
-                                                <span className="badge" style={{ gap: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}><XCircle size={12} /> Suspended</span>
-                                            )}
-                                        </td>
-                                        <td style={{ padding: '1.25rem 1.5rem' }}>
-                                            <span className="badge badge-primary" style={{ letterSpacing: '0.1em', fontWeight: 800 }}>{client.shopCode}</span>
-                                        </td>
-                                        <td style={{ padding: '1.25rem 1.5rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <Users size={14} color="var(--text-muted)" />
-                                                <span>{client._count?.users || 0} Staff</span>
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '1.25rem 1.5rem' }}>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <button
-                                                    className="icon-btn-ghost"
-                                                    title="Edit Details"
-                                                    onClick={() => {
-                                                        setSelectedClient(client);
-                                                        setEditClient({ name: client.name, email: client.email });
-                                                        setIsEditModalOpen(true);
-                                                    }}
-                                                >
-                                                    <Settings size={18} />
-                                                </button>
-                                                <button
-                                                    className="icon-btn-ghost"
-                                                    title={client.isActive ? "Deactivate" : "Activate"}
-                                                    onClick={() => handleToggleStatus(client)}
-                                                >
-                                                    {client.isActive ? <Lock size={18} color="#ef4444" /> : <Unlock size={18} color="var(--success)" />}
-                                                </button>
-                                                <button
-                                                    className="icon-btn-ghost"
-                                                    title="Reset Admin Password"
-                                                    onClick={() => {
-                                                        setSelectedClient(client);
-                                                        setIsResetModalOpen(true);
-                                                    }}
-                                                >
-                                                    <Key size={18} />
-                                                </button>
-                                                <button
-                                                    className="icon-btn-ghost"
-                                                    title="Regenerate Shop Code"
-                                                    onClick={() => handleRegenerateCode(client)}
-                                                >
-                                                    <Hash size={18} color="var(--primary)" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <div className="theme-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '2rem' }}>
+                {filteredClients.length === 0 ? (
+                    <div className="premium-glass" style={{ gridColumn: '1 / -1', padding: '6rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        <Search size={64} style={{ opacity: 0.1, marginBottom: '1.5rem' }} />
+                        <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>No restaurant entities found.</p>
+                        <p style={{ opacity: 0.6 }}>Try adjusting your search or filters.</p>
+                    </div>
+                ) : (
+                    filteredClients.map(client => (
+                        <div 
+                            key={client.id} 
+                            className="premium-glass animate-slideUp"
+                            style={{ 
+                                padding: '1.75rem', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: '1.5rem',
+                                border: '1px solid var(--border)',
+                                opacity: client.isActive ? 1 : 0.8,
+                                background: client.isActive ? 'rgba(255,255,255,0.02)' : 'rgba(239, 68, 68, 0.02)',
+                                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                cursor: 'default'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <div style={{ 
+                                        width: '56px', 
+                                        height: '56px', 
+                                        borderRadius: '18px', 
+                                        background: client.isActive ? 'var(--primary-glow)' : 'rgba(239, 68, 68, 0.1)', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Store size={28} color={client.isActive ? 'var(--primary)' : '#ef4444'} />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-heading)', marginBottom: '4px' }}>{client.name}</h3>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Mail size={12} /> {client.email}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px', fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.1em' }}>
+                                            <Hash size={11} /> {client.shopCode || '------'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={`plan-tag ${client.plan?.toLowerCase() || 'silver'}`} style={{ margin: 0, padding: '4px 10px', fontSize: '0.7rem' }}>
+                                    {client.plan}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div className="stat-card" style={{ padding: '1rem', borderRadius: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)' }}>
+                                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Subscription</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Clock size={16} color={
+                                            (() => {
+                                                const days = Math.ceil((new Date(client.subscriptionEnd) - new Date()) / (1000 * 60 * 60 * 24));
+                                                return days < 3 ? '#ef4444' : days < 15 ? '#fbbf24' : 'var(--primary)';
+                                            })()
+                                        } />
+                                        <span style={{ fontWeight: 700 }}>
+                                            {(() => {
+                                                const days = Math.ceil((new Date(client.subscriptionEnd) - new Date()) / (1000 * 60 * 60 * 24));
+                                                return days <= 0 ? 'Expired' : `${days}d left`;
+                                            })()}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="stat-card" style={{ padding: '1rem', borderRadius: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)' }}>
+                                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Payment</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <CreditCard size={16} color={client.paymentStatus === 'PAID' ? 'var(--success)' : '#ef4444'} />
+                                        <span style={{ fontWeight: 700, color: client.paymentStatus === 'PAID' ? 'inherit' : '#ef4444' }}>
+                                            {client.paymentStatus || 'UNSET'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: client.isActive ? 'var(--success)' : 'var(--danger)' }} />
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: client.isActive ? 'var(--success)' : 'var(--danger)' }}>
+                                        {client.isActive ? 'LIVE SYSTEM' : 'SUSPENDED'}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button
+                                        className="icon-btn-ghost"
+                                        title="System Settings"
+                                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '12px', width: '38px', height: '38px' }}
+                                        onClick={() => {
+                                            setSelectedClient(client);
+                                            setEditClient({ 
+                                                name: client.name, 
+                                                email: client.email,
+                                                useTax: client.useTax,
+                                                taxRate: client.taxRate,
+                                                useServiceCharge: client.useServiceCharge,
+                                                serviceChargeRate: client.serviceChargeRate,
+                                                plan: client.plan || 'SILVER',
+                                                planDuration: client.planDuration || '1m',
+                                                subscriptionStart: client.subscriptionStart ? new Date(client.subscriptionStart).toISOString().split('T')[0] : '',
+                                                subscriptionEnd: client.subscriptionEnd ? new Date(client.subscriptionEnd).toISOString().split('T')[0] : '',
+                                                paymentStatus: client.paymentStatus || 'PAID'
+                                            });
+                                            setIsEditModalOpen(true);
+                                        }}
+                                    >
+                                        <Settings size={18} />
+                                    </button>
+                                    <button
+                                        className="icon-btn-ghost"
+                                        title="Reset Password"
+                                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '12px', width: '38px', height: '38px' }}
+                                        onClick={() => {
+                                            setSelectedClient(client);
+                                            setIsResetModalOpen(true);
+                                        }}
+                                    >
+                                        <Key size={18} />
+                                    </button>
+                                    <button
+                                        className="icon-btn-ghost"
+                                        title={client.isActive ? "Restrict Access" : "Grant Access"}
+                                        style={{ background: client.isActive ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)', border: `1px solid ${client.isActive ? '#ef444433' : '#10b98133'}`, borderRadius: '12px', width: '38px', height: '38px' }}
+                                        onClick={() => handleToggleStatus(client)}
+                                    >
+                                        {client.isActive ? <Lock size={18} color="#ef4444" /> : <Unlock size={18} color="#10b981" />}
+                                    </button>
+                                    <button
+                                        className="icon-btn-ghost"
+                                        title="Rotation & Security"
+                                        style={{ background: 'var(--primary-glow)', border: '1px solid var(--primary)', borderRadius: '12px', width: '38px', height: '38px' }}
+                                        onClick={() => handleRegenerateCode(client)}
+                                    >
+                                        <Hash size={18} color="var(--primary)" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
 
             {/* Onboarding Modal */}
             {isAddModalOpen && (
-                <div className="modal-overlay animate-fade">
-                    <div className="modal-content animate-slideUp" style={{ maxWidth: '500px' }}>
-                        <div style={{ marginBottom: '2rem' }}>
-                            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Onboard Restaurant</h2>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Provision a new client unit and its administrator account.</p>
+                <div className="modal-overlay animate-fade" style={{ backdropFilter: 'blur(12px)', background: 'rgba(0,0,0,0.8)' }}>
+                    <div className="modal-content animate-slideUp premium-glass" style={{ maxWidth: '600px', border: '1px solid var(--border)', padding: '2.5rem' }}>
+                        <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
+                            <div style={{ width: '64px', height: '64px', background: 'var(--primary-glow)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifySelf: 'center', marginBottom: '1.25rem', margin: '0 auto 1rem' }}>
+                                <Plus size={32} color="var(--primary)" />
+                            </div>
+                            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem' }}>Provision Restaurant</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Deploy a new restaurant node into the ecosystem.</p>
                         </div>
-                        <form onSubmit={handleCreateClient} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            <div className="input-group">
-                                <label>Restaurant Name</label>
-                                <div className="input-wrapper">
-                                    <Store size={18} />
-                                    <input type="text" placeholder="e.g. Blue Lagoon" value={newClient.name || ''}
-                                        onChange={e => setNewClient({ ...newClient, name: e.target.value })} required />
-                                </div>
-                            </div>
 
-                            <div className="input-group">
-                                <label>Admin Contact Email (Primary)</label>
-                                <div className="input-wrapper">
-                                    <Mail size={18} />
-                                    <input type="email" placeholder="admin@restaurant.com" value={newClient.email || ''}
-                                        onChange={e => setNewClient({ ...newClient, email: e.target.value })} required />
-                                </div>
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>Used for system login and critical alerts.</p>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div className="input-group">
-                                    <label>Admin Full Name</label>
-                                    <div className="input-wrapper">
-                                        <UserCircle size={18} />
-                                        <input type="text" placeholder="Owner Name" value={newClient.adminName || ''}
-                                            onChange={e => setNewClient({ ...newClient, adminName: e.target.value })} required />
+                        <form onSubmit={handleCreateClient} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            {/* Section: Entity Identity */}
+                            <div>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Store size={14} /> Entity Identity
+                                </h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <div className="input-group">
+                                        <label>Restaurant Legal Name</label>
+                                        <div className="input-wrapper">
+                                            <Store size={18} />
+                                            <input type="text" placeholder="e.g. Royal Orchid Bistro" value={newClient.name || ''}
+                                                onChange={e => setNewClient({ ...newClient, name: e.target.value })} required />
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="input-group">
-                                    <label>Initial Password</label>
-                                    <div className="input-wrapper">
-                                        <Lock size={18} />
-                                        <input type="password" placeholder="••••••••" value={newClient.adminPassword || ''}
-                                            onChange={e => setNewClient({ ...newClient, adminPassword: e.target.value })} required />
+                                    <div className="input-group">
+                                        <label>Primary Administrative Email</label>
+                                        <div className="input-wrapper">
+                                            <Mail size={18} />
+                                            <input type="email" placeholder="admin@restaurant.com" value={newClient.email || ''}
+                                                onChange={e => setNewClient({ ...newClient, email: e.target.value })} required />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                        <input type="checkbox" checked={newClient.useTax} onChange={e => setNewClient({ ...newClient, useTax: e.target.checked })} />
-                                        Enable VAT (%)
-                                    </label>
-                                    <div className="input-wrapper" style={{ opacity: newClient.useTax ? 1 : 0.5 }}>
-                                        <input type="number" step="0.01" placeholder="13" value={newClient.taxRate || 0}
-                                            onChange={e => setNewClient({ ...newClient, taxRate: e.target.value })} disabled={!newClient.useTax} />
+                            {/* Section: Admin Authentication */}
+                            <div>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Lock size={14} /> Lead Authentication
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                                    <div className="input-group">
+                                        <label>Full Name</label>
+                                        <div className="input-wrapper">
+                                            <UserCircle size={18} />
+                                            <input type="text" placeholder="Primary Owner" value={newClient.adminName || ''}
+                                                onChange={e => setNewClient({ ...newClient, adminName: e.target.value })} required />
+                                        </div>
                                     </div>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                        <input type="checkbox" checked={newClient.useServiceCharge} onChange={e => setNewClient({ ...newClient, useServiceCharge: e.target.checked })} />
-                                        Enable Ser. Charge (%)
-                                    </label>
-                                    <div className="input-wrapper" style={{ opacity: newClient.useServiceCharge ? 1 : 0.5 }}>
-                                        <input type="number" step="0.01" placeholder="10" value={newClient.serviceChargeRate || 0}
-                                            onChange={e => setNewClient({ ...newClient, serviceChargeRate: e.target.value })} disabled={!newClient.useServiceCharge} />
+                                    <div className="input-group">
+                                        <label>Secure Password</label>
+                                        <div className="input-wrapper">
+                                            <Key size={18} />
+                                            <input type="password" placeholder="••••••••" value={newClient.adminPassword || ''}
+                                                onChange={e => setNewClient({ ...newClient, adminPassword: e.target.value })} required />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="premium-glass" style={{ padding: '0.75rem', background: 'rgba(52, 152, 219, 0.05)', border: '1px dashed var(--primary)' }}>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                                    <Hash size={14} /> Shop Code will be auto-generated upon creation.
-                                </p>
+                            {/* Section: Financial & Tax */}
+                            <div style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
+                                            <input type="checkbox" checked={newClient.useTax} onChange={e => setNewClient({ ...newClient, useTax: e.target.checked })} 
+                                                style={{ width: '18px', height: '18px' }} />
+                                            Enable VAT Compliance
+                                        </label>
+                                        <div className="input-wrapper" style={{ opacity: newClient.useTax ? 1 : 0.4 }}>
+                                            <input type="number" step="0.01" placeholder="13" value={newClient.taxRate || 0}
+                                                onChange={e => setNewClient({ ...newClient, taxRate: e.target.value })} disabled={!newClient.useTax} 
+                                                style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 700 }} />
+                                            <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>%</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
+                                            <input type="checkbox" checked={newClient.useServiceCharge} onChange={e => setNewClient({ ...newClient, useServiceCharge: e.target.checked })} 
+                                                style={{ width: '18px', height: '18px' }} />
+                                            Service Charge
+                                        </label>
+                                        <div className="input-wrapper" style={{ opacity: newClient.useServiceCharge ? 1 : 0.4 }}>
+                                            <input type="number" step="0.01" placeholder="10" value={newClient.serviceChargeRate || 0}
+                                                onChange={e => setNewClient({ ...newClient, serviceChargeRate: e.target.value })} disabled={!newClient.useServiceCharge} 
+                                                style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 700 }} />
+                                            <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>%</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="button" className="btn-ghost" onClick={() => setIsAddModalOpen(false)} style={{ flex: 1 }}>Cancel</button>
-                                <button type="submit" className="btn-primary" disabled={submitLoading} style={{ flex: 2 }}>
-                                    {submitLoading ? <Loader2 className="animate-spin" /> : 'Create Restaurant'}
+                            {/* Section: Subscription Tier */}
+                            <div>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <ShieldCheck size={14} /> Ecosystem Tier
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                    {plans.map(p => {
+                                        const color = p.tier === 'GOLD' ? '#fbbf24' : p.tier === 'DIAMOND' ? '#38bdf8' : '#94a3b8';
+                                        const isActive = newClient.plan === p.tier;
+                                        return (
+                                            <div 
+                                                key={p.id}
+                                                onClick={() => setNewClient({ ...newClient, plan: p.tier })}
+                                                className={`plan-card-mini ${isActive ? 'active' : ''}`}
+                                                style={{
+                                                    padding: '1.25rem 0.5rem',
+                                                    borderRadius: '18px',
+                                                    border: `2px solid ${isActive ? color : 'transparent'}`,
+                                                    background: isActive ? `${color}15` : 'rgba(255,255,255,0.03)',
+                                                    cursor: 'pointer',
+                                                    textAlign: 'center',
+                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    position: 'relative',
+                                                    overflow: 'hidden'
+                                                }}
+                                            >
+                                                <div style={{ 
+                                                    padding: '8px', 
+                                                    borderRadius: '12px', 
+                                                    background: isActive ? color : 'rgba(255,255,255,0.05)',
+                                                    color: isActive ? 'black' : 'var(--text-muted)',
+                                                    transition: 'all 0.2s ease'
+                                                }}>
+                                                    <ShieldCheck size={20} />
+                                                </div>
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 900, color: isActive ? color : 'var(--text-muted)' }}>{p.tier}</span>
+                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                                                    Rs. {p.offerMonthly || p.monthlyPrice}/mo
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+                                    {[
+                                        { id: '1m', label: 'Monthly' },
+                                        { id: '3m', label: 'Quarterly' },
+                                        { id: '12m', label: 'Annual' }
+                                    ].map(d => (
+                                        <button
+                                            key={d.id}
+                                            type="button"
+                                            onClick={() => setNewClient({ ...newClient, planDuration: d.id })}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.75rem',
+                                                borderRadius: '12px',
+                                                border: `1px solid ${newClient.planDuration === d.id ? 'var(--primary)' : 'var(--border)'}`,
+                                                background: newClient.planDuration === d.id ? 'var(--primary-glow)' : 'transparent',
+                                                color: newClient.planDuration === d.id ? 'var(--primary)' : 'var(--text-muted)',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 800,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {d.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Section: Lifecycle & Billing */}
+                            <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', border: '1px solid var(--border)', boxShadow: '0 8px 32px -8px rgba(0,0,0,0.2)' }}>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.15em', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <Clock size={16} /> Lifecycle & Billing
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Subscription Expiry</label>
+                                        <div className="input-wrapper" style={{ 
+                                            background: 'rgba(255,255,255,0.03)', 
+                                            border: '1px solid var(--border)', 
+                                            borderRadius: '16px', 
+                                            padding: '4px 12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px'
+                                        }}>
+                                            <Calendar size={18} color="var(--primary)" />
+                                            <input 
+                                                type="date" 
+                                                value={newClient.subscriptionEnd || ''}
+                                                onChange={e => setNewClient({ ...newClient, subscriptionEnd: e.target.value })} 
+                                                required 
+                                                style={{ 
+                                                    background: 'transparent', 
+                                                    border: 'none', 
+                                                    color: 'white', 
+                                                    padding: '12px 0', 
+                                                    fontSize: '1rem', 
+                                                    fontWeight: 600,
+                                                    outline: 'none',
+                                                    width: '100%',
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Payment Status</label>
+                                        <div className="input-wrapper" style={{ 
+                                            background: 'rgba(255,255,255,0.03)', 
+                                            border: '1px solid var(--border)', 
+                                            borderRadius: '16px', 
+                                            padding: '4px 12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            position: 'relative'
+                                        }}>
+                                            <CreditCard size={18} color="var(--primary)" />
+                                            <select 
+                                                value={newClient.paymentStatus || 'PAID'}
+                                                onChange={e => setNewClient({ ...newClient, paymentStatus: e.target.value })}
+                                                style={{ 
+                                                    width: '100%', 
+                                                    background: 'transparent', 
+                                                    border: 'none', 
+                                                    color: 'white', 
+                                                    padding: '12px 0', 
+                                                    fontSize: '1rem', 
+                                                    fontWeight: 600,
+                                                    outline: 'none',
+                                                    appearance: 'none',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <option value="PAID" style={{ background: 'var(--bg-card)', color: 'white' }}>✓ MARK AS PAID</option>
+                                                <option value="PENDING" style={{ background: 'var(--bg-card)', color: 'white' }}>⌛ PENDING</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem' }}>
+                                <button type="button" className="btn-ghost" onClick={() => setIsAddModalOpen(false)} style={{ flex: 1, padding: '1rem' }}>Cancel</button>
+                                <button type="submit" className="btn-primary" disabled={submitLoading} style={{ flex: 2, padding: '1rem', borderRadius: '16px', boxShadow: '0 10px 20px -5px var(--primary-glow)' }}>
+                                    {submitLoading ? <Loader2 className="animate-spin" /> : 'Confirm Provisioning'}
                                 </button>
                             </div>
                         </form>
@@ -530,56 +871,266 @@ const ClientManagement = () => {
 
             {/* Edit Client Modal */}
             {isEditModalOpen && (
-                <div className="modal-overlay animate-fade">
-                    <div className="modal-content animate-slideUp" style={{ maxWidth: '400px' }}>
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Update Restaurant</h2>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Modifying core details for <strong>{selectedClient?.name}</strong>.</p>
-                        </div>
-                        <form onSubmit={handleUpdateClient} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            <div className="input-group">
-                                <label>Restaurant Name</label>
-                                <div className="input-wrapper">
-                                    <Store size={18} />
-                                    <input type="text" value={editClient.name || ''}
-                                        onChange={e => setEditClient({ ...editClient, name: e.target.value })} required />
-                                </div>
+                <div className="modal-overlay animate-fade" style={{ backdropFilter: 'blur(12px)', background: 'rgba(0,0,0,0.8)' }}>
+                    <div className="modal-content animate-slideUp premium-glass" style={{ maxWidth: '600px', border: '1px solid var(--border)', padding: '2.5rem' }}>
+                        <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
+                            <div style={{ width: '64px', height: '64px', background: 'var(--primary-glow)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifySelf: 'center', margin: '0 auto 1rem' }}>
+                                <Settings size={32} color="var(--primary)" />
                             </div>
-                            <div className="input-group">
-                                <label>Admin Contact Email</label>
-                                <div className="input-wrapper">
-                                    <Mail size={18} />
-                                    <input type="email" value={editClient.email || ''}
-                                        onChange={e => setEditClient({ ...editClient, email: e.target.value })} required />
+                            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem' }}>System Orchestration</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Updating core parameters for <strong>{selectedClient?.name}</strong>.</p>
+                        </div>
+
+                        <form onSubmit={handleUpdateClient} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            {/* Section: Entity Identity */}
+                            <div>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Store size={14} /> Entity Identity
+                                </h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <div className="input-group">
+                                        <label>Restaurant Legal Name</label>
+                                        <div className="input-wrapper">
+                                            <Store size={18} />
+                                            <input type="text" placeholder="e.g. Royal Orchid Bistro" value={editClient.name || ''}
+                                                onChange={e => setEditClient({ ...editClient, name: e.target.value })} required />
+                                        </div>
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Primary Administrative Email</label>
+                                        <div className="input-wrapper">
+                                            <Mail size={18} />
+                                            <input type="email" placeholder="admin@restaurant.com" value={editClient.email || ''}
+                                                onChange={e => setEditClient({ ...editClient, email: e.target.value })} required />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                        <input type="checkbox" checked={editClient.useTax} onChange={e => setEditClient({ ...editClient, useTax: e.target.checked })} />
-                                        VAT (%)
-                                    </label>
-                                    <div className="input-wrapper" style={{ opacity: editClient.useTax ? 1 : 0.5 }}>
-                                        <input type="number" step="0.01" value={editClient.taxRate || 0}
-                                            onChange={e => setEditClient({ ...editClient, taxRate: e.target.value })} disabled={!editClient.useTax} />
+                            {/* Section: Financial & Tax */}
+                            <div style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
+                                            <input type="checkbox" checked={editClient.useTax} onChange={e => setEditClient({ ...editClient, useTax: e.target.checked })} 
+                                                style={{ width: '18px', height: '18px' }} />
+                                            VAT Override
+                                        </label>
+                                        <div className="input-wrapper" style={{ opacity: editClient.useTax ? 1 : 0.4 }}>
+                                            <input type="number" step="0.01" placeholder="13" value={editClient.taxRate || 0}
+                                                onChange={e => setEditClient({ ...editClient, taxRate: e.target.value })} disabled={!editClient.useTax} 
+                                                style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 700 }} />
+                                            <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>%</span>
+                                        </div>
                                     </div>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                                        <input type="checkbox" checked={editClient.useServiceCharge} onChange={e => setEditClient({ ...editClient, useServiceCharge: e.target.checked })} />
-                                        SC (%)
-                                    </label>
-                                    <div className="input-wrapper" style={{ opacity: editClient.useServiceCharge ? 1 : 0.5 }}>
-                                        <input type="number" step="0.01" value={editClient.serviceChargeRate || 0}
-                                            onChange={e => setEditClient({ ...editClient, serviceChargeRate: e.target.value })} disabled={!editClient.useServiceCharge} />
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
+                                            <input type="checkbox" checked={editClient.useServiceCharge} onChange={e => setEditClient({ ...editClient, useServiceCharge: e.target.checked })} 
+                                                style={{ width: '18px', height: '18px' }} />
+                                            Service Charge
+                                        </label>
+                                        <div className="input-wrapper" style={{ opacity: editClient.useServiceCharge ? 1 : 0.4 }}>
+                                            <input type="number" step="0.01" placeholder="10" value={editClient.serviceChargeRate || 0}
+                                                onChange={e => setEditClient({ ...editClient, serviceChargeRate: e.target.value })} disabled={!editClient.useServiceCharge} 
+                                                style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 700 }} />
+                                            <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>%</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                                <button type="button" className="btn-ghost" onClick={() => setIsEditModalOpen(false)} style={{ flex: 1 }}>Cancel</button>
-                                <button type="submit" className="btn-primary" disabled={submitLoading} style={{ flex: 2 }}>
-                                    {submitLoading ? <Loader2 className="animate-spin" /> : 'Save Changes'}
+
+                            {/* Section: Subscription Tier */}
+                            <div>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <ShieldCheck size={14} /> Ecosystem Tier
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                    {plans.map(p => {
+                                        const color = p.tier === 'GOLD' ? '#fbbf24' : p.tier === 'DIAMOND' ? '#38bdf8' : '#94a3b8';
+                                        const isActive = editClient.plan === p.tier;
+                                        return (
+                                            <div 
+                                                key={p.id}
+                                                onClick={() => setEditClient({ ...editClient, plan: p.tier })}
+                                                className={`plan-card-mini ${isActive ? 'active' : ''}`}
+                                                style={{
+                                                    padding: '1.25rem 0.5rem',
+                                                    borderRadius: '18px',
+                                                    border: `2px solid ${isActive ? color : 'transparent'}`,
+                                                    background: isActive ? `${color}15` : 'rgba(255,255,255,0.03)',
+                                                    cursor: 'pointer',
+                                                    textAlign: 'center',
+                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    position: 'relative',
+                                                    overflow: 'hidden'
+                                                }}
+                                            >
+                                                <div style={{ 
+                                                    padding: '8px', 
+                                                    borderRadius: '12px', 
+                                                    background: isActive ? color : 'rgba(255,255,255,0.05)',
+                                                    color: isActive ? 'black' : 'var(--text-muted)',
+                                                    transition: 'all 0.2s ease'
+                                                }}>
+                                                    <ShieldCheck size={20} />
+                                                </div>
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 900, color: isActive ? color : 'var(--text-muted)' }}>{p.tier}</span>
+                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                                                    Rs. {p.offerMonthly || p.monthlyPrice}/mo
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+                                    {[
+                                        { id: '1m', label: 'Monthly' },
+                                        { id: '3m', label: 'Quarterly' },
+                                        { id: '12m', label: 'Annual' }
+                                    ].map(d => (
+                                        <button
+                                            key={d.id}
+                                            type="button"
+                                            onClick={() => setEditClient({ ...editClient, planDuration: d.id })}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.75rem',
+                                                borderRadius: '12px',
+                                                border: `1px solid ${editClient.planDuration === d.id ? 'var(--primary)' : 'var(--border)'}`,
+                                                background: editClient.planDuration === d.id ? 'var(--primary-glow)' : 'transparent',
+                                                color: editClient.planDuration === d.id ? 'var(--primary)' : 'var(--text-muted)',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 800,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {d.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Section: Lifecycle & Billing */}
+                            <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', border: '1px solid var(--border)', boxShadow: '0 8px 32px -8px rgba(0,0,0,0.2)' }}>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.15em', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <Clock size={16} /> Lifecycle & Billing
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Subscription Expiry</label>
+                                        <div className="input-wrapper" style={{ 
+                                            background: 'rgba(255,255,255,0.03)', 
+                                            border: '1px solid var(--border)', 
+                                            borderRadius: '16px', 
+                                            padding: '4px 12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px'
+                                        }}>
+                                            <Calendar size={18} color="var(--primary)" />
+                                            <input 
+                                                type="date" 
+                                                value={editClient.subscriptionEnd || ''}
+                                                onChange={e => setEditClient({ ...editClient, subscriptionEnd: e.target.value })} 
+                                                required 
+                                                style={{ 
+                                                    background: 'transparent', 
+                                                    border: 'none', 
+                                                    color: 'white', 
+                                                    padding: '12px 0', 
+                                                    fontSize: '1rem', 
+                                                    fontWeight: 600,
+                                                    outline: 'none',
+                                                    width: '100%',
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                                            {[
+                                                { m: 1, label: '+1 Month' },
+                                                { m: 3, label: '+3 Months' },
+                                                { m: 12, label: '+1 Year' }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.m}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const current = editClient.subscriptionEnd ? new Date(editClient.subscriptionEnd) : new Date();
+                                                        const now = new Date();
+                                                        const base = current > now ? current : now;
+                                                        const fresh = new Date(base);
+                                                        fresh.setMonth(fresh.getMonth() + opt.m);
+                                                        setEditClient({ ...editClient, subscriptionEnd: fresh.toISOString().split('T')[0] });
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px',
+                                                        borderRadius: '10px',
+                                                        background: 'rgba(255,255,255,0.05)',
+                                                        border: '1px solid var(--border)',
+                                                        color: 'var(--primary)',
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 800,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                    onMouseOver={e => e.currentTarget.style.background = 'var(--primary-glow)'}
+                                                    onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Payment Status</label>
+                                        <div className="input-wrapper" style={{ 
+                                            background: 'rgba(255,255,255,0.03)', 
+                                            border: '1px solid var(--border)', 
+                                            borderRadius: '16px', 
+                                            padding: '4px 12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            position: 'relative'
+                                        }}>
+                                            <CreditCard size={18} color="var(--primary)" />
+                                            <select 
+                                                value={editClient.paymentStatus || 'PAID'}
+                                                onChange={e => setEditClient({ ...editClient, paymentStatus: e.target.value })}
+                                                style={{ 
+                                                    width: '100%', 
+                                                    background: 'transparent', 
+                                                    border: 'none', 
+                                                    color: 'white', 
+                                                    padding: '12px 0', 
+                                                    fontSize: '1rem', 
+                                                    fontWeight: 600,
+                                                    outline: 'none',
+                                                    appearance: 'none',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <option value="PAID" style={{ background: 'var(--bg-card)', color: 'white' }}>✓ MARK AS PAID</option>
+                                                <option value="PENDING" style={{ background: 'var(--bg-card)', color: 'white' }}>⌛ PENDING</option>
+                                                <option value="OVERDUE" style={{ background: 'var(--bg-card)', color: 'white' }}>⚠ OVERDUE</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem' }}>
+                                <button type="button" className="btn-ghost" onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: '1rem' }}>Cancel</button>
+                                <button type="submit" className="btn-primary" disabled={submitLoading} style={{ flex: 2, padding: '1rem', borderRadius: '16px', boxShadow: '0 10px 20px -5px var(--primary-glow)' }}>
+                                    {submitLoading ? <Loader2 className="animate-spin" /> : 'Synchronize Node'}
                                 </button>
                             </div>
                         </form>

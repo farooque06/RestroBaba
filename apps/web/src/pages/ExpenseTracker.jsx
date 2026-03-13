@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Wallet, Plus, Search, Filter, Calendar, Trash2, Edit2, Loader2, TrendingDown, TrendingUp, DollarSign } from 'lucide-react';
+import { Wallet, Plus, Search, Filter, Calendar, Trash2, Edit2, Loader2, TrendingDown, TrendingUp, DollarSign, UtensilsCrossed, User, Lightbulb, Home, Wrench, Megaphone, MoreHorizontal, X, Banknote } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import { formatCurrency } from '../utils/formatters';
 
@@ -15,7 +15,15 @@ const ExpenseTracker = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ title: '', message: '', onConfirm: () => { } });
 
-    const categories = ['Ingredients', 'Salary', 'Utilities', 'Rent', 'Maintenance', 'Marketing', 'Others'];
+    const categories = [
+        { id: 'Ingredients', icon: UtensilsCrossed, color: '#f59e0b' },
+        { id: 'Salary', icon: User, color: '#818cf8' },
+        { id: 'Utilities', icon: Lightbulb, color: '#10b981' },
+        { id: 'Rent', icon: Home, color: '#ef4444' },
+        { id: 'Maintenance', icon: Wrench, color: '#6366f1' },
+        { id: 'Marketing', icon: Megaphone, color: '#f472b6' },
+        { id: 'Others', icon: MoreHorizontal, color: '#94a3b8' }
+    ];
 
     useEffect(() => {
         fetchData();
@@ -179,19 +187,23 @@ const ExpenseTracker = () => {
                     </button>
                     {categories.map(cat => (
                         <button
-                            key={cat}
-                            onClick={() => setFilterCategory(cat)}
+                            key={cat.id}
+                            onClick={() => setFilterCategory(cat.id)}
                             style={{
                                 padding: '0.5rem 1.25rem',
                                 borderRadius: '10px',
-                                background: filterCategory === cat ? 'var(--primary)' : 'var(--glass-shine)',
+                                background: filterCategory === cat.id ? 'var(--primary)' : 'var(--glass-shine)',
                                 border: '1px solid var(--glass-border)',
-                                color: filterCategory === cat ? 'white' : 'var(--text-muted)',
+                                color: filterCategory === cat.id ? 'white' : 'var(--text-muted)',
                                 cursor: 'pointer',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
                             }}
                         >
-                            {cat}
+                            <cat.icon size={14} />
+                            {cat.id}
                         </button>
                     ))}
                 </div>
@@ -254,58 +266,89 @@ const ExpenseTracker = () => {
             </div>
 
             {isModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="modal-card" style={{ width: '400px' }}>
-                        <h2>{editingItem ? 'Edit Expense' : 'Record New Expense'}</h2>
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1.5rem' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                    <div className="modal-card" style={{ width: '450px', padding: '2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ margin: 0 }}>{editingItem ? 'Edit Expense' : 'Record New Expense'}</h2>
+                            <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div className="input-group">
-                                <label>Description (e.g., Weekly Salary, Gas Bill)</label>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Description</label>
                                 <input
                                     className="auth-input"
                                     required
+                                    placeholder="e.g., Weekly Salary, Gas Bill"
                                     value={formData.description}
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    style={{ background: 'var(--glass-shine)' }}
                                 />
                             </div>
+
                             <div style={{ display: 'flex', gap: '1rem' }}>
                                 <div className="input-group" style={{ flex: 1 }}>
-                                    <label>Amount (Rs.)</label>
-                                    <input
-                                        className="auth-input"
-                                        type="number"
-                                        step="0.01"
-                                        required
-                                        value={formData.amount}
-                                        onChange={e => setFormData({ ...formData, amount: e.target.value })}
-                                    />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Amount (Rs.)</label>
+                                    <div className="input-with-icon">
+                                        <Banknote size={16} />
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            value={formData.amount}
+                                            onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                            style={{ fontWeight: 700 }}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="input-group" style={{ flex: 1 }}>
-                                    <label>Date</label>
-                                    <input
-                                        className="auth-input"
-                                        type="date"
-                                        required
-                                        value={formData.date}
-                                        onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                    />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Date</label>
+                                    <div className="input-with-icon">
+                                        <Calendar size={16} />
+                                        <input
+                                            type="date"
+                                            required
+                                            value={formData.date}
+                                            onChange={e => setFormData({ ...formData, date: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
                             </div>
+
                             <div className="input-group">
-                                <label>Category</label>
-                                <select
-                                    className="auth-input"
-                                    value={formData.category}
-                                    onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                    style={{ appearance: 'none' }}
-                                >
+                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '12px', display: 'block', textTransform: 'uppercase' }}>Transaction Category</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
                                     {categories.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
+                                        <div 
+                                            key={cat.id}
+                                            onClick={() => setFormData({ ...formData, category: cat.id })}
+                                            style={{
+                                                padding: '0.75rem 0.25rem',
+                                                borderRadius: '12px',
+                                                cursor: 'pointer',
+                                                background: formData.category === cat.id ? `${cat.color}15` : 'rgba(255,255,255,0.02)',
+                                                border: `1px solid ${formData.category === cat.id ? cat.color : 'var(--glass-border)'}`,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <cat.icon size={16} color={formData.category === cat.id ? cat.color : 'var(--text-muted)'} />
+                                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: formData.category === cat.id ? 'var(--text-main)' : 'var(--text-muted)' }}>{cat.id}</span>
+                                        </div>
                                     ))}
-                                </select>
+                                </div>
                             </div>
+
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" className="nav-item active" style={{ flex: 1, padding: '0.8rem', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>Save Record</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '1rem', borderRadius: '16px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 700 }}>Cancel</button>
+                                <button type="submit" className="premium-button active" style={{ flex: 1, padding: '1rem', borderRadius: '16px', border: 'none', cursor: 'pointer', fontWeight: 800 }}>
+                                    {editingItem ? 'Update Record' : 'Save Record'}
+                                </button>
                             </div>
                         </form>
                     </div>
