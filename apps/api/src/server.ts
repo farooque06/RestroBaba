@@ -39,7 +39,27 @@ initSocket(httpServer);
 
 // Security Middlewares
 app.use(helmet());
-app.use(cors());
+// CORS Configuration
+const allowedOrigins = [
+    'https://restrobaba.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'clientId'],
+    exposedHeaders: ['Set-Cookie']
+}));
 app.use(express.json());
 
 // Logging Middleware
