@@ -68,7 +68,11 @@
     background: var(--bg-side);
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 20px 0 50px rgba(0,0,0,0.5);
-    overflow-y: auto;
+    overflow: hidden; /* Sidebar itself shouldn't scroll, inner nav should */
+  }
+
+  .sidebar .sidebar-footer {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 20px));
   }
 
   .sidebar.mobile-open {

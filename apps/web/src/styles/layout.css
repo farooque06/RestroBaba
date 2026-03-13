@@ -68,6 +68,28 @@
   display: none;
 }
 
+.sidebar-nav-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.sidebar-nav-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
 .nav-links {
   display: flex;
   flex-direction: column;
@@ -119,13 +141,20 @@
     border-color: rgba(239, 68, 68, 0.2) !important;
 }
 
-/* Sidebar Profile */
+/* Sidebar Profile & Footer */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-side);
+}
+
 .sidebar-profile {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     padding: 1rem;
-    margin: 1rem 0;
+    margin-bottom: 1rem;
     background: var(--bg-card);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
@@ -138,6 +167,7 @@
     justify-content: center;
     background: transparent;
     border-color: transparent;
+    margin-bottom: 0.5rem;
 }
 
 .profile-avatar {
@@ -294,4 +324,44 @@
   font-weight: 700;
   color: var(--text-heading);
   font-size: 1rem;
+}
+.mobile-close-btn {
+  display: flex;
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card) !important;
+  color: var(--text-heading) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  z-index: 10001;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-close-btn {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+}
+
+.mobile-close-btn:hover {
+  background: var(--bg-input) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  transform: rotate(90deg);
+}
+
+.mobile-close-btn:active {
+  transform: scale(0.9) rotate(90deg);
 }

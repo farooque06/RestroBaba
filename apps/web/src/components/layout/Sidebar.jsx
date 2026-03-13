@@ -119,22 +119,24 @@ const Sidebar = () => {
                     </div>
                 </div>
 
-                <div className="nav-links">
-                    {filteredItems.map((item) => (
-                        <NavLink
-                            key={item.id}
-                            to={item.path}
-                            onClick={() => setIsMobileOpen(false)} // Close drawer on navigation
-                            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                            title={isCollapsed ? item.label : ''}
-                        >
-                            <item.icon size={18} />
-                            {(!isCollapsed || isMobileOpen) && <span>{item.label}</span>}
-                        </NavLink>
-                    ))}
+                <div className="sidebar-nav-content">
+                    <div className="nav-links">
+                        {filteredItems.map((item) => (
+                            <NavLink
+                                key={item.id}
+                                to={item.path}
+                                onClick={() => setIsMobileOpen(false)} // Close drawer on navigation
+                                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                                title={isCollapsed ? item.label : ''}
+                            >
+                                <item.icon size={18} />
+                                {(!isCollapsed || isMobileOpen) && <span>{item.label}</span>}
+                            </NavLink>
+                        ))}
+                    </div>
                 </div>
 
-                <div style={{ marginTop: 'auto' }} className="nav-links">
+                <div className="sidebar-footer">
                     {/* User Profile Section */}
                     <div className="sidebar-profile" title={isCollapsed ? `${user?.name} (${user?.clientName})` : ''}>
                         <div className="profile-avatar">
@@ -151,22 +153,24 @@ const Sidebar = () => {
                         )}
                     </div>
 
-                    <NavLink
-                        to="/settings"
-                        onClick={() => setIsMobileOpen(false)}
-                        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                        title={isCollapsed ? 'Settings' : ''}
-                    >
-                        <Settings size={18} />
-                        {(!isCollapsed || isMobileOpen) && <span>Settings</span>}
-                    </NavLink>
-                    <div
-                        className="nav-item logout-item"
-                        onClick={() => { logout(); setIsMobileOpen(false); }}
-                        title={isCollapsed ? 'Logout' : ''}
-                    >
-                        <Logout size={18} />
-                        {(!isCollapsed || isMobileOpen) && <span>Logout</span>}
+                    <div className="nav-links">
+                        <NavLink
+                            to="/settings"
+                            onClick={() => setIsMobileOpen(false)}
+                            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                            title={isCollapsed ? 'Settings' : ''}
+                        >
+                            <Settings size={18} />
+                            {(!isCollapsed || isMobileOpen) && <span>Settings</span>}
+                        </NavLink>
+                        <div
+                            className="nav-item logout-item"
+                            onClick={() => { logout(); setIsMobileOpen(false); }}
+                            title={isCollapsed ? 'Logout' : ''}
+                        >
+                            <Logout size={18} />
+                            {(!isCollapsed || isMobileOpen) && <span>Logout</span>}
+                        </div>
                     </div>
                 </div>
             </div>
