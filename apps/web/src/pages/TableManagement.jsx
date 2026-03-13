@@ -329,10 +329,24 @@ const TableManagement = () => {
                             Real-time floor plan for <strong style={{ color: 'var(--text-heading)' }}>{user?.clientName}</strong>
                         </p>
                     </div>
-                    <button onClick={() => setIsModalOpen(true)} className="tm-add-btn">
+                    <button onClick={() => setIsModalOpen(true)} className="tm-add-btn" disabled={tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10)}>
                         <Plus size={16} />
                         <span>Add Table</span>
                     </button>
+                </div>
+                {/* Plan Limit Indicator */}
+                <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Capacity: <strong style={{ color: tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10) ? 'var(--danger)' : 'var(--text-main)' }}>{tables.length}</strong> / {user?.client?.subscriptionPlan?.maxTables || 10}
+                    </div>
+                    <div style={{ width: '120px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        <div style={{ 
+                            width: `${Math.min((tables.length / (user?.client?.subscriptionPlan?.maxTables || 10)) * 100, 100)}%`, 
+                            height: '100%', 
+                            background: tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10) ? 'var(--danger)' : 'var(--primary-gradient)',
+                            transition: 'width 0.5s ease'
+                        }} />
+                    </div>
                 </div>
             </div>
 

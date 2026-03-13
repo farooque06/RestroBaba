@@ -41,10 +41,14 @@ const StaffManagement = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ title: '', message: '', onConfirm: () => { } });
 
-    // Plan-based limits
+    // Plan-based limits (dynamic from DB)
     const plan = user?.client?.plan || 'SILVER';
-    const limits = { SILVER: 2, GOLD: 10, DIAMOND: Infinity };
-    const limit = limits[plan] || 2;
+    const dynamicLimit = user?.client?.subscriptionPlan?.maxStaff;
+    
+    // Fallback to hardcoded defaults only if DB value is missing
+    const fallbackLimits = { SILVER: 2, GOLD: 10, DIAMOND: Infinity };
+    const limit = dynamicLimit ?? (fallbackLimits[plan] || 2);
+    
     const isLimitReached = staff.length >= limit;
 
     useEffect(() => { fetchStaff(); }, []);
