@@ -19,6 +19,20 @@ class ErrorBoundary extends React.Component {
             errorInfo: errorInfo
         });
         console.error("ErrorBoundary caught an error", error, errorInfo);
+
+        // Auto-refresh on chunk loading errors (stale builds)
+        const isChunkError = error.message && (
+            error.message.includes("Failed to fetch dynamically imported module") ||
+            error.message.includes("Loading chunk") ||
+            error.message.includes("MIME type mismatch")
+        );
+
+        if (isChunkError) {
+            console.log("Chunk loading error detected. Restoring application with automatic reload...");
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
     }
 
     render() {

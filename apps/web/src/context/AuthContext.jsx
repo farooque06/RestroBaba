@@ -98,6 +98,8 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         localStorage.removeItem('restroUser');
         localStorage.removeItem('restroToken');
+        // Force full refresh to login page to clear all in-memory state and avoid lazy-load issues
+        window.location.href = '/login';
     };
 
     return (
