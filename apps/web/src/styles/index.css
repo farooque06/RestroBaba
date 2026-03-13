@@ -24,6 +24,8 @@
 @import './components/settings.css';
 @import './components/recipe-management.css';
 @import './components/billing.css';
+@import './components/sa-management.css';
+@import './components/admin-pages.css';
 
 /* ── Responsive & Print Rules ── */
 @import './responsive.css';

@@ -227,3 +227,48 @@
 .sidebar.collapsed .sidebar-toggle {
   right: -12px;
 }
+
+/* =====================================================
+   MOBILE HEADER
+   ===================================================== */
+.mobile-header {
+  display: none;
+  height: 60px;
+  background: var(--bg-side);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
+.mobile-menu-trigger {
+  background: transparent;
+  border: none;
+  color: var(--text-heading);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-trigger:hover {
+  background: var(--bg-card);
+  color: var(--primary);
+}
+
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  font-size: 1rem;
+}

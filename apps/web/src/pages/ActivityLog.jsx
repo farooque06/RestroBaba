@@ -66,39 +66,37 @@ const ActivityLog = () => {
 
     return (
         <div className="page-container animate-fade">
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>System Activity Log</h1>
-                <p style={{ color: 'var(--text-muted)' }}>Audit trail of all administrative and operational actions.</p>
+            <div className="admin-page-header" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                <h1>System Activity Log</h1>
+                <p>Audit trail of all administrative and operational actions.</p>
             </div>
 
-            <div className="premium-glass" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button onClick={() => setFilter('ALL')} className={`nav-item ${filter === 'ALL' ? 'active' : ''}`} style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}>All Activity</button>
-                    <button onClick={() => setFilter('STATUS_CHANGE')} className={`nav-item ${filter === 'STATUS_CHANGE' ? 'active' : ''}`} style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}>Order Status</button>
-                    <button onClick={() => setFilter('INVENTORY')} className={`nav-item ${filter === 'INVENTORY' ? 'active' : ''}`} style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}>Inventory</button>
+            <div className="premium-glass admin-filter-bar">
+                <div className="admin-filter-group">
+                    <button onClick={() => setFilter('ALL')} className={`admin-filter-btn ${filter === 'ALL' ? 'active' : ''}`}>All Activity</button>
+                    <button onClick={() => setFilter('STATUS_CHANGE')} className={`admin-filter-btn ${filter === 'STATUS_CHANGE' ? 'active' : ''}`}>Order Status</button>
+                    <button onClick={() => setFilter('INVENTORY')} className={`admin-filter-btn ${filter === 'INVENTORY' ? 'active' : ''}`}>Inventory</button>
                 </div>
 
-                <div style={{ height: '24px', width: '1px', background: 'var(--glass-border)' }}></div>
+                <div className="admin-filter-divider"></div>
 
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div className="admin-date-range">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>From:</span>
                         <input
                             type="date"
-                            className="premium-glass"
+                            className="premium-glass admin-date-input"
                             value={startDate}
                             onChange={e => setStartDate(e.target.value)}
-                            style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', color: 'var(--text-main)', fontSize: '0.9rem' }}
                         />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>To:</span>
                         <input
                             type="date"
-                            className="premium-glass"
+                            className="premium-glass admin-date-input"
                             value={endDate}
                             onChange={e => setEndDate(e.target.value)}
-                            style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', color: 'var(--text-main)', fontSize: '0.9rem' }}
                         />
                     </div>
                     {(startDate || endDate) && (
@@ -113,32 +111,36 @@ const ActivityLog = () => {
             </div>
 
             <div className="premium-glass" style={{ overflow: 'hidden' }}>
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--glass-border)', display: 'grid', gridTemplateColumns: '150px 1fr 150px 150px', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="admin-table-header admin-table-4col">
                     <span>Timestamp</span>
                     <span>Action / Details</span>
                     <span>User</span>
                     <span>Role</span>
                 </div>
-                <div style={{ maxHeight: 'calc(100vh - 400px)', overflowY: 'auto' }}>
+                <div className="admin-table-scroll">
                     {logs.filter(log => filter === 'ALL' || log.action.includes(filter)).map(log => (
-                        <div key={log.id} style={{ padding: '1.25rem', borderBottom: '1px solid var(--glass-border)', display: 'grid', gridTemplateColumns: '150px 1fr 150px 150px', alignItems: 'center', transition: 'background 0.2s' }}>
+                        <div key={log.id} className="admin-table-row admin-table-4col">
                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span className="admin-mobile-label">Timestamp</span>
                                 <Clock size={14} />
                                 {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 <br />
                                 {new Date(log.createdAt).toLocaleDateString()}
                             </div>
                             <div>
+                                <span className="admin-mobile-label">Action</span>
                                 <span style={{ fontWeight: 700, color: getActionColor(log.action), fontSize: '0.9rem', marginBottom: '0.25rem', display: 'block' }}>
                                     {log.action.replace('_', ' ')}
                                 </span>
                                 <p style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{log.details}</p>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                                <span className="admin-mobile-label">User</span>
                                 <User size={16} color="var(--text-muted)" />
                                 <span>{log.user?.name || log.userId.slice(-6).toUpperCase()}</span>
                             </div>
                             <div>
+                                <span className="admin-mobile-label">Role</span>
                                 <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
                                     {log.role}
                                 </span>
@@ -146,8 +148,8 @@ const ActivityLog = () => {
                         </div>
                     ))}
                     {logs.length === 0 && (
-                        <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            <Activity size={48} style={{ opacity: 0.1, marginBottom: '1rem' }} />
+                        <div className="admin-empty-state">
+                            <Activity size={48} />
                             <p>No activity logs found.</p>
                         </div>
                     )}

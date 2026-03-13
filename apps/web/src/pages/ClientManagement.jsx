@@ -353,110 +353,97 @@ const ClientManagement = () => {
     return (
         <div className="page-container animate-fade">
             {/* Header Section */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3.5rem' }}>
-                <div>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="sa-mgmt-header">
+                <div className="sa-mgmt-title">
+                    <h1>
                         Client Ecosystem 
-                        <span className="status-badge" style={{ fontSize: '0.7rem', padding: '6px 14px', borderRadius: '100px', background: 'var(--primary-glow)', border: '1px solid var(--primary)', color: 'var(--primary)', fontWeight: 800 }}>
+                        <span className="status-badge sa-badge-super">
                             <ShieldCheck size={14} /> SUPER ADMIN
                         </span>
                     </h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Orchestrate your network of restaurant clients and system infrastructure.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '1.25rem' }}>
-                    <button className="btn-ghost" onClick={() => setIsSecurityModalOpen(true)} style={{ gap: '10px', padding: '0.8rem 1.6rem', borderRadius: '14px' }}>
+                <div className="sa-mgmt-actions">
+                    <button className="btn-ghost" onClick={() => setIsSecurityModalOpen(true)}>
                         <Lock size={18} /> Credentials
                     </button>
-                    <button className="btn-primary" onClick={() => setIsAddModalOpen(true)} style={{ padding: '0.8rem 1.8rem', gap: '10px', borderRadius: '14px', boxShadow: '0 10px 20px -5px var(--primary-glow)' }}>
+                    <button className="btn-primary sa-btn-onboard" onClick={() => setIsAddModalOpen(true)}>
                         <Plus size={20} /> Onboard Restaurant
                     </button>
                 </div>
             </div>
 
             {/* Stats Row */}
-            <div className="dashboard-grid" style={{ marginBottom: '3.5rem', gap: '2rem' }}>
-                <div className="stat-card" style={{ padding: '2rem', borderRadius: '24px', background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+            <div className="sa-mgmt-stats">
+                <div className="stat-card sa-stat-card-premium">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <span className="stat-label" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Portfolio</span>
-                            <span className="stat-value" style={{ fontSize: '2.5rem', fontWeight: 900, display: 'block', marginTop: '0.5rem' }}>{clients.length}</span>
+                            <span className="stat-label">Total Portfolio</span>
+                            <span className="stat-value sa-stat-large">{clients.length}</span>
                         </div>
-                        <div style={{ background: 'var(--primary-glow)', padding: '12px', borderRadius: '16px' }}>
+                        <div className="sa-stat-icon-bg primary">
                             <Store size={24} color="var(--primary)" />
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: 700, padding: '4px 12px' }}>{clients.filter(c => c.isActive).length} Active</span>
-                        <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', fontWeight: 700, padding: '4px 12px' }}>{clients.filter(c => !c.isActive).length} Inactive</span>
+                        <span className="badge badge-success-light">{clients.filter(c => c.isActive).length} Active</span>
+                        <span className="badge badge-subtle">{clients.filter(c => !c.isActive).length} Inactive</span>
                     </div>
                 </div>
                 
-                <div className="stat-card" style={{ padding: '2rem', borderRadius: '24px', background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                <div className="stat-card sa-stat-card-premium">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <span className="stat-label" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>System Resilience</span>
-                            <span className="stat-value" style={{ fontSize: '2.5rem', fontWeight: 900, display: 'block', marginTop: '0.5rem', color: '#10b981' }}>99.9%</span>
+                            <span className="stat-label">System Resilience</span>
+                            <span className="stat-value sa-stat-large sa-text-success">99.9%</span>
                         </div>
-                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '16px' }}>
+                        <div className="sa-stat-icon-bg success">
                             <ShieldCheck size={24} color="#10b981" />
                         </div>
                     </div>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block', marginTop: '1.5rem' }}>Infrastructure health is optimal.</span>
                 </div>
 
-                <div className="stat-card" style={{ padding: '2rem', borderRadius: '24px', background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                <div className="stat-card sa-stat-card-premium">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <span className="stat-label" style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Security Layer</span>
-                            <span className="stat-value" style={{ fontSize: '1.8rem', fontWeight: 900, display: 'block', marginTop: '0.5rem' }}>E2EE Active</span>
+                            <span className="stat-label">Security Layer</span>
+                            <span className="stat-value sa-stat-medium">E2EE Active</span>
                         </div>
-                        <div style={{ background: 'rgba(251, 191, 36, 0.1)', padding: '12px', borderRadius: '16px' }}>
+                        <div className="sa-stat-icon-bg warning">
                             <Key size={24} color="#fbbf24" />
                         </div>
                     </div>
                     <div style={{ marginTop: '1.5rem' }}>
-                        <span className="badge" style={{ background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', fontWeight: 800 }}>AES-256 Enforced</span>
+                        <span className="badge badge-warning-light">AES-256 Enforced</span>
                     </div>
                 </div>
             </div>
 
             {/* Client Registry & Filters */}
-            <div style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '2rem' }}>
-                    <div className="search-bar premium-glass shadow-sm" style={{ width: '100%', maxWidth: '500px', background: 'rgba(255,255,255,0.02)', padding: '0.8rem 1.25rem', borderRadius: '16px' }}>
+            <div className="sa-mgmt-controls-container">
+                <div className="sa-mgmt-controls">
+                    <div className="search-bar sa-search-premium">
                         <Search size={20} color="var(--text-muted)" />
                         <input
                             type="text"
                             placeholder="Search by name, email, or shop code..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{ fontSize: '1rem' }}
                         />
                         {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}>
+                            <button onClick={() => setSearchQuery('')} className="sa-search-clear">
                                 <XCircle size={18} />
                             </button>
                         )}
                     </div>
                     
-                    <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '4px', maxWidth: '60%' }}>
+                    <div className="sa-mgmt-filters">
                         {['ALL', 'LIVE', 'SUSPENDED', 'EXPIRING_SOON', 'PENDING_PAYMENT', 'SILVER', 'GOLD', 'DIAMOND'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setActiveFilter(f)}
                                 className={`pill-btn ${activeFilter === f ? 'active' : ''}`}
-                                style={{
-                                    padding: '0.6rem 1.25rem',
-                                    borderRadius: '12px',
-                                    fontSize: '0.7rem',
-                                    whiteSpace: 'nowrap',
-                                    fontWeight: 700,
-                                    border: '1px solid var(--border)',
-                                    background: activeFilter === f ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
-                                    color: activeFilter === f ? 'white' : 'var(--text-muted)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
-                                }}
                             >
                                 {f.replace('_', ' ')}
                             </button>
@@ -465,7 +452,7 @@ const ClientManagement = () => {
                 </div>
             </div>
 
-            <div className="theme-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '2rem' }}>
+            <div className="sa-mgmt-grid">
                 {filteredClients.length === 0 ? (
                     <div className="premium-glass" style={{ gridColumn: '1 / -1', padding: '6rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                         <Search size={64} style={{ opacity: 0.1, marginBottom: '1.5rem' }} />

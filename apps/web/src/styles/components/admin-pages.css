@@ -1,0 +1,288 @@
+/* =====================================================
+   ADMIN PAGES - Shared Responsive Classes
+   ===================================================== */
+
+/* ── Page Headers ── */
+.admin-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.admin-page-header h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+
+.admin-page-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.admin-header-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* ── Filter / Control Bars ── */
+.admin-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-filter-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.admin-filter-btn {
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.admin-filter-btn.active,
+.admin-filter-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.admin-date-range {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.admin-date-input {
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    font-size: 0.85rem;
+    background: transparent;
+}
+
+.admin-filter-divider {
+    height: 24px;
+    width: 1px;
+    background: var(--glass-border);
+    flex-shrink: 0;
+}
+
+/* ── Data Tables (Desktop: grid, Mobile: cards) ── */
+.admin-table-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--glass-border);
+    display: grid;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.admin-table-row {
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid var(--glass-border);
+    display: grid;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.admin-table-row:hover {
+    background: rgba(255,255,255,0.02);
+}
+
+.admin-table-scroll {
+    max-height: calc(100vh - 380px);
+    overflow-y: auto;
+}
+
+/* 4-column layout (Activity Log, Orders) */
+.admin-table-4col {
+    grid-template-columns: 140px 1fr 140px 120px;
+}
+
+/* 3-column layout */
+.admin-table-3col {
+    grid-template-columns: 1fr 1fr 120px;
+}
+
+/* ── Stat / Card Grids ── */
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.admin-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+/* ── Form Layouts ── */
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+.admin-form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* ── Empty States ── */
+.admin-empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.admin-empty-state svg {
+    opacity: 0.1;
+    margin-bottom: 1rem;
+}
+
+/* ── Mobile Label (shown only on small screens for table→card) ── */
+.admin-mobile-label {
+    display: none;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+}
+
+/* =====================================================
+   RESPONSIVE BREAKPOINTS
+   ===================================================== */
+
+@media (max-width: 1024px) {
+    .admin-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .admin-header-actions {
+        width: 100%;
+    }
+
+    .admin-table-4col {
+        grid-template-columns: 120px 1fr 120px 100px;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-page-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .admin-header-actions {
+        flex-direction: column;
+    }
+
+    .admin-header-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .admin-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .admin-filter-divider {
+        display: none;
+    }
+
+    .admin-date-range {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    /* Table → Card conversion */
+    .admin-table-header {
+        display: none;
+    }
+
+    .admin-table-4col,
+    .admin-table-3col {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 0.5rem;
+    }
+
+    .admin-mobile-label {
+        display: block;
+    }
+
+    .admin-stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .admin-card-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .admin-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .admin-table-scroll {
+        max-height: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-page-header h1 {
+        font-size: 1.3rem;
+    }
+
+    .admin-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.6rem;
+    }
+
+    .admin-filter-group {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+    }
+
+    .admin-empty-state {
+        padding: 2.5rem 1rem;
+    }
+}

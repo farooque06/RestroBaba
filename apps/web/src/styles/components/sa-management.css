@@ -1,0 +1,165 @@
+/* =====================================================
+   SUPER ADMIN MANAGEMENT PAGES (Clients, Plans)
+   ===================================================== */
+
+.sa-mgmt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3.5rem;
+    gap: 2rem;
+}
+
+.sa-mgmt-title h1 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    line-height: 1.1;
+}
+
+.sa-mgmt-actions {
+    display: flex;
+    gap: 1.25rem;
+}
+
+.sa-mgmt-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3.5rem;
+}
+
+.sa-mgmt-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.sa-mgmt-filters {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sa-mgmt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+/* Base Responsive Rules */
+@media (max-width: 1024px) {
+    .sa-mgmt-header {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 2.5rem;
+    }
+
+    .sa-mgmt-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .sa-mgmt-title h1 {
+        font-size: 1.8rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sa-mgmt-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .sa-mgmt-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .sa-mgmt-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .sa-mgmt-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+/* Plan Management Specifics */
+.sa-plan-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.sa-plan-form-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
+.sa-price-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+
+.sa-entitlements-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.sa-features-checklist {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.sa-plan-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+    width: 100%;
+}
+
+@media (max-width: 1024px) {
+    .sa-entitlements-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .sa-plan-form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .sa-price-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sa-features-checklist {
+        grid-template-columns: 1fr;
+    }
+
+    .sa-plan-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}

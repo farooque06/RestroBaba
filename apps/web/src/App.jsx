@@ -35,6 +35,7 @@ const ShiftManagement = React.lazy(() => import('./pages/ShiftManagement'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 import Sidebar from './components/layout/Sidebar';
+import MobileHeader from './components/layout/MobileHeader';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -84,6 +85,7 @@ function AppContent() {
                 <Route path="/*" element={
                     <ProtectedRoute>
                         <div className="app-container">
+                            <MobileHeader />
                             <Sidebar />
                             <main className="main-content">
                                 <Routes>

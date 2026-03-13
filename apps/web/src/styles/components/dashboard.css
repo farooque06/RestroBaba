@@ -38,3 +38,97 @@
   font-size: 1.75rem;
   color: var(--text-heading);
 }
+
+.dashboard-grid.analytics {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* Super Admin Specifics */
+.sa-header {
+    margin-bottom: 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2rem;
+}
+
+.sa-header-content h1 {
+    line-height: 1.2;
+}
+
+.sa-header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.sa-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.sa-card-revenue {
+    background: linear-gradient(135deg, rgba(212,175,55,0.08) 0%, transparent 100%);
+    border: 1px solid rgba(212,175,55,0.2) !important;
+}
+
+.sa-card-health {
+    border: 1px solid rgba(239,68,68,0.2) !important;
+    background: rgba(239,68,68,0.02) !important;
+}
+
+.sa-main-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 2rem;
+}
+
+.sa-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sa-activity-item {
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    background: rgba(255,255,255,0.01);
+    border: 1px solid var(--border);
+}
+
+@media (max-width: 1024px) {
+    .sa-main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .sa-header {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        gap: 1.5rem;
+    }
+
+    .sa-header-content h1 {
+        font-size: 1.8rem !important;
+    }
+
+    .sa-header-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .sa-header-actions .nav-item {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .sa-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}

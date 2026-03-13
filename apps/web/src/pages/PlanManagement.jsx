@@ -120,34 +120,27 @@ const PlanManagement = () => {
     };
 
     return (
-        <div className="page-container animate-fade" style={{ width: '100%', maxWidth: '100%', padding: '2rem' }}>
-            <header style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'flex-start', 
-                marginBottom: '2.5rem',
-                width: '100%'
-            }}>
-                <div>
+        <div className="page-container animate-fade">
+            <header className="sa-mgmt-header">
+                <div className="sa-mgmt-title">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                         <div className="premium-glass" style={{ padding: '6px', borderRadius: '8px', color: 'var(--primary)' }}>
                             <Zap size={18} fill="var(--primary)" style={{ opacity: 0.2 }} />
                         </div>
                         <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary)' }}>Revenue Operations</span>
                     </div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1 }}>Subscription Models</h1>
+                    <h1>Subscription Models</h1>
                 </div>
                 {!editingPlan && (
                     <button 
-                        className="btn-primary" 
-                        style={{ height: '44px', padding: '0 1.25rem', borderRadius: '12px' }}
+                        className="btn-primary sa-btn-deploy" 
                         onClick={() => setEditingPlan({ 
                             tier: 'SILVER', name: '', monthlyPrice: 0, quarterlyPrice: 0, yearlyPrice: 0,
                             maxStaff: 2, maxTables: 10, features: [], isActive: true 
                         })}
                     >
                         <Plus size={18} strokeWidth={3} />
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Deploy Model</span>
+                        <span>Deploy Model</span>
                     </button>
                 )}
             </header>
@@ -192,14 +185,14 @@ const PlanManagement = () => {
                     </div>
 
                     <form onSubmit={handleSavePlan} style={{ padding: '2rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        <div className="sa-plan-form">
                             {/* Section: Identity */}
                             <section>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem', color: 'var(--primary)' }}>
                                     <Tag size={14} />
                                     <h3 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Identity & Tiering</h3>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                                <div className="sa-plan-form-row">
                                     <div className="input-group">
                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>Commercial Name</label>
                                         <input 
@@ -234,7 +227,7 @@ const PlanManagement = () => {
                                     <h3 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pricing Architecture (NPR)</h3>
                                 </div>
                                 <div className="premium-glass" style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                    <div className="sa-price-grid">
                                         <div className="input-group">
                                             <label className="input-label" style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Monthly RR</label>
                                             <input type="number" className="auth-input" style={{ height: '36px', fontSize: '0.85rem' }} value={editingPlan.monthlyPrice} onChange={e => setEditingPlan({...editingPlan, monthlyPrice: parseFloat(e.target.value)})} />
@@ -249,7 +242,7 @@ const PlanManagement = () => {
                                         </div>
                                     </div>
 
-                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--glass-border)', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                    <div className="sa-price-grid" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--glass-border)' }}>
                                         <div className="input-group">
                                             <label className="input-label" style={{ color: '#fbbf24', fontSize: '0.7rem' }}>Promo Price</label>
                                             <input type="number" className="auth-input" style={{ height: '36px', fontSize: '0.85rem', borderColor: 'rgba(251, 191, 36, 0.3)' }} value={editingPlan.offerMonthly || ''} onChange={e => setEditingPlan({...editingPlan, offerMonthly: parseFloat(e.target.value) || null})} placeholder="Optional" />
@@ -272,7 +265,7 @@ const PlanManagement = () => {
                                     <Check size={14} />
                                     <h3 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Limits & Entitlements</h3>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                <div className="sa-entitlements-grid">
                                     <div className="input-group">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                                             <Users size={14} color="var(--text-muted)" />
@@ -289,7 +282,7 @@ const PlanManagement = () => {
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div className="sa-features-checklist">
                                     {[
                                         { id: 'hasKDS', label: 'Kitchen Intelligence', icon: ChefHat },
                                         { id: 'hasInventory', label: 'Asset Management', icon: Package },
@@ -339,12 +332,7 @@ const PlanManagement = () => {
                     </form>
                 </div>
             ) : (
-                <div className="theme-grid" style={{ 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-                    gap: '1.5rem',
-                    width: '100%',
-                    alignItems: 'start'
-                }}>
+                <div className="sa-plan-grid">
                     {plans.map(p => {
                         const tier = getTierColor(p.tier);
                         return (

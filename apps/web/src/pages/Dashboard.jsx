@@ -110,19 +110,19 @@ const Dashboard = () => {
         return (
             <div className="page-container animate-fade">
                 {/* Command Center Header */}
-                <div style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                    <div>
+                <div className="sa-header">
+                    <div className="sa-header-content">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                             <div className="premium-glass" style={{ padding: '8px', borderRadius: '12px', color: 'var(--primary)', background: 'var(--primary-glow)' }}>
                                 <ShieldCheck size={20} />
                             </div>
                             <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--primary)' }}>Ecosystem Command Center</span>
                         </div>
-                        <h1 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', margin: 0 }}>Platform Intelligence</h1>
+                        <h1>Platform Intelligence</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginTop: '4px' }}>Global performance metrics across all node clusters.</p>
                     </div>
                     
-                    <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="sa-header-actions">
                         <Link to="/clients" className="nav-item active" style={{ textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Building2 size={18} />
                             <span>Provision New Node</span>
@@ -134,9 +134,9 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '3rem' }}>
+                <div className="sa-stats-grid">
                     {/* Revenue Forecast Card */}
-                    <div className="premium-glass" style={{ padding: '2rem', background: 'linear-gradient(135deg, rgba(212,175,55,0.08) 0%, transparent 100%)', border: '1px solid rgba(212,175,55,0.2)' }}>
+                    <div className="premium-glass sa-card-revenue" style={{ padding: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                             <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Estimated MRR</span>
                             <div style={{ padding: '6px', borderRadius: '10px', background: 'var(--primary-glow)', color: 'var(--primary)' }}>
@@ -174,7 +174,7 @@ const Dashboard = () => {
                     </div>
 
                     {/* Critical health Card */}
-                    <div className="premium-glass" style={{ padding: '2rem', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.02)' }}>
+                    <div className="premium-glass sa-card-health" style={{ padding: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                             <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Intervention Required</span>
                             <div style={{ padding: '6px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
@@ -201,18 +201,18 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '2rem' }}>
+                <div className="sa-main-grid">
                     {/* Live Ecosystem Activity */}
                     <div className="premium-glass" style={{ padding: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>Global Activity Stream</h3>
                             <Link to="/activity" style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700, textDecoration: 'none' }}>Full Log</Link>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div className="sa-activity-list">
                             {globalActivity.length === 0 ? (
                                 <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No recent activity detected.</p>
                             ) : globalActivity.map((log, idx) => (
-                                <div key={log.id || idx} className="premium-glass" style={{ padding: '1rem', display: 'flex', gap: '1rem', alignItems: 'flex-start', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)' }}>
+                                <div key={log.id || idx} className="sa-activity-item premium-glass">
                                     <div style={{ 
                                         padding: '8px', borderRadius: '10px', 
                                         background: log.action.includes('CREATE') ? 'rgba(16,185,129,0.1)' : 'rgba(56,189,248,0.1)',
