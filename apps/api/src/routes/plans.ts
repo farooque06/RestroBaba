@@ -35,7 +35,7 @@ router.post('/', authenticate, authorize(['SUPER_ADMIN']), async (req: Request, 
 router.patch('/:id', authenticate, authorize(['SUPER_ADMIN']), async (req: Request, res: Response) => {
     try {
         const plan = await prisma.subscriptionPlan.update({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             data: req.body
         });
         res.json(plan);
@@ -48,7 +48,7 @@ router.patch('/:id', authenticate, authorize(['SUPER_ADMIN']), async (req: Reque
 router.delete('/:id', authenticate, authorize(['SUPER_ADMIN']), async (req: Request, res: Response) => {
     try {
         await prisma.subscriptionPlan.update({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             data: { isActive: false }
         });
         res.json({ message: 'Plan deactivated successfully' });
