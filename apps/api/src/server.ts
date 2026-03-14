@@ -87,7 +87,7 @@ declare global {
 }
 
 // Public & Auth Routes (Rate Limited)
-app.get('/health', limiter, (req, res) => {
+app.get('/health', (req, res) => {
     res.json({ status: 'RestroBaBa API is running', multiTenant: true });
 });
 app.use('/api/auth', limiter, authRoutes);
