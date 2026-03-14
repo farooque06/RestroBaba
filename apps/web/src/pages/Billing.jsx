@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Receipt as ReceiptIcon, CreditCard, DollarSign, Loader2, Printer, Search, FileText, Clock, AlertCircle, Users, Download, Layout } from 'lucide-react';
+import { Receipt as ReceiptIcon, CreditCard, DollarSign, Loader2, Printer, Search, FileText, Clock, AlertCircle, Users, Download, Layout, QrCode } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { initSocket, disconnectSocket } from '../services/socket';

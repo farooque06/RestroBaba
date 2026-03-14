@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Users, Clock, Plus, Square, Loader2, Trash2, Edit2, Utensils, DollarSign, TableProperties, MoveHorizontal } from 'lucide-react';
+import { Users, Clock, Plus, Square, Loader2, Trash2, Edit2, Utensils, DollarSign, TableProperties, MoveHorizontal, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import OrderTaking from '../components/OrderTaking';

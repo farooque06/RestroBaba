@@ -323,6 +323,80 @@ const Dashboard = () => {
                 </div>
             )}
 
+            {/* QUICK OPERATIONS DASH */}
+            <div style={{ marginBottom: '2.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.25rem' }}>
+                    <div style={{ width: '4px', height: '16px', background: 'var(--primary)', borderRadius: '2px' }} />
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Quick Operations</h3>
+                </div>
+                
+                <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1.25rem' }}>
+                    {[
+                        { label: 'New Order', icon: UtensilsCrossed, path: '/tables', color: 'var(--primary)', variant: 'primary' },
+                        { label: 'Add Expense', icon: DollarSign, path: '/expenses', color: 'var(--danger)', variant: 'danger' },
+                        { label: 'Manage Stock', icon: Package, path: '/inventory', color: 'var(--text-main)', variant: 'default' },
+                        { label: 'Shift Console', icon: Clock, path: '/shifts', color: 'var(--warning)', variant: 'warning' },
+                        { label: 'Staff Ops', icon: Users, path: '/staff', color: 'var(--primary)', variant: 'primary' },
+                        { label: 'Analytics', icon: BarChart3, path: '/reports', color: 'var(--success)', variant: 'success' },
+                    ].map((action, idx) => (
+                        <Link 
+                            key={idx} 
+                            to={action.path} 
+                            className="premium-glass" 
+                            style={{ 
+                                padding: '1.25rem', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                gap: '0.75rem', 
+                                textDecoration: 'none',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                cursor: 'pointer',
+                                border: '1px solid var(--border)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-5px)';
+                                e.currentTarget.style.borderColor = action.color;
+                                e.currentTarget.style.boxShadow = `0 10px 20px -5px ${action.color}33`;
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
+                        >
+                            <div style={{ 
+                                padding: '10px', 
+                                borderRadius: '12px', 
+                                background: idx === 0 ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
+                                color: action.color,
+                                marginBottom: '0.25rem'
+                            }}>
+                                <action.icon size={22} />
+                            </div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', textAlign: 'center' }}>{action.label}</span>
+                            
+                            {/* Subtle background glow for first item (conversion focus) */}
+                            {idx === 0 && (
+                                <div style={{ 
+                                    position: 'absolute', 
+                                    top: '-20%', 
+                                    right: '-20%', 
+                                    width: '60%', 
+                                    height: '60%', 
+                                    background: 'var(--primary)', 
+                                    filter: 'blur(30px)', 
+                                    opacity: 0.1, 
+                                    zIndex: -1 
+                                }} />
+                            )}
+                        </Link>
+                    ))}
+                </div>
+            </div>
+
             {/* OPERATIONAL STATUS (Quick Glance) */}
             <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
                 <div className="stat-card">
