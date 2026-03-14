@@ -1,18 +1,32 @@
 import React from 'react';
-import { Edit2, Tag, XCircle, CheckCircle2, Trash2 } from 'lucide-react';
+import { Edit2, Tag, XCircle, CheckCircle2, Trash2, UtensilsCrossed } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import OptimizedImage from '../common/OptimizedImage';
-import foodPlaceholder from '../../assets/premium-placeholder.png';
 
 const MenuCard = ({ item, onEdit, onRecipe, onDelete, onToggleAvailability, userRole }) => {
     return (
         <div className="mm-card animate-fade">
             <div className="mm-img-container">
-                <OptimizedImage
-                    src={item.image || foodPlaceholder}
-                    alt={item.name}
-                    style={{ opacity: item.available ? 1 : 0.6 }}
-                />
+                {item.image ? (
+                    <OptimizedImage
+                        src={item.image}
+                        alt={item.name}
+                        style={{ opacity: item.available ? 1 : 0.6 }}
+                    />
+                ) : (
+                    <div style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        background: 'var(--glass-shine)', 
+                        borderBottom: '1px solid var(--border)',
+                        opacity: item.available ? 1 : 0.6
+                    }}>
+                        <UtensilsCrossed size={48} color="var(--text-muted)" style={{ opacity: 0.3 }} />
+                    </div>
+                )}
                 <div className={`mm-badge ${item.available ? 'available' : 'unavailable'}`}>
                     {item.available ? 'In Stock' : 'Out of Stock'}
                 </div>
