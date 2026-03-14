@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { API_BASE_URL } from '../config';
-import { Search, Plus, Tag, XCircle, Loader2, Trash2, Edit2, Package } from 'lucide-react';
+import { Search, Plus, Tag, XCircle, Loader2, Trash2, Edit2, Package, LayoutGrid, List } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import RecipeManagement from './RecipeManagement';
 import ConfirmModal from '../components/ConfirmModal';
@@ -24,6 +24,7 @@ const MenuManagement = () => {
     const [selectedItemForRecipe, setSelectedItemForRecipe] = useState(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ title: '', message: '', onConfirm: () => { } });
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
     // Form States
     const [newItem, setNewItem] = useState({ name: '', description: '', price: '', categoryId: '', image: '' });
@@ -419,20 +420,38 @@ const MenuManagement = () => {
                     onSelect={setSelectedCategory} 
                 />
                 
-                <div className="search-bar" style={{ width: '350px' }}>
-                    <Search size={20} />
-                    <input
-                        type="text"
-                        placeholder="Search for a dish..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', background: 'var(--glass-shine)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '0.25rem' }}>
+                        <button
+                            onClick={() => setViewMode('grid')}
+                            style={{ background: viewMode === 'grid' ? 'var(--primary-gradient)' : 'transparent', color: viewMode === 'grid' ? 'white' : 'var(--text-muted)', border: 'none', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.3s' }}
+                            title="Grid View"
+                        >
+                            <LayoutGrid size={18} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            style={{ background: viewMode === 'list' ? 'var(--primary-gradient)' : 'transparent', color: viewMode === 'list' ? 'white' : 'var(--text-muted)', border: 'none', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.3s' }}
+                            title="List View"
+                        >
+                            <List size={18} />
+                        </button>
+                    </div>
+                    <div className="search-bar" style={{ width: '300px' }}>
+                        <Search size={20} />
+                        <input
+                            type="text"
+                            placeholder="Search for a dish..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
             </div>
 
             {error && <div className="error-message" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div className="mm-grid">
+            <div className={`mm-grid ${viewMode === 'list' ? 'list-view' : ''}`}>
                 {displayItems.map(item => (
                     <MenuCard
                         key={item.id}
