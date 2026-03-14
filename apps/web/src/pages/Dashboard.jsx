@@ -13,7 +13,8 @@ import {
     Clock,
     Zap,
     History,
-    DollarSign
+    DollarSign,
+    Users
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
