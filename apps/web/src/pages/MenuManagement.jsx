@@ -432,7 +432,7 @@ const MenuManagement = () => {
 
             {error && <div className="error-message" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem' }}>
+            <div className="mm-grid">
                 {displayItems.map(item => (
                     <MenuCard
                         key={item.id}
