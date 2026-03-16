@@ -22,6 +22,7 @@ const Billing = () => {
     const [selectedMethods, setSelectedMethods] = useState({}); // orderId -> method
     const [printingOrder, setPrintingOrder] = useState(null);
     const [customerPhone, setCustomerPhone] = useState('');
+    const [showPhonePrompt, setShowPhonePrompt] = useState(false);
     const receiptRef = React.useRef(null);
 
     useEffect(() => {
@@ -70,6 +71,8 @@ const Billing = () => {
             });
             if (response.ok) {
                 toast.success(`Payment processed via ${selectedMethods[orderId] || 'Cash'}`);
+                setShowPhonePrompt(false);
+                setCustomerPhone('');
                 fetchInvoices(true);
             } else {
                 const data = await response.json();
@@ -143,7 +146,8 @@ const Billing = () => {
 
     const handleWhatsApp = async (order) => {
         if (!customerPhone || customerPhone.length < 10) {
-            toast.error('Please enter a valid phone number');
+            setShowPhonePrompt(true);
+            toast.error('Please enter customer phone number');
             return;
         }
 
@@ -364,7 +368,10 @@ const Billing = () => {
                                                 </span>
                                             </td>
                                             <td style={{ padding: '1.25rem', textAlign: 'right' }}>
-                                                <button onClick={() => setPrintingOrder(order)} className="premium-glass" style={{ padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}>
+                                                <button onClick={() => {
+                                                    setPrintingOrder(order);
+                                                    setShowPhonePrompt(false);
+                                                }} className="premium-glass" style={{ padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}>
                                                     <Search size={16} />
                                                 </button>
                                             </td>
@@ -459,17 +466,20 @@ const Billing = () => {
                                             </div>
                                         )}
 
-                                        <div style={{ marginBottom: '1.5rem' }}>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Customer WhatsApp Number</label>
-                                            <input 
-                                                type="tel"
-                                                placeholder="98XXXXXXXX"
-                                                className="form-input"
-                                                style={{ padding: '1rem', background: 'var(--bg-input)', border: '1px solid var(--border)' }}
-                                                value={customerPhone}
-                                                onChange={(e) => setCustomerPhone(e.target.value)}
-                                            />
-                                        </div>
+                                        {showPhonePrompt ? (
+                                            <div style={{ marginBottom: '1.5rem' }} className="animate-fade">
+                                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Enter Customer Phone for WhatsApp</label>
+                                                <input 
+                                                    type="tel"
+                                                    placeholder="98XXXXXXXX"
+                                                    className="form-input"
+                                                    style={{ padding: '1rem', background: 'var(--bg-input)', border: '1px solid var(--primary)', boxShadow: '0 0 10px var(--primary-glow)' }}
+                                                    autoFocus
+                                                    value={customerPhone}
+                                                    onChange={(e) => setCustomerPhone(e.target.value)}
+                                                />
+                                            </div>
+                                        ) : null}
 
                                         <button 
                                             onClick={() => processPayment(printingOrder.id)}

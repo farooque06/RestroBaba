@@ -36,6 +36,7 @@ const TableManagement = () => {
     const [tableToTransfer, setTableToTransfer] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [customerPhone, setCustomerPhone] = useState('');
+    const [showPhonePrompt, setShowPhonePrompt] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const receiptRef = React.useRef(null);
 
@@ -205,6 +206,8 @@ const TableManagement = () => {
             });
             if (response.ok) {
                 setCheckoutOrder(null);
+                setShowPhonePrompt(false);
+                setCustomerPhone('');
                 fetchTables(true);
                 toast.success('Payment processed');
             }
@@ -340,7 +343,8 @@ const TableManagement = () => {
 
     const handleWhatsApp = async (order) => {
         if (!customerPhone || customerPhone.length < 10) {
-            toast.error('Please enter a valid phone number');
+            setShowPhonePrompt(true);
+            toast.error('Please enter customer phone number');
             return;
         }
 
@@ -695,19 +699,22 @@ const TableManagement = () => {
                                 </div>
                             )}
 
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>CUSTOMER PHONE (FOR WHATSAPP)</label>
-                                <div className="tm-filters" style={{ margin: 0 }}>
-                                    <input 
-                                        type="tel"
-                                        placeholder="98XXXXXXXX"
-                                        className="form-input"
-                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.75rem' }}
-                                        value={customerPhone}
-                                        onChange={(e) => setCustomerPhone(e.target.value)}
-                                    />
+                            {showPhonePrompt ? (
+                                <div style={{ marginBottom: '1rem' }} className="animate-fade">
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', display: 'block', marginBottom: '0.5rem' }}>ENTER CUSTOMER PHONE FOR WHATSAPP</label>
+                                    <div className="tm-filters" style={{ margin: 0 }}>
+                                        <input 
+                                            type="tel"
+                                            placeholder="98XXXXXXXX"
+                                            className="form-input"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '0.75rem', boxShadow: '0 0 10px var(--primary-glow)' }}
+                                            autoFocus
+                                            value={customerPhone}
+                                            onChange={(e) => setCustomerPhone(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
+                            ) : null}
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                                 <button onClick={() => processPayment(checkoutOrder.id)} className="ol-action-btn pay" style={{ height: 'auto', padding: '1rem', gridColumn: 'span 2' }}>
@@ -736,7 +743,10 @@ const TableManagement = () => {
                                     <span>PDF</span>
                                 </button>
                             </div>
-                            <button onClick={() => setCheckoutOrder(null)} className="btn-ghost" style={{ width: '100%' }}>
+                            <button onClick={() => {
+                                setCheckoutOrder(null);
+                                setShowPhonePrompt(false);
+                            }} className="btn-ghost" style={{ width: '100%' }}>
                                 Back
                             </button>
                         </div>
