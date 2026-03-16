@@ -8,7 +8,7 @@ import OrderTaking from '../components/OrderTaking';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../components/ConfirmModal';
 import { QRCodeCanvas } from 'qrcode.react';
-import { QrCode, Download, X, Split, Printer } from 'lucide-react';
+import { QrCode, Download, X, Split, Printer, MessageCircle } from 'lucide-react';
 import { initSocket, disconnectSocket } from '../services/socket';
 import SplitBillModal from '../components/SplitBillModal';
 import Receipt from '../components/Receipt';
