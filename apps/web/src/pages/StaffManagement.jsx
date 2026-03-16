@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import {
     Users, Plus, Trash2, Edit2, Shield,
@@ -243,21 +244,10 @@ const StaffManagement = () => {
 
     return (
         <div className="page-container animate-fade">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
+            <div className="page-header">
+                <div className="page-header-info">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                         <h1 style={{ fontSize: '2rem', margin: 0 }}>Staff Management</h1>
-                        <span className={`badge ${plan === 'DIAMOND' ? 'badge-primary' : plan === 'GOLD' ? 'badge-success' : ''}`} style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 800 }}>
-                            {plan} PLAN
-                        </span>
-                    </div>
-                    <p style={{ color: 'var(--text-muted)' }}>
-                        Manage your team at <strong style={{ color: 'var(--text-main)' }}>{user?.clientName}</strong>
-                    </p>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem' }}>
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
                             Team Capacity: <strong style={{ color: isLimitReached ? 'var(--danger)' : 'var(--text-main)' }}>{staff.length}</strong> / {limit === Infinity ? '∞' : limit}
                         </div>
                         {limit !== Infinity && (
@@ -441,7 +431,7 @@ const StaffManagement = () => {
             )}
 
             {/* Create/Edit Modal */}
-            {isModalOpen && (
+            {isModalOpen && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div className="modal-card" style={{ width: '420px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -553,7 +543,8 @@ const StaffManagement = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <ConfirmModal
@@ -563,7 +554,7 @@ const StaffManagement = () => {
             />
 
             {/* Financial Ledger Modal */}
-            {showLedgerModal && (
+            {showLedgerModal && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
                     <div className="modal-card" style={{ width: '800px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -784,7 +775,8 @@ const StaffManagement = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

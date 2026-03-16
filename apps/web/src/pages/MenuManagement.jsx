@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { Search, Plus, Tag, XCircle, Loader2, Trash2, Edit2, Package, LayoutGrid, List } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -472,7 +473,7 @@ const MenuManagement = () => {
                 )}
             </div>
 
-            {isItemModalOpen && (
+            {isItemModalOpen && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }} className="animate-fade">
                     <div className="premium-glass" style={{ width: '100%', maxWidth: '550px', padding: '2.5rem', borderRadius: '24px', position: 'relative' }}>
                         <button 
@@ -653,10 +654,11 @@ const MenuManagement = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {isCategoryModalOpen && (
+            {isCategoryModalOpen && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }} className="animate-fade">
                     <div className="premium-glass" style={{ width: '100%', maxWidth: '600px', borderRadius: '24px', padding: '2.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
@@ -744,7 +746,8 @@ const MenuManagement = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <ConfirmModal

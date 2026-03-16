@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import {
     Trash2,
@@ -307,7 +308,7 @@ const WasteManagement = () => {
             </div>
 
             {/* Log Waste Modal */}
-            {isLogModalOpen && (
+            {isLogModalOpen && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div className="modal-card" style={{ width: '450px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexShrink: 0 }}>
@@ -425,7 +426,8 @@ const WasteManagement = () => {
                             </form>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

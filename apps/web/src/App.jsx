@@ -118,7 +118,7 @@ function AppContent() {
                                         </ProtectedRoute>
                                     } />
                                     <Route path="expenses" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} minPlan="GOLD">
                                             <ExpenseTracker />
                                         </ProtectedRoute>
                                     } />
@@ -133,17 +133,17 @@ function AppContent() {
                                         </ProtectedRoute>
                                     } />
                                     <Route path="activity" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} minPlan="DIAMOND">
                                             <ActivityLog />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="kitchen" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CHEF']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CHEF']} minPlan="GOLD">
                                             <KitchenDisplay />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="reports" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} minPlan="SILVER">
                                             <Reports />
                                         </ProtectedRoute>
                                     } />
@@ -153,7 +153,7 @@ function AppContent() {
                                         </ProtectedRoute>
                                     } />
                                     <Route path="profit-analytics" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} minPlan="GOLD">
                                             <ProfitDashboard />
                                         </ProtectedRoute>
                                     } />
@@ -163,7 +163,7 @@ function AppContent() {
                                         </ProtectedRoute>
                                     } />
                                     <Route path="shifts" element={
-                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} minPlan="GOLD">
                                             <ShiftManagement />
                                         </ProtectedRoute>
                                     } />

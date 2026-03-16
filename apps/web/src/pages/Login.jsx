@@ -146,9 +146,8 @@ const Login = () => {
                 <div className="login-orb login-orb-2"></div>
                 <div className={`login-glass-card ${shake ? 'login-shake' : ''}`} style={{ maxWidth: '460px' }}>
                     <div className="login-header">
-                        <div className="logo-section">
-                            <div className="logo-icon"><Shield size={24} /></div>
-                            <h1>RestroBaBa</h1>
+                        <div className="logo-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                            <img src="/logo.png" alt="RestroBaba" style={{ width: '120px', height: 'auto', marginBottom: '0.5rem' }} />
                         </div>
                         <p className="login-subtitle">Two-Factor Authentication Setup</p>
                     </div>
@@ -192,7 +191,7 @@ const Login = () => {
                     </div>
 
                     <div className="login-footer">
-                        <p>© 2024 RestroBaBa · Secure Access</p>
+                        <p>© 2024 RestroBaba · Secure Access</p>
                     </div>
                 </div>
             </div>
@@ -207,9 +206,8 @@ const Login = () => {
                 <div className="login-orb login-orb-2"></div>
                 <div className={`login-glass-card ${shake ? 'login-shake' : ''}`}>
                     <div className="login-header">
-                        <div className="logo-section">
-                            <div className="logo-icon"><Shield size={24} /></div>
-                            <h1>RestroBaBa</h1>
+                        <div className="logo-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                            <img src="/logo.png" alt="RestroBaba" style={{ width: '120px', height: 'auto', marginBottom: '0.5rem' }} />
                         </div>
                         <p className="login-subtitle">Two-Factor Authentication</p>
                     </div>
@@ -245,7 +243,7 @@ const Login = () => {
                     </div>
 
                     <div className="login-footer">
-                        <p>© 2024 RestroBaBa · Secure Access</p>
+                        <p>© 2024 RestroBaba · Secure Access</p>
                     </div>
                 </div>
             </div>
@@ -260,9 +258,8 @@ const Login = () => {
 
             <div className={`login-glass-card ${shake ? 'login-shake' : ''}`}>
                 <div className="login-header">
-                    <div className="logo-section">
-                        <div className="logo-icon"><Shield size={24} /></div>
-                        <h1>RestroBaBa</h1>
+                    <div className="logo-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <img src="/logo.png" alt="RestroBaba" style={{ width: '120px', height: 'auto', marginBottom: '0.5rem' }} />
                     </div>
                     <p className="login-subtitle">
                         {mode === 'email' ? 'System Administrator' :
@@ -363,7 +360,7 @@ const Login = () => {
                 )}
 
                 <div className="login-footer">
-                    <p>© 2024 RestroBaBa · Multi-Tenant System</p>
+                    <p>© 2024 RestroBaba · Multi-Tenant System</p>
                 </div>
             </div>
         </div>

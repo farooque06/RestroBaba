@@ -49,20 +49,20 @@ const Sidebar = () => {
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
         { id: 'menu', label: 'Menu', icon: UtensilsCrossed, path: '/menu', roles: ['ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
-        { id: 'kitchen', label: 'Kitchen', icon: ChefHat, path: '/kitchen', roles: ['ADMIN', 'MANAGER', 'CHEF'], minPlan: 'SILVER' },
+        { id: 'kitchen', label: 'Kitchen', icon: ChefHat, path: '/kitchen', roles: ['ADMIN', 'MANAGER', 'CHEF'], minPlan: 'GOLD' },
         { id: 'tables', label: 'Tables', icon: TableProperties, path: '/tables', roles: ['ADMIN', 'MANAGER', 'WAITER'], minPlan: 'SILVER' },
         { id: 'orders', label: 'Orders', icon: ClipboardList, path: '/orders', roles: ['ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
-        { id: 'reports', label: 'Reports', icon: BarChart3, path: '/reports', roles: ['ADMIN', 'MANAGER'], minPlan: 'GOLD' },
+        { id: 'reports', label: 'Reports', icon: BarChart3, path: '/reports', roles: ['ADMIN', 'MANAGER'], minPlan: 'SILVER' },
         { id: 'inventory', label: 'Inventory', icon: Package, path: '/inventory', roles: ['ADMIN', 'MANAGER', 'CHEF'], minPlan: 'SILVER' },
         { id: 'waste', label: 'Waste Management', icon: Trash2, path: '/waste', roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'], minPlan: 'SILVER' },
-        { id: 'expenses', label: 'Expenses', icon: Wallet, path: '/expenses', roles: ['ADMIN', 'MANAGER'], minPlan: 'SILVER' },
+        { id: 'expenses', label: 'Expenses', icon: Wallet, path: '/expenses', roles: ['ADMIN', 'MANAGER'], minPlan: 'GOLD' },
         { id: 'staff', label: 'Staff', icon: Users, path: '/staff', roles: ['ADMIN', 'MANAGER'], minPlan: 'SILVER' },
         { id: 'billing', label: 'Billing', icon: Receipt, path: '/billing', roles: ['ADMIN', 'MANAGER', 'WAITER'], minPlan: 'SILVER' },
         { id: 'customers', label: 'Customers', icon: Users, path: '/customers', roles: ['ADMIN', 'MANAGER', 'WAITER'], minPlan: 'SILVER' },
         { id: 'activity', label: 'Activity Log', icon: History, path: '/activity', roles: ['ADMIN', 'MANAGER'], minPlan: 'DIAMOND' },
         { id: 'clients', label: 'Manage Clients', icon: ShieldCheck, path: '/clients', roles: ['SUPER_ADMIN'], minPlan: 'SILVER' },
         { id: 'plans', label: 'Subscription Plans', icon: Zap, path: '/plans', roles: ['SUPER_ADMIN'], minPlan: 'SILVER' },
-        { id: 'shifts', label: 'Shifts', icon: Clock, path: '/shifts', roles: ['ADMIN', 'MANAGER'], minPlan: 'SILVER' },
+        { id: 'shifts', label: 'Shifts', icon: Clock, path: '/shifts', roles: ['ADMIN', 'MANAGER'], minPlan: 'GOLD' },
     ];
 
     const PLAN_RANK = { 'SILVER': 1, 'GOLD': 2, 'DIAMOND': 3 };
@@ -115,7 +115,7 @@ const Sidebar = () => {
 
                 <div className="logo" style={{ justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <UtensilsCrossed size={24} color="var(--primary)" style={{ flexShrink: 0 }} />
+                        <img src="/favicon.png" alt="Logo" style={{ width: '24px', height: '24px', flexShrink: 0 }} />
                         {(!isCollapsed || isMobileOpen) && <span title={user?.clientName || 'RestroBaba'} style={{ overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 700 }}>{user?.clientName || 'RestroBaba'}</span>}
                     </div>
                 </div>

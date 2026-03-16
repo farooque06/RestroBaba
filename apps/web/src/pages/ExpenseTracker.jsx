@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { Wallet, Plus, Search, Filter, Calendar, Trash2, Edit2, Loader2, TrendingDown, TrendingUp, DollarSign, UtensilsCrossed, User, Lightbulb, Home, Wrench, Megaphone, MoreHorizontal, X, Banknote } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
@@ -265,7 +266,7 @@ const ExpenseTracker = () => {
                 )}
             </div>
 
-            {isModalOpen && (
+            {isModalOpen && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div className="modal-card" style={{ width: '450px', padding: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -352,7 +353,8 @@ const ExpenseTracker = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <ConfirmModal

@@ -174,9 +174,36 @@
     gap: 0.6rem;
     margin-bottom: 1rem;
   }
-  .stat-card { padding: 0.85rem; }
-  .stat-value { font-size: 1.2rem; }
-  .stat-label { font-size: 0.65rem; }
+
+  .dashboard-ops-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .dashboard-actions {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .dashboard-actions .btn-primary,
+  .dashboard-actions .btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stat-card { padding: 1rem; }
+  .stat-value { font-size: 1.35rem; }
+  .stat-label { font-size: 0.7rem; }
 
   .modal-card {
     width: 92%;
@@ -387,6 +414,34 @@
 
   .page-container div[style*="primary-gradient"] h2 {
     font-size: 1.2rem !important;
+  }
+
+  .premium-footer {
+    padding: 2.5rem 1.25rem !important;
+  }
+
+  .premium-footer h2 {
+    font-size: 1.4rem !important;
+  }
+
+  .premium-footer p {
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Reports Page Specifics */
+  .chart-segment {
+    stroke-width: 12 !important;
+  }
+
+  .reports-donut-container {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 1.5rem !important;
+  }
+
+  .reports-legend {
+    width: 100% !important;
   }
 }
 

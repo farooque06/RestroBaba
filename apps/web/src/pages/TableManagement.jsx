@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { Users, Clock, Plus, Square, Loader2, Trash2, Edit2, Utensils, DollarSign, TableProperties, MoveHorizontal, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +14,6 @@ import SplitBillModal from '../components/SplitBillModal';
 import Receipt from '../components/Receipt';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { createPortal } from 'react-dom';
 import { Calendar, CalendarX } from 'lucide-react';
 
 const TableManagement = () => {
@@ -34,6 +34,7 @@ const TableManagement = () => {
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [tableToTransfer, setTableToTransfer] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [currentTime, setCurrentTime] = useState(new Date());
     const receiptRef = React.useRef(null);
 
     useEffect(() => {
@@ -84,8 +85,11 @@ const TableManagement = () => {
         }
 
         const interval = setInterval(() => fetchTables(true), 30000);
+        const timeInterval = setInterval(() => setCurrentTime(new Date()), 60000); // Update timers every minute
+
         return () => {
             clearInterval(interval);
+            clearInterval(timeInterval);
             disconnectSocket();
         };
     }, [user?.clientId]);
@@ -400,6 +404,14 @@ const TableManagement = () => {
                                     <Users size={13} />
                                     <span>Capacity {table.capacity}</span>
                                 </div>
+                                {table.status === 'Occupied' && table.activeOrderCreatedAt && (
+                                    <div className="tm-card-timer animate-pulse-gentle">
+                                        <Clock size={12} />
+                                        <span>
+                                            {Math.floor((currentTime - new Date(table.activeOrderCreatedAt)) / (1000 * 60))}m
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                             <div className="tm-card-icons">
                                 <button onClick={() => setQrModalTable(table)} className="tm-card-icon-btn" title="QR Code">
@@ -523,8 +535,7 @@ const TableManagement = () => {
                 />
             )}
 
-            {/* ── Checkout / Payment Modal ── */}
-            {checkoutOrder && (
+            {checkoutOrder && createPortal(
                 <div className="ol-payment-overlay">
                     <div className="ol-payment-sheet">
                         <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '1px dashed var(--border)', paddingBottom: '1rem' }}>
@@ -626,11 +637,12 @@ const TableManagement = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ── Add Table Modal ── */}
-            {isModalOpen && (
+            {isModalOpen && createPortal(
                 <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
                     <div className="modal-card" style={{ width: '100%', maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
                         <h2 style={{ fontSize: '1.3rem', marginBottom: '1.5rem' }}>Add New Table</h2>
@@ -663,11 +675,12 @@ const TableManagement = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ── QR Modal ── */}
-            {qrModalTable && (
+            {qrModalTable && createPortal(
                 <div className="modal-overlay" onClick={() => setQrModalTable(null)}>
                     <div className="modal-card" style={{ width: '100%', maxWidth: '340px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                         <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>QR Code — Table {qrModalTable.number}</h2>
@@ -684,19 +697,23 @@ const TableManagement = () => {
                         </p>
                         <button onClick={() => setQrModalTable(null)} className="btn-ghost" style={{ width: '100%' }}>Close</button>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            <ConfirmModal
-                isOpen={isConfirmModalOpen}
-                onClose={() => setIsConfirmModalOpen(false)}
-                onConfirm={confirmAction.onConfirm}
-                title={confirmAction.title}
-                message={confirmAction.message}
-                variant="danger"
-            />
+            {createPortal(
+                <ConfirmModal
+                    isOpen={isConfirmModalOpen}
+                    onClose={() => setIsConfirmModalOpen(false)}
+                    onConfirm={confirmAction.onConfirm}
+                    title={confirmAction.title}
+                    message={confirmAction.message}
+                    variant="danger"
+                />,
+                document.body
+            )}
 
-            {splitOrder && (
+            {splitOrder && createPortal(
                 <SplitBillModal
                     order={splitOrder}
                     onClose={() => setSplitOrder(null)}
@@ -704,13 +721,15 @@ const TableManagement = () => {
                         setSplitOrder(null);
                         fetchTables(true);
                     }}
-                />
+                />,
+                document.body
             )}
 
             {/* ── Transfer Table Modal ── */}
-            {isTransferModalOpen && (
+            {isTransferModalOpen && createPortal(
                 <div className="modal-overlay" onClick={() => setIsTransferModalOpen(false)}>
                     <div className="modal-card" style={{ width: '100%', maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
+                        {/* ... body content ... */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                             <h2 style={{ fontSize: '1.3rem', margin: 0 }}>Shift Table {tableToTransfer?.number}</h2>
                             <button onClick={() => setIsTransferModalOpen(false)} className="btn-ghost" style={{ padding: '0.5rem' }}>
@@ -761,7 +780,8 @@ const TableManagement = () => {
                             <button onClick={() => setIsTransferModalOpen(false)} className="btn-ghost" style={{ width: '100%' }}>Cancel</button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Hidden print area */}

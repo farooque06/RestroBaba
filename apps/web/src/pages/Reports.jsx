@@ -14,8 +14,17 @@ import {
     DollarSign
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
+
+const PLAN_RANK = { 'SILVER': 1, 'GOLD': 2, 'DIAMOND': 3 };
+const hasPlan = (user, minPlan) => {
+    if (user?.role === 'SUPER_ADMIN') return true;
+    const currentPlan = user?.client?.plan || 'SILVER';
+    return PLAN_RANK[currentPlan] >= PLAN_RANK[minPlan];
+};
 
 const Reports = () => {
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [salesData, setSalesData] = useState({});
     const [topItems, setTopItems] = useState([]);
@@ -67,40 +76,44 @@ const Reports = () => {
 
     return (
         <div className="page-container animate-fade">
-            <div style={{ marginBottom: '2.5rem' }}>
-                <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Business Analytics</h1>
-                <p style={{ color: 'var(--text-muted)' }}>Deep insights into sales performance and operational efficiency.</p>
-            </div>
-
-            {/* Profit Analytics CTA */}
-            <div
-                onClick={() => navigate('/profit-analytics')}
-                className="premium-glass animate-fade-in"
-                style={{
-                    padding: '2rem',
-                    marginBottom: '2rem',
-                    background: 'var(--primary-gradient)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    border: 'none',
-                    color: 'white'
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.2)', padding: '1rem', borderRadius: '15px' }}>
-                        <DollarSign size={32} />
-                    </div>
-                    <div>
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Advanced Profit Analytics</h2>
-                        <p style={{ opacity: 0.9 }}>See your Gross Margin, COGS, and most profitable menu items based on real inventory costs.</p>
-                    </div>
+            <div className="page-header">
+                <div className="page-header-info">
+                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Business Analytics</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>Deep insights into sales performance and operational efficiency.</p>
                 </div>
-                <ArrowUpRight size={32} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+            {/* Profit Analytics CTA (GOLD+) */}
+            {hasPlan(user, 'GOLD') && (
+                <div
+                    onClick={() => navigate('/profit-analytics')}
+                    className="premium-glass animate-fade-in"
+                    style={{
+                        padding: '2rem',
+                        marginBottom: '2rem',
+                        background: 'var(--primary-gradient)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        border: 'none',
+                        color: 'white'
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.2)', padding: '1rem', borderRadius: '15px' }}>
+                            <DollarSign size={32} />
+                        </div>
+                        <div>
+                            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Advanced Profit Analytics</h2>
+                            <p style={{ opacity: 0.9 }}>See your Gross Margin, COGS, and most profitable menu items based on real inventory costs.</p>
+                        </div>
+                    </div>
+                    <ArrowUpRight size={32} />
+                </div>
+            )}
+
+            <div className="analytics-grid">
                 {/* Sales Chart Section */}
                 <div className="premium-glass" style={{ padding: '2rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -218,8 +231,7 @@ const Reports = () => {
                     </div>
                 </div>
 
-            {/* Lower Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
+            <div className="dashboard-grid" style={{ marginTop: '2rem' }}>
                 {/* Sales by Category Donut Chart */}
                 <div className="premium-glass animate-fade-in" style={{ padding: '2rem' }}>
                     <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
@@ -232,7 +244,7 @@ const Reports = () => {
                             No category data available.
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                        <div className="reports-donut-container" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                             {/* SVG Donut */}
                             <div style={{ position: 'relative', width: '200px', height: '200px', flexShrink: 0 }}>
                                 <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
@@ -250,7 +262,7 @@ const Reports = () => {
                                         // Colors mapping
                                         const colors = ['#d4af37', '#38bdf8', '#a855f7', '#10b981', '#f43f5e', '#f97316'];
                                         const color = colors[idx % colors.length];
-
+ 
                                         const segment = (
                                             <circle
                                                 key={cat.name}
@@ -266,7 +278,7 @@ const Reports = () => {
                                                 className="chart-segment"
                                             />
                                         );
-
+ 
                                         // Update offset for next segment
                                         acc.currentOffset += dashArray;
                                         acc.segments.push(segment);
@@ -282,15 +294,15 @@ const Reports = () => {
                                     </text>
                                 </svg>
                             </div>
-
+ 
                             {/* Custom Legend */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                            <div className="reports-legend" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
                                 {categorySales.map((cat, idx) => {
                                     const colors = ['#d4af37', '#38bdf8', '#a855f7', '#10b981', '#f43f5e', '#f97316'];
                                     const color = colors[idx % colors.length];
                                     const total = categorySales.reduce((sum, item) => sum + item.value, 0);
                                     const percent = ((cat.value / Math.max(total, 1)) * 100).toFixed(1);
-
+ 
                                     return (
                                         <div key={cat.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

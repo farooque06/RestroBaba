@@ -23,8 +23,42 @@
 }
 
 /* =====================================================
-   FORMS - ARTISAN FORM SYSTEM
+   PAGE HEADER & LAYOUT
    ===================================================== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1.5rem;
+}
+
+.page-header-info {
+  flex: 1;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .page-header-actions {
+    width: 100%;
+  }
+
+  .page-header-actions > * {
+    flex: 1;
+  }
+}
 .auth-input,
 .form-input {
   width: 100%;

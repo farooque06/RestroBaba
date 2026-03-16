@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
 import { Package, Plus, Search, AlertTriangle, ArrowRight, History, Loader2, Edit2, Trash2, Save, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
@@ -198,19 +199,20 @@ const InventoryManagement = () => {
 
     return (
         <div className="page-container animate-fade">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
+            <div className="page-header">
+                <div className="page-header-info">
                     <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Inventory Tracking</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Manage stock levels and raw materials.</p>
                 </div>
-                <button
-                    onClick={() => { setEditingItem(null); setFormData({ name: '', unit: '', quantity: '', minThreshold: '', unitPrice: '' }); setIsModalOpen(true); }}
-                    className="nav-item active"
-                    style={{ border: 'none', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
-                >
-                    <Plus size={20} />
-                    <span>Add Stock Item</span>
-                </button>
+                <div className="page-header-actions">
+                    <button
+                        onClick={() => { setEditingItem(null); setFormData({ name: '', unit: '', quantity: '', minThreshold: '', unitPrice: '' }); setIsModalOpen(true); }}
+                        className="btn-primary"
+                    >
+                        <Plus size={20} />
+                        <span>Add Stock</span>
+                    </button>
+                </div>
             </div>
 
             {lowStockItems.length > 0 && (
@@ -237,53 +239,46 @@ const InventoryManagement = () => {
                 </div>
             </div>
 
-            <div className="premium-glass" style={{ overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div className="premium-glass" style={{ overflowX: 'auto' }}>
+                <table className="data-table">
                     <thead>
-                        <tr style={{ background: 'var(--glass-shine)', borderBottom: '1px solid var(--glass-border)' }}>
-                            <th style={{ padding: '1.25rem' }}>Item Name</th>
-                            <th style={{ padding: '1.25rem' }}>Current Stock</th>
-                            <th style={{ padding: '1.25rem' }}>Unit</th>
-                            <th style={{ padding: '1.25rem' }}>Min. Threshold</th>
-                            <th style={{ padding: '1.25rem' }}>Unit Cost</th>
-                            <th style={{ padding: '1.25rem' }}>Status</th>
-                            <th style={{ padding: '1.25rem', textAlign: 'right' }}>Actions</th>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Current Stock</th>
+                            <th>Unit</th>
+                            <th>Min. Threshold</th>
+                            <th>Unit Cost</th>
+                            <th>Status</th>
+                            <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredInventory.map(item => (
                             <tr key={item.id} style={{ borderBottom: '1px solid var(--glass-border)', transition: 'background 0.2s' }}>
-                                <td style={{ padding: '1.25rem', fontWeight: 600 }}>{item.name}</td>
-                                <td style={{ padding: '1.25rem', fontSize: '1.1rem', fontWeight: 700, color: item.quantity <= item.minThreshold ? 'var(--danger)' : 'var(--text-main)' }}>
+                                <td>{item.name}</td>
+                                <td style={{ fontSize: '1.1rem', fontWeight: 700, color: item.quantity <= item.minThreshold ? 'var(--danger)' : 'var(--text-main)' }}>
                                     {item.quantity.toFixed(2)}
                                 </td>
-                                <td style={{ padding: '1.25rem', color: 'var(--text-muted)' }}>{item.unit}</td>
-                                <td style={{ padding: '1.25rem', color: 'var(--text-muted)' }}>{item.minThreshold} {item.unit}</td>
-                                <td style={{ padding: '1.25rem', fontWeight: 600, color: 'var(--primary)' }}>Rs. {item.unitPrice.toFixed(2)}</td>
-                                <td style={{ padding: '1.25rem' }}>
-                                    <span style={{
-                                        fontSize: '0.75rem',
-                                        padding: '0.25rem 0.6rem',
-                                        borderRadius: '20px',
-                                        background: item.quantity <= item.minThreshold ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                        color: item.quantity <= item.minThreshold ? 'var(--danger)' : '#10b981',
-                                        fontWeight: 700
-                                    }}>
+                                <td style={{ color: 'var(--text-muted)' }}>{item.unit}</td>
+                                <td style={{ color: 'var(--text-muted)' }}>{item.minThreshold} {item.unit}</td>
+                                <td style={{ fontWeight: 600, color: 'var(--primary)' }}>Rs. {item.unitPrice.toFixed(2)}</td>
+                                <td>
+                                    <span className={`badge badge-${item.quantity <= item.minThreshold ? 'danger' : 'success'}`}>
                                         {item.quantity <= item.minThreshold ? 'Low Stock' : 'Healthy'}
                                     </span>
                                 </td>
-                                <td style={{ padding: '1.25rem', textAlign: 'right' }}>
+                                <td style={{ textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                        <button onClick={() => openAdjust(item)} className="premium-glass" title="Adjust Stock" style={{ padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', color: 'var(--primary)' }}>
+                                        <button onClick={() => openAdjust(item)} className="icon-button" title="Adjust Stock">
                                             <ArrowUpRight size={16} />
                                         </button>
-                                        <button onClick={() => openHistory(item)} className="premium-glass" title="View History" style={{ padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}>
+                                        <button onClick={() => openHistory(item)} className="icon-button" title="View History">
                                             <History size={16} />
                                         </button>
-                                        <button onClick={() => openEdit(item)} className="premium-glass" title="Edit Item" style={{ padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}>
+                                        <button onClick={() => openEdit(item)} className="icon-button" title="Edit Item">
                                             <Edit2 size={16} />
                                         </button>
-                                        <button onClick={() => handleDelete(item.id)} className="premium-glass" title="Delete" style={{ padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', color: 'var(--danger)' }}>
+                                        <button onClick={() => handleDelete(item.id)} className="icon-button danger" title="Delete">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -301,7 +296,7 @@ const InventoryManagement = () => {
             </div>
 
             {/* Add / Edit Modal */}
-            {isModalOpen && (
+            {isModalOpen && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div className="modal-card" style={{ width: '400px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -370,14 +365,14 @@ const InventoryManagement = () => {
                             </button>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Adjust Stock Modal */}
-            {
-                isAdjustModalOpen && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                        <div className="modal-card" style={{ width: '400px' }}>
+            {isAdjustModalOpen && createPortal(
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                    <div className="modal-card" style={{ width: '400px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                                 <div>
                                     <h2 style={{ marginBottom: '0.25rem' }}>Adjust Stock</h2>
@@ -456,15 +451,15 @@ const InventoryManagement = () => {
                                 </button>
                             </form>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )
             }
 
             {/* History Modal */}
-            {
-                isHistoryOpen && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'flex-end', zIndex: 2000 }}>
-                        <div className="animate-slide-in" style={{ width: '450px', height: '100%', background: 'var(--bg-card)', padding: '2rem', overflowY: 'auto', borderLeft: '1px solid var(--glass-border)', boxShadow: '-10px 0 30px rgba(0,0,0,0.5)' }}>
+            {isHistoryOpen && createPortal(
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'flex-end', zIndex: 2000 }}>
+                    <div className="animate-slide-in" style={{ width: '450px', height: '100%', background: 'var(--bg-card)', padding: '2rem', overflowY: 'auto', borderLeft: '1px solid var(--glass-border)', boxShadow: '-10px 0 30px rgba(0,0,0,0.5)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                                 <div>
                                     <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Transaction History</h2>
@@ -573,7 +568,8 @@ const InventoryManagement = () => {
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )
             }
 

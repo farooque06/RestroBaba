@@ -147,10 +147,11 @@ router.post('/login', async (req: Request, res: Response) => {
                 userId: user.id,
                 clientId: user.clientId,
                 role: user.role,
+                plan: user.client?.plan || 'SILVER',
                 clientName: user.client?.name || 'System'
             },
             JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '7d' }
         );
 
         res.json({
@@ -213,10 +214,11 @@ router.post('/verify-totp', async (req: Request, res: Response) => {
                 userId: user.id,
                 clientId: null,
                 role: 'SUPER_ADMIN',
+                plan: 'DIAMOND', // Super admin has diamond equivalent access
                 clientName: 'RestroFlow System'
             },
             JWT_SECRET,
-            { expiresIn: '12h' }
+            { expiresIn: '24h' }
         );
 
         res.json({
@@ -320,10 +322,11 @@ router.post('/pin-login', async (req: Request, res: Response) => {
                 userId: user.id,
                 clientId: user.clientId,
                 role: user.role,
+                plan: user.client?.plan || 'SILVER',
                 clientName: user.client?.name || 'System'
             },
             JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '7d' }
         );
 
         res.json({

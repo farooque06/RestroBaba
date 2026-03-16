@@ -10,9 +10,25 @@ router.get('/', async (req, res) => {
     try {
         const tables = await prisma.table.findMany({
             where: { clientId: req.clientId! },
+            include: {
+                orders: {
+                    where: { status: { notIn: ['Paid', 'Cancelled'] } },
+                    select: { createdAt: true },
+                    take: 1,
+                    orderBy: { createdAt: 'desc' }
+                }
+            },
             orderBy: { number: 'asc' }
         });
-        res.json(tables);
+
+        // Flatten the activeOrderCreatedAt for frontend convenience
+        const formattedTables = tables.map(t => ({
+            ...t,
+            activeOrderCreatedAt: t.orders[0]?.createdAt || null,
+            orders: undefined
+        }));
+
+        res.json(formattedTables);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch tables' });
     }

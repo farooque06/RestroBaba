@@ -21,6 +21,7 @@ import plansRoutes from './routes/plans.js';
 import shiftsRoutes from './routes/shifts.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import { roleMiddleware } from './middleware/roleMiddleware.js';
+import { requirePlan } from './middleware/planMiddleware.js';
 import prisma from './services/prisma.js';
 import { createServer } from 'http';
 import { initSocket } from './services/socket.js';
@@ -103,17 +104,17 @@ app.use('/api/tables', roleMiddleware(['ADMIN', 'MANAGER', 'WAITER']), tableRout
 app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', roleMiddleware(['ADMIN', 'MANAGER', 'CHEF']), inventoryRoutes);
 app.use('/api/recipes', roleMiddleware(['ADMIN', 'MANAGER', 'CHEF']), recipeRoutes);
-app.use('/api/expenses', roleMiddleware(['ADMIN', 'MANAGER']), expenseRoutes);
+app.use('/api/expenses', roleMiddleware(['ADMIN', 'MANAGER']), requirePlan('GOLD'), expenseRoutes);
 app.use('/api/staff', roleMiddleware(['ADMIN', 'MANAGER']), staffRoutes);
-app.use('/api/activity', roleMiddleware(['ADMIN', 'SUPER_ADMIN']), activityRoutes);
-app.use('/api/shift-management', roleMiddleware(['ADMIN', 'MANAGER']), shiftsRoutes); // Backward compatibility or specific route
+app.use('/api/activity', roleMiddleware(['ADMIN', 'SUPER_ADMIN']), requirePlan('DIAMOND'), activityRoutes);
+app.use('/api/shift-management', roleMiddleware(['ADMIN', 'MANAGER']), requirePlan('GOLD'), shiftsRoutes); // Backward compatibility or specific route
 app.use('/api/staff-accountancy', roleMiddleware(['ADMIN', 'MANAGER']), staffAccountancyRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/customers', roleMiddleware(['ADMIN', 'MANAGER', 'WAITER']), customerRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/reports', roleMiddleware(['ADMIN', 'MANAGER']), reportsRoutes);
 app.use('/api/plans', plansRoutes);
-app.use('/api/shifts', roleMiddleware(['ADMIN', 'MANAGER']), shiftsRoutes);
+app.use('/api/shifts', roleMiddleware(['ADMIN', 'MANAGER']), requirePlan('GOLD'), shiftsRoutes);
 
 import { ZodError } from 'zod';
 

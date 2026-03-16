@@ -21,6 +21,13 @@ import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 
+const PLAN_RANK = { 'SILVER': 1, 'GOLD': 2, 'DIAMOND': 3 };
+const hasPlan = (user, minPlan) => {
+    if (user?.role === 'SUPER_ADMIN') return true;
+    const currentPlan = user?.client?.plan || 'SILVER';
+    return PLAN_RANK[currentPlan] >= PLAN_RANK[minPlan];
+};
+
 const Dashboard = () => {
     const { user } = useAuth();
     const [stats, setStats] = useState({ revenue: 0, expenses: 0, profit: 0, activeTables: 0, kitchenOrders: 0, lowStockCount: 0, lowStockItems: [] });
@@ -295,9 +302,9 @@ const Dashboard = () => {
     // --- ADMIN / STAFF VIEW ---
     return (
         <div className="page-container animate-fade">
-            <div style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="dashboard-header">
                 <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                    <h1 className="dashboard-title">
                         Welcome back, {user?.name?.split(' ')[0]}
                     </h1>
                     <p style={{ color: 'var(--text-muted)' }}>
@@ -313,38 +320,40 @@ const Dashboard = () => {
             </div>
 
             {user?.role === 'ADMIN' && (
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+                <div className="dashboard-actions">
                     <Link to="/reports" className="btn-primary" style={{ textDecoration: 'none' }}>
                         <BarChart3 size={18} />
                         View Detailed Reports
                     </Link>
-                    <Link to="/activity" className="btn-ghost" style={{ textDecoration: 'none' }}>
-                        <TrendingUp size={18} />
-                        System Activity
-                    </Link>
+                    {hasPlan(user, 'DIAMOND') && (
+                        <Link to="/activity" className="btn-ghost" style={{ textDecoration: 'none' }}>
+                            <TrendingUp size={18} />
+                            System Activity
+                        </Link>
+                    )}
                 </div>
             )}
 
             {/* QUICK OPERATIONS DASH */}
             <div style={{ marginBottom: '2.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.25rem' }}>
-                    <div style={{ width: '4px', height: '16px', background: 'var(--primary)', borderRadius: '2px' }} />
+                <div className="dashboard-section-header">
+                    <div className="dashboard-section-indicator" />
                     <h3 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Quick Operations</h3>
                 </div>
                 
-                <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1.25rem' }}>
+                <div className="dashboard-ops-grid">
                     {[
-                        { label: 'New Order', icon: UtensilsCrossed, path: '/tables', color: 'var(--primary)', variant: 'primary' },
-                        { label: 'Add Expense', icon: DollarSign, path: '/expenses', color: 'var(--danger)', variant: 'danger' },
-                        { label: 'Manage Stock', icon: Package, path: '/inventory', color: 'var(--text-main)', variant: 'default' },
-                        { label: 'Shift Console', icon: Clock, path: '/shifts', color: 'var(--warning)', variant: 'warning' },
-                        { label: 'Staff Ops', icon: Users, path: '/staff', color: 'var(--primary)', variant: 'primary' },
-                        { label: 'Analytics', icon: BarChart3, path: '/reports', color: 'var(--success)', variant: 'success' },
-                    ].map((action, idx) => (
+                        { label: 'New Order', icon: UtensilsCrossed, path: '/tables', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER' },
+                        { label: 'Add Expense', icon: DollarSign, path: '/expenses', color: 'var(--danger)', variant: 'danger', minPlan: 'GOLD' },
+                        { label: 'Manage Stock', icon: Package, path: '/inventory', color: 'var(--text-main)', variant: 'default', minPlan: 'SILVER' },
+                        { label: 'Shift Console', icon: Clock, path: '/shifts', color: 'var(--warning)', variant: 'warning', minPlan: 'GOLD' },
+                        { label: 'Staff Ops', icon: Users, path: '/staff', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER' },
+                        { label: 'Analytics', icon: BarChart3, path: '/reports', color: 'var(--success)', variant: 'success', minPlan: 'SILVER' },
+                    ].filter(action => hasPlan(user, action.minPlan)).map((action, idx) => (
                         <Link 
                             key={idx} 
                             to={action.path} 
-                            className="premium-glass" 
+                            className="premium-glass dashboard-ops-card" 
                             style={{ 
                                 padding: '1.25rem', 
                                 display: 'flex', 
@@ -550,7 +559,7 @@ const Dashboard = () => {
 
 
             {/* Premium Service Message Footer */}
-            <div className="premium-glass" style={{
+            <div className="premium-glass premium-footer" style={{
                 padding: '4rem 2rem',
                 textAlign: 'center',
                 display: 'flex',
