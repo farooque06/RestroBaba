@@ -68,14 +68,13 @@ app.use(morgan('combined', { stream: { write: (message) => logger.info(message.t
 
 // Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 100, // Limit each IP to 100 requests per windowMs
     message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
     standardHeaders: true,
     legacyHeaders: false,
 });
 // Skip global rate limiting to prevent blocking legitimate high-volume traffic
-// app.use('/api/', limiter);
 
 // Extend Express Request to include clientId and user
 declare global {
