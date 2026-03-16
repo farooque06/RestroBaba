@@ -73,26 +73,37 @@ const Dashboard = () => {
             }
 
             // Parallel fetching for high performance (ADMIN)
-            const [statsRes, salesRes, itemsRes, staffRes, profitRes, currentRes] = await Promise.all([
+            const canAccessShifts = ['ADMIN', 'MANAGER'].includes(user?.role) && hasPlan(user, 'GOLD');
+            
+            const fetchPromises = [
                 fetch(`${API_BASE_URL}/api/stats`, { headers }),
                 fetch(`${API_BASE_URL}/api/stats/daily-sales`, { headers }),
                 fetch(`${API_BASE_URL}/api/stats/top-items`, { headers }),
                 fetch(`${API_BASE_URL}/api/stats/staff-performance`, { headers }),
                 fetch(`${API_BASE_URL}/api/reports/profit`, { headers }),
-                fetch(`${API_BASE_URL}/api/shifts/current`, { headers })
-            ]);
+            ];
+            
+            if (canAccessShifts) {
+                fetchPromises.push(fetch(`${API_BASE_URL}/api/shifts/current`, { headers }));
+            }
 
-            const [statsData, salesData, itemsData, staffData, profitData, shiftData] = await Promise.all([
+            const responses = await Promise.all(fetchPromises);
+            const [statsRes, salesRes, itemsRes, staffRes, profitRes] = responses;
+            const currentRes = canAccessShifts ? responses[5] : null;
+
+            const [statsData, salesData, itemsData, staffData, profitData] = await Promise.all([
                 statsRes.json(),
                 salesRes.json(),
                 itemsRes.json(),
                 staffRes.json(),
                 profitRes.json(),
-                currentRes.json()
             ]);
 
             if (statsRes.ok) setStats(statsData);
-            if (currentRes.ok) setCurrentShift(shiftData);
+            if (currentRes && currentRes.ok) {
+                const shiftData = await currentRes.json();
+                setCurrentShift(shiftData);
+            }
             setAnalytics({
                 dailySales: salesData || {},
                 topItems: itemsData || [],
