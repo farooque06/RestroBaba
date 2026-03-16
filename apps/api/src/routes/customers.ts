@@ -36,6 +36,38 @@ router.get('/search', async (req, res) => {
     }
 });
 
+// Upsert a customer (create if doesn't exist, update if it does)
+router.post('/upsert', async (req, res) => {
+    const { name, phone, email } = req.body;
+    if (!phone) return res.status(400).json({ error: 'Phone number is required' });
+
+    try {
+        const customer = await prisma.customer.upsert({
+            where: {
+                phone_clientId: {
+                    phone,
+                    clientId: req.clientId!
+                }
+            },
+            update: {
+                name: name || undefined,
+                email: email || undefined
+            },
+            create: {
+                name: name || 'Guest',
+                phone,
+                email,
+                clientId: req.clientId!
+            }
+        });
+
+        res.json(customer);
+    } catch (error) {
+        console.error('Upsert failed', error);
+        res.status(500).json({ error: 'Failed to upsert customer' });
+    }
+});
+
 // Create a new customer
 router.post('/', async (req, res) => {
     const { name, phone, email } = req.body;

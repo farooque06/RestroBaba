@@ -435,25 +435,58 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                 </div>
                             ) : (
                                 cart.map(item => (
-                                    <div key={item.cartKey || item.id} className="ol-item-row" style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            <div className="qty">{item.quantity}</div>
+                                    <div key={item.cartKey || item.id} className="ot-basket-item">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div className="qty" style={{ 
+                                                width: '28px', 
+                                                height: '28px', 
+                                                background: 'var(--primary-glow)', 
+                                                color: 'var(--primary)', 
+                                                borderRadius: '8px', 
+                                                fontSize: '0.8rem', 
+                                                fontWeight: 800,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                border: '1px solid rgba(212, 175, 55, 0.2)'
+                                            }}>
+                                                {item.quantity}
+                                            </div>
                                             <div style={{ flex: 1 }}>
-                                                <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                                                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px', color: 'var(--text-heading)' }}>
                                                     {item.name}
-                                                    {item.isExisting && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', padding: '1px 4px', background: 'var(--bg-input)', borderRadius: '4px' }}>{item.status}</span>}
+                                                    {item.isExisting && (
+                                                        <span style={{ 
+                                                            marginLeft: '0.6rem', 
+                                                            fontSize: '0.6rem', 
+                                                            padding: '2px 6px', 
+                                                            background: 'rgba(255,255,255,0.05)', 
+                                                            color: 'var(--text-muted)',
+                                                            borderRadius: '4px',
+                                                            textTransform: 'uppercase',
+                                                            letterSpacing: '0.02em'
+                                                        }}>
+                                                            {item.status}
+                                                        </span>
+                                                    )}
                                                 </p>
-                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatCurrency(item.price)}</p>
+                                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{formatCurrency(item.price)}</p>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div className="ot-qty-controls">
                                             {!item.isExisting ? (
-                                                <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                    <button onClick={() => removeFromCart(item.cartKey)} style={{ padding: '4px', background: 'var(--bg-input)', borderRadius: '4px' }}><Minus size={14} /></button>
-                                                    <button onClick={() => addToCart(item)} style={{ padding: '4px', background: 'var(--bg-input)', borderRadius: '4px' }}><Plus size={14} /></button>
-                                                </div>
+                                                <>
+                                                    <button onClick={() => removeFromCart(item.cartKey)} className="ot-qty-btn">
+                                                        <Minus size={14} />
+                                                    </button>
+                                                    <button onClick={() => addToCart(item)} className="ot-qty-btn">
+                                                        <Plus size={14} />
+                                                    </button>
+                                                </>
                                             ) : (
-                                                <button onClick={() => handleRemake(item.orderItemId)} style={{ color: 'var(--warning)', cursor: 'pointer', padding: '4px' }}><RotateCcw size={16} /></button>
+                                                <button onClick={() => handleRemake(item.orderItemId)} className="ot-qty-btn remake" title="Remake / Waste">
+                                                    <RotateCcw size={14} />
+                                                </button>
                                             )}
                                         </div>
                                     </div>

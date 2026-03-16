@@ -217,6 +217,26 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Link a customer to an order
+router.put('/:id/customer', async (req, res) => {
+    const { id } = req.params;
+    const { customerId } = req.body;
+
+    if (!customerId) return res.status(400).json({ error: 'Customer ID is required' });
+
+    try {
+        const order = await prisma.order.update({
+            where: { id: id as string, clientId: req.clientId! },
+            data: { customerId },
+            include: { customer: true }
+        });
+        res.json(order);
+    } catch (error) {
+        console.error('Failed to link customer', error);
+        res.status(500).json({ error: 'Failed to link customer to order' });
+    }
+});
+
 // Update order status with VALIDATION (Issue #1, #2, #3)
 router.put('/:id/status', async (req, res) => {
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });

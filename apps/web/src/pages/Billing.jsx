@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Receipt as ReceiptIcon, CreditCard, DollarSign, Loader2, Printer, Search, FileText, Clock, AlertCircle, Users, Download, Layout, QrCode } from 'lucide-react';
+import { Receipt as ReceiptIcon, CreditCard, DollarSign, Loader2, Printer, Search, FileText, Clock, AlertCircle, Users, Download, Layout, QrCode, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { initSocket, disconnectSocket } from '../services/socket';
@@ -9,6 +9,7 @@ import SplitBillModal from '../components/SplitBillModal';
 import Receipt from '../components/Receipt';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { formatWhatsAppReceipt } from '../utils/whatsappFormatter';
 import { createPortal } from 'react-dom';
 
 const Billing = () => {
@@ -20,6 +21,7 @@ const Billing = () => {
     const [splitOrder, setSplitOrder] = useState(null);
     const [selectedMethods, setSelectedMethods] = useState({}); // orderId -> method
     const [printingOrder, setPrintingOrder] = useState(null);
+    const [customerPhone, setCustomerPhone] = useState('');
     const receiptRef = React.useRef(null);
 
     useEffect(() => {
@@ -108,6 +110,82 @@ const Billing = () => {
             pdf.save(`Receipt-${order.id.slice(-6).toUpperCase()}.pdf`);
             setPrintingOrder(null);
         }, 500);
+    };
+
+    const performAutoCapture = async (orderId) => {
+        if (!customerPhone || customerPhone.length < 10) return;
+
+        try {
+            const token = localStorage.getItem('restroToken');
+            let phone = customerPhone.replace(/\D/g, '');
+            if (phone.length === 10) phone = '977' + phone;
+
+            // 1. Upsert Customer
+            const custRes = await fetch(`${API_BASE_URL}/api/customers/upsert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ phone, name: `Guest ${phone.slice(-4)}` })
+            });
+            const customer = await custRes.json();
+
+            if (custRes.ok && customer.id) {
+                // 2. Link to Order
+                await fetch(`${API_BASE_URL}/api/orders/${orderId}/customer`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ customerId: customer.id })
+                });
+            }
+        } catch (err) {
+            console.error('Auto-capture failed:', err);
+        }
+    };
+
+    const handleWhatsApp = async (order) => {
+        if (!customerPhone || customerPhone.length < 10) {
+            toast.error('Please enter a valid phone number');
+            return;
+        }
+
+        const message = formatWhatsAppReceipt(order, { name: user?.clientName });
+        let phone = customerPhone.replace(/\D/g, '');
+        if (phone.length === 10) phone = '977' + phone;
+
+        // BACKGROUND: Save customer and link to order
+        try {
+            const token = localStorage.getItem('restroToken');
+            // 1. Upsert Customer
+            const custRes = await fetch(`${API_BASE_URL}/api/customers/upsert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ phone, name: `Guest ${phone.slice(-4)}` })
+            });
+            const customer = await custRes.json();
+
+            if (custRes.ok && customer.id) {
+                // 2. Link to Order
+                await fetch(`${API_BASE_URL}/api/orders/${order.id}/customer`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ customerId: customer.id })
+                });
+            }
+        } catch (err) {
+            console.error('Auto-capture failed:', err);
+        }
+
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        toast.success('WhatsApp receipt generated');
+    };
+
+    const handlePrintWithCapture = (order) => {
+        performAutoCapture(order.id);
+        handlePrint(order);
+    };
+
+    const handleDownloadWithCapture = (order) => {
+        performAutoCapture(order.id);
+        handleDownload(order);
     };
 
     const paidOrders = orders.filter(o => o.status === 'Paid');
@@ -304,11 +382,17 @@ const Billing = () => {
                         <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Live Receipt Preview</span>
                         {printingOrder && (
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button onClick={() => handlePrint(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px' }} title="Print Now">
+                                <button onClick={() => handlePrintWithCapture(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px' }} title="Print Now">
                                     <Printer size={14} />
                                 </button>
                                 <button onClick={() => setSplitOrder(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px' }} title="Split Bill">
                                     <Users size={14} />
+                                </button>
+                                <button onClick={() => handleWhatsApp(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px', color: '#25D366' }} title="WhatsApp Receipt">
+                                    <MessageCircle size={14} />
+                                </button>
+                                <button onClick={() => handleDownloadWithCapture(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px' }} title="Download PDF">
+                                    <Download size={14} />
                                 </button>
                             </div>
                         )}
@@ -374,6 +458,19 @@ const Billing = () => {
                                                 )}
                                             </div>
                                         )}
+
+                                        <div style={{ marginBottom: '1.5rem' }}>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Customer WhatsApp Number</label>
+                                            <input 
+                                                type="tel"
+                                                placeholder="98XXXXXXXX"
+                                                className="form-input"
+                                                style={{ padding: '1rem', background: 'var(--bg-input)', border: '1px solid var(--border)' }}
+                                                value={customerPhone}
+                                                onChange={(e) => setCustomerPhone(e.target.value)}
+                                            />
+                                        </div>
+
                                         <button 
                                             onClick={() => processPayment(printingOrder.id)}
                                             className="nav-item active"

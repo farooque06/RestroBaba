@@ -32,6 +32,7 @@ const CustomerManagement = React.lazy(() => import('./pages/CustomerManagement')
 const ProfitDashboard = React.lazy(() => import('./pages/ProfitDashboard'));
 const WasteManagement = React.lazy(() => import('./pages/WasteManagement'));
 const ShiftManagement = React.lazy(() => import('./pages/ShiftManagement'));
+const HelpPage = React.lazy(() => import('./pages/HelpPage'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 import Sidebar from './components/layout/Sidebar';
@@ -168,6 +169,7 @@ function AppContent() {
                                         </ProtectedRoute>
                                     } />
                                     <Route path="settings" element={<SettingsPage />} />
+                                    <Route path="help" element={<HelpPage />} />
 
                                     {/* 404 inside Protected Area */}
                                     <Route path="*" element={<NotFound />} />

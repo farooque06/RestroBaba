@@ -24,6 +24,9 @@ import {
     Bell,
     Settings,
     User,
+    HelpCircle,
+    Phone,
+    MessageCircle,
     X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -63,6 +66,7 @@ const Sidebar = () => {
         { id: 'clients', label: 'Manage Clients', icon: ShieldCheck, path: '/clients', roles: ['SUPER_ADMIN'], minPlan: 'SILVER' },
         { id: 'plans', label: 'Subscription Plans', icon: Zap, path: '/plans', roles: ['SUPER_ADMIN'], minPlan: 'SILVER' },
         { id: 'shifts', label: 'Shifts', icon: Clock, path: '/shifts', roles: ['ADMIN', 'MANAGER'], minPlan: 'GOLD' },
+        { id: 'help', label: 'Help & FAQ', icon: HelpCircle, path: '/help', roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
     ];
 
     const PLAN_RANK = { 'SILVER': 1, 'GOLD': 2, 'DIAMOND': 3 };
@@ -173,6 +177,20 @@ const Sidebar = () => {
                             {(!isCollapsed || isMobileOpen) && <span>Logout</span>}
                         </div>
                     </div>
+
+                    {(!isCollapsed || isMobileOpen) && (
+                        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(212, 175, 55, 0.05)', borderRadius: '12px', border: '1px solid rgba(212, 175, 55, 0.1)' }}>
+                            <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--primary)', marginBottom: '0.75rem', fontWeight: 800 }}>Support</p>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <a href="tel:9818998937" title="Call Support" style={{ flex: 1, padding: '0.5rem', background: 'var(--bg-input)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)', border: '1px solid var(--border)' }}>
+                                    <Phone size={14} />
+                                </a>
+                                <a href="https://wa.me/9779818998937" target="_blank" rel="noopener noreferrer" title="WhatsApp Support" style={{ flex: 1, padding: '0.5rem', background: 'var(--bg-input)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#25D366', border: '1px solid var(--border)' }}>
+                                    <MessageCircle size={14} />
+                                </a>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -12,6 +12,7 @@ import { QrCode, Download, X, Split, Printer } from 'lucide-react';
 import { initSocket, disconnectSocket } from '../services/socket';
 import SplitBillModal from '../components/SplitBillModal';
 import Receipt from '../components/Receipt';
+import { formatWhatsAppReceipt } from '../utils/whatsappFormatter';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { Calendar, CalendarX } from 'lucide-react';
@@ -34,6 +35,7 @@ const TableManagement = () => {
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [tableToTransfer, setTableToTransfer] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [customerPhone, setCustomerPhone] = useState('');
     const [currentTime, setCurrentTime] = useState(new Date());
     const receiptRef = React.useRef(null);
 
@@ -305,6 +307,83 @@ const TableManagement = () => {
                 setPrintingOrder(null);
             }
         }, 300);
+    };
+
+    const performAutoCapture = async (orderId) => {
+        if (!customerPhone || customerPhone.length < 10) return;
+
+        try {
+            const token = localStorage.getItem('restroToken');
+            let phone = customerPhone.replace(/\D/g, '');
+            if (phone.length === 10) phone = '977' + phone;
+
+            // 1. Upsert Customer
+            const custRes = await fetch(`${API_BASE_URL}/api/customers/upsert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ phone, name: `Guest ${phone.slice(-4)}` })
+            });
+            const customer = await custRes.json();
+
+            if (custRes.ok && customer.id) {
+                // 2. Link to Order
+                await fetch(`${API_BASE_URL}/api/orders/${orderId}/customer`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ customerId: customer.id })
+                });
+            }
+        } catch (err) {
+            console.error('Auto-capture failed:', err);
+        }
+    };
+
+    const handleWhatsApp = async (order) => {
+        if (!customerPhone || customerPhone.length < 10) {
+            toast.error('Please enter a valid phone number');
+            return;
+        }
+
+        const message = formatWhatsAppReceipt(order, { name: user?.clientName });
+        // Standardize phone: remove non-digits, add default country code if missing
+        let phone = customerPhone.replace(/\D/g, '');
+        if (phone.length === 10) phone = '977' + phone; // Default to Nepal if 10 digits
+
+        // BACKGROUND: Save customer and link to order
+        try {
+            const token = localStorage.getItem('restroToken');
+            // 1. Upsert Customer
+            const custRes = await fetch(`${API_BASE_URL}/api/customers/upsert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ phone, name: `Quest ${phone.slice(-4)}` })
+            });
+            const customer = await custRes.json();
+
+            if (custRes.ok && customer.id) {
+                // 2. Link to Order
+                await fetch(`${API_BASE_URL}/api/orders/${order.id}/customer`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ customerId: customer.id })
+                });
+            }
+        } catch (err) {
+            console.error('Auto-capture failed:', err);
+        }
+
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        toast.success('WhatsApp receipt generated');
+    };
+
+    const handlePrintWithCapture = (order) => {
+        performAutoCapture(order.id);
+        handlePrint(order);
+    };
+
+    const handleDownloadWithCapture = (order) => {
+        performAutoCapture(order.id);
+        handleDownload(order);
     };
 
     const filteredTables = tables.filter((t) => filter === 'All' || t.status === filter);
@@ -616,22 +695,47 @@ const TableManagement = () => {
                                 </div>
                             )}
 
-                            <button onClick={() => processPayment(checkoutOrder.id)} className="ol-action-btn pay" style={{ padding: '0.85rem' }}>
-                                <DollarSign size={18} />
-                                <span>Confirm {paymentMethod === 'UPI' ? 'Online' : paymentMethod} Payment</span>
-                            </button>
-                            <button onClick={() => handlePrint(checkoutOrder)} className="ol-action-btn cook" style={{ padding: '0.85rem', border: '1px solid var(--border)' }}>
-                                <Printer size={18} />
-                                <span>Print Receipt</span>
-                            </button>
-                            <button onClick={() => setSplitOrder(checkoutOrder)} className="ol-action-btn cook" style={{ padding: '0.85rem', border: '1px solid var(--border)' }}>
-                                <Split size={18} />
-                                <span>Split Bill</span>
-                            </button>
-                            <button onClick={() => handleDownload(checkoutOrder)} className="ol-action-btn cook" style={{ padding: '0.85rem', border: '1px solid var(--border)' }}>
-                                <Download size={18} />
-                                <span>Download PDF</span>
-                            </button>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>CUSTOMER PHONE (FOR WHATSAPP)</label>
+                                <div className="tm-filters" style={{ margin: 0 }}>
+                                    <input 
+                                        type="tel"
+                                        placeholder="98XXXXXXXX"
+                                        className="form-input"
+                                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.75rem' }}
+                                        value={customerPhone}
+                                        onChange={(e) => setCustomerPhone(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                <button onClick={() => processPayment(checkoutOrder.id)} className="ol-action-btn pay" style={{ height: 'auto', padding: '1rem', gridColumn: 'span 2' }}>
+                                    <DollarSign size={18} />
+                                    <span>Confirm {paymentMethod === 'UPI' ? 'Online' : paymentMethod} Payment</span>
+                                </button>
+                                
+                                <button onClick={() => handleWhatsApp(checkoutOrder)} className="ol-action-btn" style={{ height: 'auto', padding: '1rem', background: '#25D366', color: 'white', border: 'none' }}>
+                                    <MessageCircle size={18} />
+                                    <span>WhatsApp</span>
+                                </button>
+
+                                <button onClick={() => handlePrintWithCapture(checkoutOrder)} className="ol-action-btn cook" style={{ height: 'auto', padding: '1rem', border: '1px solid var(--border)' }}>
+                                    <Printer size={18} />
+                                    <span>Print</span>
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <button onClick={() => setSplitOrder(checkoutOrder)} className="ol-action-btn cook" style={{ padding: '0.6rem', border: '1px solid var(--border)', fontSize: '0.75rem' }}>
+                                    <Split size={14} />
+                                    <span>Split bill</span>
+                                </button>
+                                <button onClick={() => handleDownloadWithCapture(checkoutOrder)} className="ol-action-btn cook" style={{ padding: '0.6rem', border: '1px solid var(--border)', fontSize: '0.75rem' }}>
+                                    <Download size={14} />
+                                    <span>PDF</span>
+                                </button>
+                            </div>
                             <button onClick={() => setCheckoutOrder(null)} className="btn-ghost" style={{ width: '100%' }}>
                                 Back
                             </button>
