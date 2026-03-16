@@ -475,7 +475,7 @@ const MenuManagement = () => {
 
             {isItemModalOpen && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }} className="animate-fade">
-                    <div className="premium-glass" style={{ width: '100%', maxWidth: '550px', padding: '2.5rem', borderRadius: '24px', position: 'relative' }}>
+                    <div className="premium-glass" style={{ width: '100%', maxWidth: '550px', padding: '2.5rem', borderRadius: '24px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
                         <button 
                             onClick={() => setIsItemModalOpen(false)}
                             style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}

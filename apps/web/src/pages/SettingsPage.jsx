@@ -22,7 +22,7 @@ import toast from 'react-hot-toast';
 
 const SettingsPage = () => {
     const { theme, switchTheme } = useTheme();
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [activeTab, setActiveTab] = useState('appearance');
 
     const FinancialSettings = () => {
@@ -84,6 +84,7 @@ const SettingsPage = () => {
 
                 if (response.ok) {
                     toast.success('Financial settings updated');
+                    await refreshUser();
                 } else {
                     const data = await response.json();
                     toast.error(data.error || 'Update failed');

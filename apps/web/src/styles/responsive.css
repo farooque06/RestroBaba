@@ -210,6 +210,11 @@
     padding: 1.5rem;
     max-height: 85vh;
   }
+
+  .premium-glass {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
 }
 
 /* ── Small phones (≤ 480px) ── */

@@ -8,12 +8,28 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('restroUser');
-        const token = localStorage.getItem('restroToken');
-        if (storedUser && token) {
-            setUser(JSON.parse(storedUser));
-        }
-        setLoading(false);
+        const initAuth = async () => {
+            const storedUser = localStorage.getItem('restroUser');
+            const token = localStorage.getItem('restroToken');
+            
+            if (storedUser && token) {
+                setUser(JSON.parse(storedUser));
+                // Refresh silently to get latest client settings (like QR code)
+                try {
+                    const data = await apiClient('/api/auth/me');
+                    if (data?.user) {
+                        setUser(data.user);
+                        localStorage.setItem('restroUser', JSON.stringify(data.user));
+                    }
+                } catch (err) {
+                    console.error('Initial auth refresh failed:', err);
+                    // If 401, apiClient will handle logout
+                }
+            }
+            setLoading(false);
+        };
+
+        initAuth();
     }, []);
 
     const handleAuthSuccess = (data) => {
@@ -94,6 +110,20 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const refreshUser = async () => {
+        try {
+            const data = await apiClient('/api/auth/me');
+            if (data?.user) {
+                setUser(data.user);
+                localStorage.setItem('restroUser', JSON.stringify(data.user));
+                return { success: true, user: data.user };
+            }
+        } catch (err) {
+            console.error('Failed to refresh user:', err);
+        }
+        return { success: false };
+    };
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem('restroUser');
@@ -103,7 +133,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, verifyTotp, resolveShop, loginWithPin, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, verifyTotp, resolveShop, loginWithPin, logout, refreshUser, loading }}>
             {children}
         </AuthContext.Provider>
     );
