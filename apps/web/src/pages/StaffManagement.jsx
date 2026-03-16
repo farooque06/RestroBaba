@@ -248,38 +248,24 @@ const StaffManagement = () => {
                 <div className="page-header-info">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                         <h1 style={{ fontSize: '2rem', margin: 0 }}>Staff Management</h1>
-                            Team Capacity: <strong style={{ color: isLimitReached ? 'var(--danger)' : 'var(--text-main)' }}>{staff.length}</strong> / {limit === Infinity ? '∞' : limit}
+                        <div className="status-badge active" style={{ fontSize: '0.7rem' }}>
+                            <Users size={12} />
+                            {staff.length} / {limit === Infinity ? '∞' : limit} Members
                         </div>
-                        {limit !== Infinity && (
-                            <div style={{ width: '200px', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                                <div style={{ 
-                                    width: `${Math.min((staff.length / limit) * 100, 100)}%`, 
-                                    height: '100%', 
-                                    background: isLimitReached ? 'var(--danger)' : 'var(--primary-gradient)',
-                                    transition: 'width 0.5s ease'
-                                }} />
-                            </div>
-                        )}
                     </div>
-                    <button
-                        onClick={openCreateModal}
-                        className={`nav-item ${isLimitReached ? '' : 'active'}`}
-                        disabled={isLimitReached}
-                        style={{ 
-                            border: 'none', 
-                            display: 'flex', 
-                            gap: '0.5rem', 
-                            alignItems: 'center', 
-                            padding: '0.75rem 1.5rem', 
-                            borderRadius: '12px', 
-                            cursor: isLimitReached ? 'not-allowed' : 'pointer',
-                            opacity: isLimitReached ? 0.5 : 1
-                        }}
-                    >
-                        <Plus size={20} />
-                        <span>Add Staff</span>
-                    </button>
+                    <p style={{ color: 'var(--text-muted)', margin: 0 }}>Create and manage staff roles, permissions, and salaries.</p>
                 </div>
+                {!isLimitReached && (
+                    <div className="page-header-actions">
+                        <button
+                            onClick={openCreateModal}
+                            className="btn-primary"
+                        >
+                            <Plus size={20} />
+                            <span>Add Member</span>
+                        </button>
+                    </div>
+                )}
             </div>
 
             {isLimitReached && (

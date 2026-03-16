@@ -126,19 +126,20 @@ const ExpenseTracker = () => {
 
     return (
         <div className="page-container animate-fade">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
+            <div className="page-header">
+                <div className="page-header-info">
                     <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Expense Tracker</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Manage your daily operational costs and monitor profitability.</p>
+                    <p style={{ color: 'var(--text-muted)', margin: 0 }}>Manage your daily operational costs and monitor profitability.</p>
                 </div>
-                <button
-                    onClick={() => { setEditingItem(null); setFormData({ description: '', amount: '', category: 'Ingredients', date: new Date().toISOString().split('T')[0] }); setIsModalOpen(true); }}
-                    className="nav-item active"
-                    style={{ border: 'none', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
-                >
-                    <Plus size={20} />
-                    <span>Record Expense</span>
-                </button>
+                <div className="page-header-actions">
+                    <button
+                        onClick={() => { setEditingItem(null); setFormData({ description: '', amount: '', category: 'Ingredients', date: new Date().toISOString().split('T')[0] }); setIsModalOpen(true); }}
+                        className="btn-primary"
+                    >
+                        <Plus size={20} />
+                        <span>Record Expense</span>
+                    </button>
+                </div>
             </div>
 
             <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
