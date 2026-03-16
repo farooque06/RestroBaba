@@ -74,9 +74,7 @@ const limiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 });
-// Skip global rate limiting to prevent blocking legitimate high-volume traffic
 
-// Extend Express Request to include clientId and user
 declare global {
     namespace Express {
         interface Request {
