@@ -33,6 +33,8 @@ const ProfitDashboard = React.lazy(() => import('./pages/ProfitDashboard'));
 const WasteManagement = React.lazy(() => import('./pages/WasteManagement'));
 const ShiftManagement = React.lazy(() => import('./pages/ShiftManagement'));
 const HelpPage = React.lazy(() => import('./pages/HelpPage'));
+const Signup = React.lazy(() => import('./pages/Signup'));
+const LeadManagement = React.lazy(() => import('./pages/LeadManagement'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 import Sidebar from './components/layout/Sidebar';
@@ -79,6 +81,7 @@ function AppContent() {
             <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={!user ? <Login /> : <Navigate to={from} replace />} />
+                <Route path="/signup" element={<Signup />} />
                 <Route path="/menu/p/:clientId/:tableId" element={<PublicMenu />} />
                 <Route path="/menu/p/:clientId" element={<PublicMenu />} />
 
@@ -100,6 +103,11 @@ function AppContent() {
                                     <Route path="plans" element={
                                         <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                                             <PlanManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="leads" element={
+                                        <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                                            <LeadManagement />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="menu" element={

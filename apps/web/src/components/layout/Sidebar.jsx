@@ -65,6 +65,7 @@ const Sidebar = () => {
         { id: 'activity', label: 'Activity Log', icon: History, path: '/activity', roles: ['ADMIN', 'MANAGER'], minPlan: 'DIAMOND' },
         { id: 'clients', label: 'Manage Clients', icon: ShieldCheck, path: '/clients', roles: ['SUPER_ADMIN'], minPlan: 'SILVER' },
         { id: 'plans', label: 'Subscription Plans', icon: Zap, path: '/plans', roles: ['SUPER_ADMIN'], minPlan: 'SILVER' },
+        { id: 'leads', label: 'Restro Requests', icon: MessageCircle, path: '/leads', roles: ['SUPER_ADMIN'], minPlan: 'SILVER' },
         { id: 'shifts', label: 'Shifts', icon: Clock, path: '/shifts', roles: ['ADMIN', 'MANAGER'], minPlan: 'GOLD' },
         { id: 'help', label: 'Help & FAQ', icon: HelpCircle, path: '/help', roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
     ];

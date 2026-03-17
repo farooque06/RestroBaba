@@ -381,3 +381,19 @@ model FinancialShift {
   @@index([clientId])
   @@index([status])
 }
+
+model RestaurantLead {
+  id             String   @id @default(uuid())
+  restaurantName String
+  ownerName      String
+  email          String
+  phone          String
+  location       String?
+  message        String?
+  status         String   @default("PENDING") // PENDING, CONTACTED, REJECTED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}

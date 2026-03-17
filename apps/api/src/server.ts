@@ -19,6 +19,7 @@ import uploadRoutes from './routes/upload.js';
 import reportsRoutes from './routes/reports.js';
 import plansRoutes from './routes/plans.js';
 import shiftsRoutes from './routes/shifts.js';
+import leadsRoutes from './routes/leads.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import { roleMiddleware } from './middleware/roleMiddleware.js';
 import { requirePlan } from './middleware/planMiddleware.js';
@@ -90,6 +91,7 @@ app.get('/health', (req, res) => {
 });
 app.use('/api/auth', limiter, authRoutes);
 app.use('/api/public', limiter, publicRoutes);
+app.use('/api/leads', leadsRoutes);
 
 // Auth Middleware (Protected Routes)
 app.use(authMiddleware);
