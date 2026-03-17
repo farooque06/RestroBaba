@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { 
-    Search, 
-    Filter, 
-    MoreVertical, 
-    Mail, 
-    Phone, 
-    MapPin, 
-    Clock, 
-    CheckCircle, 
-    XCircle, 
+import {
+    Search,
+    Filter,
+    MoreVertical,
+    Mail,
+    Phone,
+    MapPin,
+    Clock,
+    CheckCircle,
+    XCircle,
     Trash2,
     Loader2,
     Plus,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+
 
 const LeadManagement = () => {
     const [leads, setLeads] = useState([]);
@@ -52,9 +53,9 @@ const LeadManagement = () => {
             const token = localStorage.getItem('restroToken');
             const response = await fetch(`${API_BASE_URL}/api/leads/${id}`, {
                 method: 'PATCH',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ status: newStatus })
             });
@@ -67,6 +68,7 @@ const LeadManagement = () => {
             toast.error('Failed to update status');
         }
     };
+
 
     const deleteLead = async (id) => {
         if (!window.confirm('Are you sure you want to delete this lead?')) return;
@@ -87,13 +89,13 @@ const LeadManagement = () => {
     };
 
     const filteredLeads = leads.filter(lead => {
-        const matchesSearch = 
+        const matchesSearch =
             lead.restaurantName.toLowerCase().includes(search.toLowerCase()) ||
             lead.ownerName.toLowerCase().includes(search.toLowerCase()) ||
             lead.email.toLowerCase().includes(search.toLowerCase());
-        
+
         const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
-        
+
         return matchesSearch && matchesStatus;
     });
 
@@ -128,9 +130,9 @@ const LeadManagement = () => {
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', width: '100%' }}>
                     <div className="search-box" style={{ flex: 1, minWidth: '300px' }}>
                         <Search size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="Search by restaurant, owner or email..." 
+                        <input
+                            type="text"
+                            placeholder="Search by restaurant, owner or email..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -190,14 +192,14 @@ const LeadManagement = () => {
                                     </div>
                                 </td>
                                 <td style={{ padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                    {format(new Date(lead.createdAt), 'MMM dd, yyyy')}<br/>
+                                    {format(new Date(lead.createdAt), 'MMM dd, yyyy')}<br />
                                     {format(new Date(lead.createdAt), 'hh:mm a')}
                                 </td>
                                 <td style={{ padding: '1.25rem', textAlign: 'center' }}>
-                                    <span style={{ 
-                                        padding: '0.4rem 0.8rem', 
-                                        borderRadius: '20px', 
-                                        fontSize: '0.75rem', 
+                                    <span style={{
+                                        padding: '0.4rem 0.8rem',
+                                        borderRadius: '20px',
+                                        fontSize: '0.75rem',
                                         fontWeight: 800,
                                         background: `${getStatusColor(lead.status)}15`,
                                         color: getStatusColor(lead.status),
@@ -209,9 +211,9 @@ const LeadManagement = () => {
                                 <td style={{ padding: '1.25rem', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                                         {lead.status !== 'CONTACTED' && (
-                                            <button 
+                                            <button
                                                 onClick={() => updateStatus(lead.id, 'CONTACTED')}
-                                                className="premium-glass" 
+                                                className="premium-glass"
                                                 style={{ padding: '0.5rem', borderRadius: '8px', color: 'var(--primary)' }}
                                                 title="Mark as Contacted"
                                             >
@@ -219,18 +221,18 @@ const LeadManagement = () => {
                                             </button>
                                         )}
                                         {lead.status !== 'REJECTED' && (
-                                            <button 
+                                            <button
                                                 onClick={() => updateStatus(lead.id, 'REJECTED')}
-                                                className="premium-glass" 
+                                                className="premium-glass"
                                                 style={{ padding: '0.5rem', borderRadius: '8px', color: '#ef4444' }}
                                                 title="Reject Request"
                                             >
                                                 <XCircle size={16} />
                                             </button>
                                         )}
-                                        <button 
+                                        <button
                                             onClick={() => deleteLead(lead.id)}
-                                            className="premium-glass" 
+                                            className="premium-glass"
                                             style={{ padding: '0.5rem', borderRadius: '8px', color: '#6b7280' }}
                                             title="Delete Lead"
                                         >
