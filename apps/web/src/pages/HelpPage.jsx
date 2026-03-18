@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { 
-    HelpCircle, 
-    Book, 
-    MessageCircle, 
-    ChevronDown, 
-    ChevronUp, 
-    Search, 
-    Layout, 
-    Utensils, 
-    DollarSign, 
-    Settings, 
-    Users, 
-    Package, 
+import {
+    HelpCircle,
+    Book,
+    MessageCircle,
+    ChevronDown,
+    ChevronUp,
+    Search,
+    Layout,
+    Utensils,
+    DollarSign,
+    Settings,
+    Users,
+    Package,
     LifeBuoy,
     ShieldCheck,
     Smartphone,
@@ -78,7 +78,7 @@ const HelpPage = () => {
         setOpenFaq(openFaq === index ? null : index);
     };
 
-    const filteredFaqs = faqs.filter(faq => 
+    const filteredFaqs = faqs.filter(faq =>
         faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
         faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -133,8 +133,8 @@ const HelpPage = () => {
                     </div>
                 </div>
 
-                <button 
-                    className="btn-primary" 
+                <button
+                    className="btn-primary"
                     style={{ width: '100%', marginTop: '2rem', padding: '1rem' }}
                     onClick={() => setShowInstallGuide(false)}
                 >
@@ -160,9 +160,9 @@ const HelpPage = () => {
 
                 <div className="search-bar" style={{ maxWidth: '600px', margin: '2rem 0' }}>
                     <Search size={20} />
-                    <input 
-                        type="text" 
-                        placeholder="Search for guides, FAQs, or troubleshooting tips..." 
+                    <input
+                        type="text"
+                        placeholder="Search for guides, FAQs, or troubleshooting tips..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -195,25 +195,25 @@ const HelpPage = () => {
                     </h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {filteredFaqs.map((faq, idx) => (
-                            <div 
-                                key={idx} 
-                                className="premium-glass" 
-                                style={{ 
-                                    overflow: 'hidden', 
+                            <div
+                                key={idx}
+                                className="premium-glass"
+                                style={{
+                                    overflow: 'hidden',
                                     transition: 'all 0.3s ease',
                                     border: openFaq === idx ? '1px solid var(--primary)' : '1px solid var(--glass-border)'
                                 }}
                             >
-                                <button 
+                                <button
                                     onClick={() => toggleFaq(idx)}
-                                    style={{ 
-                                        width: '100%', 
-                                        padding: '1.5rem', 
-                                        display: 'flex', 
-                                        justifyContent: 'space-between', 
-                                        alignItems: 'center', 
-                                        background: 'none', 
-                                        border: 'none', 
+                                    style={{
+                                        width: '100%',
+                                        padding: '1.5rem',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        background: 'none',
+                                        border: 'none',
                                         cursor: 'pointer',
                                         color: 'inherit',
                                         textAlign: 'left'
@@ -241,8 +241,8 @@ const HelpPage = () => {
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                             Install RestroBaba as an app on your iOS or Android device for better performance.
                         </p>
-                        <button 
-                            className="nav-item active" 
+                        <button
+                            className="nav-item active"
                             style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem' }}
                             onClick={() => setShowInstallGuide(true)}
                         >
@@ -274,19 +274,19 @@ const HelpPage = () => {
                             Our premium support team is available to assist you via WhatsApp or Email.
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <a href="https://wa.me/9779818998937" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                            <a href="https://wa.me/9779765231402" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
                                 <button className="nav-item active" style={{ width: '100%', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#25D366', borderColor: '#25D366' }}>
                                     <MessageCircle size={18} />
                                     WhatsApp Support
                                 </button>
                             </a>
-                            <a href="tel:9818998937" style={{ textDecoration: 'none' }}>
+                            <a href="tel:9765231402" style={{ textDecoration: 'none' }}>
                                 <button className="nav-item active" style={{ width: '100%', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                     <Phone size={18} />
                                     Direct Call
                                 </button>
                             </a>
-                            <a href="mailto:support@restrobaba.io" style={{ textDecoration: 'none' }}>
+                            <a href="mailto:farooque12.alam@gmail.com" style={{ textDecoration: 'none' }}>
                                 <button className="btn-ghost" style={{ width: '100%', padding: '0.75rem', fontSize: '0.85rem' }}>
                                     Email Support
                                 </button>
