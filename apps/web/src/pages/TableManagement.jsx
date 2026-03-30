@@ -765,8 +765,8 @@ const TableManagement = () => {
                                 <label>Table Number</label>
                                 <input
                                     className="form-input"
-                                    type="number"
-                                    placeholder="e.g. 1"
+                                    type="text"
+                                    placeholder="e.g. 1 or F1-T1"
                                     value={newTable.number}
                                     onChange={(e) => setNewTable({ ...newTable, number: e.target.value })}
                                     required
