@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Receipt as ReceiptIcon, CreditCard, DollarSign, Loader2, Printer, Search, FileText, Clock, AlertCircle, Users, Download, Layout, QrCode, MessageCircle } from 'lucide-react';
+import { Receipt as ReceiptIcon, CreditCard, DollarSign, Loader2, Printer, Search, FileText, Clock, AlertCircle, Users, UserPlus, X, Download, Layout, QrCode, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { initSocket, disconnectSocket } from '../services/socket';
@@ -11,6 +11,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { formatWhatsAppReceipt } from '../utils/whatsappFormatter';
 import { createPortal } from 'react-dom';
+import CustomerSelectionModal from '../components/CustomerSelectionModal';
 
 const Billing = () => {
     const { user } = useAuth();
@@ -23,6 +24,7 @@ const Billing = () => {
     const [printingOrder, setPrintingOrder] = useState(null);
     const [customerPhone, setCustomerPhone] = useState('');
     const [showPhonePrompt, setShowPhonePrompt] = useState(false);
+    const [showCustomerSearch, setShowCustomerSearch] = useState(false);
     const receiptRef = React.useRef(null);
 
     useEffect(() => {
@@ -115,6 +117,28 @@ const Billing = () => {
         }, 500);
     };
 
+    // ─── CUSTOMER HELPERS ───────────────────────────────────────────
+    const linkCustomerToOrder = async (orderId, customerId) => {
+        const token = localStorage.getItem('restroToken');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/customer`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ customerId })
+            });
+            if (response.ok) {
+                toast.success(customerId ? 'Guest updated' : 'Guest removed');
+                fetchInvoices(true); // Silent refresh
+                const updatedOrder = await response.json();
+                if (printingOrder?.id === orderId) {
+                    setPrintingOrder(updatedOrder);
+                }
+            }
+        } catch (err) {
+            toast.error('Failed to update guest');
+        }
+    };
+
     const performAutoCapture = async (orderId) => {
         if (!customerPhone || customerPhone.length < 10) return;
 
@@ -151,7 +175,7 @@ const Billing = () => {
             return;
         }
 
-        const message = formatWhatsAppReceipt(order, { name: user?.clientName });
+        const message = formatWhatsAppReceipt(order, user?.client);
         let phone = customerPhone.replace(/\D/g, '');
         if (phone.length === 10) phone = '977' + phone;
 
@@ -409,15 +433,63 @@ const Billing = () => {
                         {printingOrder ? (
                             <div style={{ padding: '1.5rem' }}>
                                 <div style={{ border: activeTab === 'pending' ? '1px dashed var(--border)' : 'none', borderRadius: '8px', padding: activeTab === 'pending' ? '1rem' : 0 }}>
+                                    {/* Customer Selector */}
+                                    {activeTab === 'pending' && (
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            {printingOrder.customer ? (
+                                                <div className="premium-glass" style={{
+                                                    padding: '0.75rem', 
+                                                    borderRadius: '10px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    border: '1px solid var(--primary-glow)',
+                                                    background: 'rgba(59, 130, 246, 0.05)'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <Users size={16} color="white" />
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>{printingOrder.customer.name}</div>
+                                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{printingOrder.customer.phone}</div>
+                                                        </div>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => linkCustomerToOrder(printingOrder.id, null)}
+                                                        className="btn-ghost" 
+                                                        style={{ padding: '4px', minWidth: 'auto' }}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => setShowCustomerSearch(true)}
+                                                    className="btn-ghost" 
+                                                    style={{ 
+                                                        width: '100%', 
+                                                        padding: '0.75rem', 
+                                                        border: '1px dashed var(--border)', 
+                                                        borderRadius: '10px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '8px',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 700
+                                                    }}
+                                                >
+                                                    <UserPlus size={16} /> Add Guest Details (Optional)
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <Receipt
                                         ref={receiptRef}
                                         order={printingOrder}
-                                        client={{
-                                            name: user?.clientName,
-                                            email: user?.email,
-                                            taxRate: user?.client?.taxRate,
-                                            serviceChargeRate: user?.client?.serviceChargeRate
-                                        }}
+                                        client={user?.client}
                                     />
                                 </div>
                                 
@@ -509,6 +581,19 @@ const Billing = () => {
                 />
             )}
 
+            {/* Customer Search / Registration Modal */}
+            {showCustomerSearch && (
+                <CustomerSelectionModal
+                    orderId={printingOrder?.id}
+                    onClose={() => setShowCustomerSearch(false)}
+                    onSelect={(customer) => {
+                        // Silent update of local order (DB update handled by modal)
+                        setPrintingOrder({ ...printingOrder, customer, customerId: customer.id });
+                        fetchInvoices(true);
+                    }}
+                />
+            )}
+
             {/* Hidden Receipt Area for Printing - Improved for capture and print */}
             {createPortal(
                 <div 
@@ -528,12 +613,7 @@ const Billing = () => {
                         <Receipt
                             ref={receiptRef}
                             order={printingOrder}
-                            client={{
-                                name: user?.clientName,
-                                email: user?.email,
-                                taxRate: user?.client?.taxRate,
-                                serviceChargeRate: user?.client?.serviceChargeRate
-                            }}
+                            client={user?.client}
                         />
                     )}
                 </div>,

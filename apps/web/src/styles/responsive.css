@@ -476,11 +476,22 @@
 /* ── Print styles ── */
 @media print {
   @page {
-    size: 80mm auto;
-    margin: 0;
+    /* If printing on thermal (80mm), this works. If A4, browser will scale background. */
+    size: auto; 
+    margin: 0mm;
   }
   
-  /* Hide the entire application UI */
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100%;
+    height: auto;
+    overflow: visible !important;
+  }
+
+  /* Hide everything */
+  #root,
   .app-container, 
   .sidebar, 
   .header, 
@@ -488,36 +499,55 @@
   .modal-overlay,
   .ol-payment-overlay,
   .ot-overlay,
-  .page-container {
+  .page-container,
+  .premium-footer {
     display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
   }
 
-  /* Force display of the dedicated print container */
+  /* Universal print container */
   #printable-receipt-container {
-    display: block !important;
-    position: static !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    width: 80mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* Centering for A4 */
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
     height: auto !important;
     background: white !important;
     padding: 0 !important;
     margin: 0 !important;
-    overflow: visible !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 9999999 !important;
   }
 
-  body {
-    background: white !important;
-    margin: 0 !important;
-    padding: 0 !important;
+  /* The actual receipt component wrapper */
+  .receipt-print-wrapper {
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-inside: avoid !important;
+    width: 80mm !important; /* Keep the 80mm width for the content itself */
   }
 
-  /* High contrast for thermal printing */
+  /* High contrast for thermal/standard printing */
   * {
     color: #000 !important;
     text-shadow: none !important;
     box-shadow: none !important;
+    background: transparent !important;
+    border-color: #000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Prevent extra pages */
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
   }
 }

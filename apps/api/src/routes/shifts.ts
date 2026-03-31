@@ -29,9 +29,16 @@ router.get('/current', async (req, res) => {
             let cashSales = 0;
             let cardSales = 0;
             let upiSales = 0;
+            let totalTax = 0;
+            let totalServiceCharge = 0;
+            let taxableAmount = 0;
             
             shift.orders.forEach(order => {
                 totalSales += order.totalAmount;
+                totalTax += order.taxAmount || 0;
+                totalServiceCharge += order.serviceChargeAmount || 0;
+                taxableAmount += order.subtotal || 0;
+
                 if (order.payments && order.payments.length > 0) {
                     order.payments.forEach(p => {
                         if (p.method === 'Cash') cashSales += p.amount;
@@ -54,6 +61,9 @@ router.get('/current', async (req, res) => {
             (shift as any).cashSales = cashSales;
             (shift as any).cardSales = cardSales;
             (shift as any).upiSales = upiSales;
+            (shift as any).totalTax = totalTax;
+            (shift as any).totalServiceCharge = totalServiceCharge;
+            (shift as any).taxableAmount = taxableAmount;
             (shift as any).totalExpenses = totalExpenses;
             (shift as any).expectedCash = shift.openingCash + cashSales - totalExpenses;
         }
@@ -123,9 +133,16 @@ router.post('/close/:id', async (req, res) => {
         let cashSales = 0;
         let cardSales = 0;
         let upiSales = 0;
+        let totalTax = 0;
+        let totalServiceCharge = 0;
+        let taxableAmount = 0;
         
         shift.orders.forEach(order => {
             totalSales += order.totalAmount;
+            totalTax += order.taxAmount || 0;
+            totalServiceCharge += order.serviceChargeAmount || 0;
+            taxableAmount += order.subtotal || 0;
+
             if (order.payments && order.payments.length > 0) {
                 order.payments.forEach(p => {
                     if (p.method === 'Cash') cashSales += p.amount;
@@ -156,7 +173,10 @@ router.post('/close/:id', async (req, res) => {
                 totalExpenses,
                 cashSales,
                 cardSales,
-                upiSales
+                upiSales,
+                totalTax,
+                totalServiceCharge,
+                taxableAmount
             }
         });
 
@@ -192,9 +212,16 @@ router.get('/history', async (req, res) => {
                 let cashSales = 0;
                 let cardSales = 0;
                 let upiSales = 0;
+                let totalTax = 0;
+                let totalServiceCharge = 0;
+                let taxableAmount = 0;
                 
                 shift.orders.forEach(order => {
                     totalSales += order.totalAmount;
+                    totalTax += order.taxAmount || 0;
+                    totalServiceCharge += order.serviceChargeAmount || 0;
+                    taxableAmount += order.subtotal || 0;
+
                     if (order.payments && order.payments.length > 0) {
                         order.payments.forEach(p => {
                             if (p.method === 'Cash') cashSales += p.amount;
@@ -218,6 +245,9 @@ router.get('/history', async (req, res) => {
                     cashSales,
                     cardSales,
                     upiSales,
+                    totalTax,
+                    totalServiceCharge,
+                    taxableAmount,
                     totalExpenses,
                     expectedCash: shift.openingCash + cashSales - totalExpenses
                 };

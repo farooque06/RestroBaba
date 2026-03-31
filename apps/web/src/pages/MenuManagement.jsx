@@ -39,6 +39,7 @@ const MenuManagement = () => {
     const [quickInventory, setQuickInventory] = useState({ name: '', unit: 'pcs', quantity: 0 });
     const [uploadingImg, setUploadingImg] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [categoryViewMode, setCategoryViewMode] = useState(localStorage.getItem('mmCategoryViewMode') || 'classic');
     const observerLoader = useRef(null);
 
     useEffect(() => {
@@ -381,8 +382,8 @@ const MenuManagement = () => {
         <div className="page-container animate-fade">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Menu Management</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Manage dishes for <strong style={{ color: 'var(--text-main)' }}>{user?.clientName}</strong></p>
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '0.5rem' }}>Menu Management</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>Curate your culinary offerings for <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{user?.clientName}</span></p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     {user?.role !== 'WAITER' && (
@@ -421,30 +422,85 @@ const MenuManagement = () => {
                     categories={categories} 
                     selectedCategory={selectedCategory} 
                     onSelect={setSelectedCategory} 
+                    viewMode={categoryViewMode}
                 />
                 
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', background: 'var(--glass-shine)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '0.25rem' }}>
+                <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', background: 'var(--glass-bg)', backdropFilter: 'blur(10px)', border: '1px solid var(--glass-border)', borderRadius: '14px', padding: '0.35rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+                        <button
+                            onClick={() => {
+                                const newMode = categoryViewMode === 'classic' ? 'smart' : 'classic';
+                                setCategoryViewMode(newMode);
+                                localStorage.setItem('mmCategoryViewMode', newMode);
+                            }}
+                            style={{ 
+                                background: categoryViewMode === 'smart' ? 'var(--primary)' : 'transparent', 
+                                color: categoryViewMode === 'smart' ? 'white' : 'var(--text-muted)', 
+                                border: 'none', 
+                                padding: '0 1rem',
+                                height: '40px',
+                                borderRadius: '10px', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                fontSize: '0.75rem',
+                                fontWeight: 800,
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                            title="Switch Category Navigation"
+                        >
+                            <LayoutGrid size={18} strokeWidth={2.5} />
+                            <span>{categoryViewMode === 'classic' ? 'CLASSIC' : 'SMART NAV'}</span>
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', background: 'var(--glass-bg)', backdropFilter: 'blur(10px)', border: '1px solid var(--glass-border)', borderRadius: '14px', padding: '0.35rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
                         <button
                             onClick={() => setViewMode('grid')}
-                            style={{ background: viewMode === 'grid' ? 'var(--primary-gradient)' : 'transparent', color: viewMode === 'grid' ? 'white' : 'var(--text-muted)', border: 'none', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.3s' }}
+                            style={{ 
+                                background: viewMode === 'grid' ? 'var(--primary)' : 'transparent', 
+                                color: viewMode === 'grid' ? 'white' : 'var(--text-muted)', 
+                                border: 'none', 
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '10px', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: viewMode === 'grid' ? '0 4px 12px var(--primary-glow)' : 'none'
+                            }}
                             title="Grid View"
                         >
-                            <LayoutGrid size={18} />
+                            <LayoutGrid size={20} strokeWidth={2.5} />
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            style={{ background: viewMode === 'list' ? 'var(--primary-gradient)' : 'transparent', color: viewMode === 'list' ? 'white' : 'var(--text-muted)', border: 'none', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.3s' }}
+                            style={{ 
+                                background: viewMode === 'list' ? 'var(--primary)' : 'transparent', 
+                                color: viewMode === 'list' ? 'white' : 'var(--text-muted)', 
+                                border: 'none', 
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '10px', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: viewMode === 'list' ? '0 4px 12px var(--primary-glow)' : 'none'
+                            }}
                             title="List View"
                         >
-                            <List size={18} />
+                            <List size={20} strokeWidth={2.5} />
                         </button>
                     </div>
-                    <div className="search-bar" style={{ width: '300px' }}>
-                        <Search size={20} />
+                    <div className="mm-search-bar">
+                        <Search size={20} strokeWidth={2.5} color="var(--primary)" />
                         <input
                             type="text"
-                            placeholder="Search for a dish..."
+                            placeholder="Find a dish (e.g. Burger, Momo...)"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />

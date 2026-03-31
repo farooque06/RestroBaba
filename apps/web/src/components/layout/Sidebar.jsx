@@ -56,6 +56,7 @@ const Sidebar = () => {
         { id: 'tables', label: 'Tables', icon: TableProperties, path: '/tables', roles: ['ADMIN', 'MANAGER', 'WAITER'], minPlan: 'SILVER' },
         { id: 'orders', label: 'Orders', icon: ClipboardList, path: '/orders', roles: ['ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
         { id: 'reports', label: 'Reports', icon: BarChart3, path: '/reports', roles: ['ADMIN', 'MANAGER'], minPlan: 'SILVER' },
+        { id: 'tax-reports', label: 'Sales & Tax Reports', icon: ShieldCheck, path: '/tax-reports', roles: ['ADMIN', 'MANAGER'], minPlan: 'GOLD' },
         { id: 'inventory', label: 'Inventory', icon: Package, path: '/inventory', roles: ['ADMIN', 'MANAGER', 'CHEF'], minPlan: 'SILVER' },
         { id: 'waste', label: 'Waste Management', icon: Trash2, path: '/waste', roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'], minPlan: 'SILVER' },
         { id: 'expenses', label: 'Expenses', icon: Wallet, path: '/expenses', roles: ['ADMIN', 'MANAGER'], minPlan: 'GOLD' },

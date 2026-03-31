@@ -369,25 +369,34 @@ const TableManagement = () => {
             <div className="tm-header">
                 <div className="tm-header-top">
                     <div>
-                        <h1>Table Management</h1>
-                        <p className="tm-subtitle">
-                            Real-time floor plan for <strong style={{ color: 'var(--text-heading)' }}>{user?.clientName}</strong>
+                        <h1>Floor Plan</h1>
+                        <p className="tm-subtitle" style={{ fontSize: '1rem' }}>
+                            Live table management for <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{user?.clientName}</span>
                         </p>
                     </div>
-                    <button onClick={() => setIsModalOpen(true)} className="tm-add-btn" disabled={tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10)}>
-                        <Plus size={16} />
-                        <span>Add Table</span>
+                    <button 
+                        onClick={() => setIsModalOpen(true)} 
+                        className="tm-add-btn" 
+                        disabled={tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10)}
+                        style={{ height: '48px', padding: '0 1.5rem', borderRadius: '14px' }}
+                    >
+                        <Plus size={18} />
+                        <span>Add New Table</span>
                     </button>
                 </div>
-                <div className="plan-limit-container">
-                    <div className="plan-limit-text">
-                        Capacity: <strong style={{ color: tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10) ? 'var(--danger)' : 'var(--text-main)' }}>{tables.length}</strong> / {user?.client?.subscriptionPlan?.maxTables || 10}
+                <div className="plan-limit-container" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(10px)', border: '1px solid var(--glass-border)' }}>
+                    <div className="plan-limit-text" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Restaurant Capacity</span>
+                        <span>
+                            <strong style={{ color: tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10) ? 'var(--danger)' : 'var(--text-main)' }}>{tables.length}</strong> / {user?.client?.subscriptionPlan?.maxTables || 10}
+                        </span>
                     </div>
-                    <div className="plan-limit-bar">
+                    <div className="plan-limit-bar" style={{ height: '8px', marginTop: '0.75rem' }}>
                         <div style={{ 
                             width: `${Math.min((tables.length / (user?.client?.subscriptionPlan?.maxTables || 10)) * 100, 100)}%`, 
                             background: tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10) ? 'var(--danger)' : 'var(--primary-gradient)',
-                            transition: 'width 0.5s ease'
+                            transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: '0 0 10px var(--primary-glow)'
                         }} className="plan-limit-fill" />
                     </div>
                 </div>

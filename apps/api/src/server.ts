@@ -20,6 +20,7 @@ import reportsRoutes from './routes/reports.js';
 import plansRoutes from './routes/plans.js';
 import shiftsRoutes from './routes/shifts.js';
 import leadsRoutes from './routes/leads.js';
+import taxInvoiceRoutes from './routes/taxInvoice.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import { roleMiddleware } from './middleware/roleMiddleware.js';
 import { requirePlan } from './middleware/planMiddleware.js';
@@ -114,6 +115,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/reports', roleMiddleware(['ADMIN', 'MANAGER']), reportsRoutes);
 app.use('/api/plans', plansRoutes);
 app.use('/api/shifts', roleMiddleware(['ADMIN', 'MANAGER']), requirePlan('GOLD'), shiftsRoutes);
+app.use('/api/tax-invoices', roleMiddleware(['ADMIN', 'MANAGER']), taxInvoiceRoutes);
 
 import { ZodError } from 'zod';
 

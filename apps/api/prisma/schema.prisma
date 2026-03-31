@@ -31,6 +31,17 @@ model Client {
   taxRate               Float                  @default(0)
   useServiceCharge      Boolean                @default(false)
   serviceChargeRate     Float                  @default(0)
+
+  // Nepal IRD Compliance Fields
+  taxMode               String                 @default("NONE") // NONE, PAN_ONLY, VAT_REGISTERED
+  panNumber             String?                // 9-digit PAN number
+  vatNumber             String?                // VAT registration number (often same as PAN)
+  businessAddress       String?                // Required on legal invoices
+  businessPhone         String?                // Contact number on invoice
+  invoicePrefix         String?                @default("INV") // e.g. "INV", "RB"
+  nextInvoiceNumber     Int                    @default(1)      // Auto-incrementing fiscal invoice counter
+  fiscalYearStart       String?                @default("Shrawan") // Nepal fiscal year start month
+
   plan                  String                 @default("SILVER") // SILVER, GOLD, DIAMOND
   planDuration          String?                @default("1m") // 1m, 3m, 12m
   planId                String?
@@ -40,6 +51,7 @@ model Client {
   paymentStatus         String                 @default("PAID") // PAID, PENDING, OVERDUE
   lastPaymentDate       DateTime?              @default(now())
   qrCode                String?
+  taxInvoices           TaxInvoice[]
 }
 
 model SubscriptionPlan {
@@ -306,6 +318,7 @@ model Order {
   items               OrderItem[]
   payments            Payment[]
   transactions        InventoryTransaction[]
+  taxInvoice          TaxInvoice?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
@@ -380,14 +393,17 @@ model FinancialShift {
   status     String    @default("OPEN") // OPEN, CLOSED
 
   // Financial Data
-  openingCash   Float  @default(0)
-  closingCash   Float? // Declared by manager
-  expectedCash  Float? // Calculated (opening + cash sales)
-  totalSales    Float? @default(0)
-  totalExpenses Float? @default(0)
-  cashSales     Float? @default(0)
-  cardSales     Float? @default(0)
-  upiSales      Float? @default(0)
+  openingCash        Float     @default(0)
+  closingCash        Float?    // Declared by manager
+  expectedCash       Float?    // Calculated (opening + cash sales)
+  totalSales         Float?    @default(0)
+  totalExpenses      Float?    @default(0)
+  cashSales          Float?    @default(0)
+  cardSales          Float?    @default(0)
+  upiSales           Float?    @default(0)
+  totalTax           Float?    @default(0) // VAT Collected
+  totalServiceCharge Float?    @default(0) // S.C. Collected
+  taxableAmount      Float?    @default(0) // Sales excluding tax/SC (or including SC if taxable)
 
   clientId          String
   client            Client             @relation(fields: [clientId], references: [id])
@@ -416,4 +432,37 @@ model RestaurantLead {
 
   @@index([status])
   @@index([createdAt])
+}
+
+model TaxInvoice {
+  id              String   @id @default(uuid())
+  invoiceNumber   String   // Sequential: "INV-0001", "INV-0002"
+  fiscalYear      String   // "2081/82"
+  orderId         String   @unique
+  order           Order    @relation(fields: [orderId], references: [id])
+
+  // Snapshot at time of billing (immutable for audit)
+  subtotal        Float
+  taxableAmount   Float    // subtotal + serviceCharge (base for VAT)
+  taxRate         Float
+  taxAmount       Float
+  serviceCharge   Float    @default(0)
+  totalAmount     Float
+
+  // Seller info snapshot
+  sellerName      String
+  sellerPAN       String?
+  sellerAddress   String?
+
+  // Buyer info (for full invoices when requested)
+  buyerName       String?
+  buyerPAN        String?
+
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  issuedAt        DateTime @default(now())
+
+  @@index([clientId])
+  @@index([fiscalYear])
+  @@unique([invoiceNumber, clientId, fiscalYear])
 }

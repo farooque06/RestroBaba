@@ -261,6 +261,19 @@ const ShiftManagement = () => {
                                     <span style={{ color: 'var(--text-muted)' }}>Online Sales</span>
                                     <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatCurrency(currentShift.upiSales || 0)}</span>
                                 </div>
+                                <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }}></div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Taxable Amount</span>
+                                    <span style={{ fontWeight: 700 }}>{formatCurrency(currentShift.taxableAmount || 0)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>VAT Collected (13%)</span>
+                                    <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatCurrency(currentShift.totalTax || 0)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Service Charge</span>
+                                    <span style={{ fontWeight: 700 }}>{formatCurrency(currentShift.totalServiceCharge || 0)}</span>
+                                </div>
                             </div>
 
                             <div style={{ marginTop: 'auto', padding: '1.25rem', background: 'var(--primary-glow)', borderRadius: '16px', border: '1px solid rgba(var(--primary-rgb, 212, 175, 55), 0.2)' }}>
@@ -304,6 +317,7 @@ const ShiftManagement = () => {
                                 <th style={{ padding: '1.25rem 1rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 800 }}>Expected Cash</th>
                                 <th style={{ padding: '1.25rem 1rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 800 }}>Actual Cash</th>
                                 <th style={{ padding: '1.25rem 1rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 800 }}>Discrepancy</th>
+                                <th style={{ padding: '1.25rem 2rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 800, textAlign: 'right' }}>Tax/VAT</th>
                                 <th style={{ padding: '1.25rem 2rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 800, textAlign: 'right' }}>Actions</th>
                             </tr>
                         </thead>
@@ -339,6 +353,10 @@ const ShiftManagement = () => {
                                         <td style={{ padding: '1.25rem 1rem', fontWeight: 600 }}>{shift.closingCash !== null ? formatCurrency(shift.closingCash) : '-'}</td>
                                         <td style={{ padding: '1.25rem 1rem', color: discrepancy < 0 ? '#ef4444' : '#10b981', fontWeight: 800 }}>
                                             {shift.closingCash !== null ? formatCurrency(discrepancy) : '-'}
+                                        </td>
+                                        <td style={{ padding: '1.25rem 2rem', textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                            <div>VAT: {formatCurrency(shift.totalTax || 0)}</div>
+                                            <div>SC: {formatCurrency(shift.totalServiceCharge || 0)}</div>
                                         </td>
                                         <td style={{ padding: '1.25rem 2rem', textAlign: 'right' }}>
                                             <button className="btn-ghost" title="View Report" style={{ padding: '8px', borderRadius: '10px', display: 'inline-flex' }}>

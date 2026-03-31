@@ -9,6 +9,7 @@ import {
     UserPlus, Search as SearchIcon, Award, RotateCcw, ChevronUp, ChevronDown, Heart
 } from 'lucide-react';
 import OptimizedImage from './common/OptimizedImage';
+import CustomerSelectionModal from './CustomerSelectionModal';
 
 const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     const { user } = useAuth();
@@ -21,11 +22,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     const [submitting, setSubmitting] = useState(false);
     const [existingOrderId, setExistingOrderId] = useState(null);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
-    const [customerSearch, setCustomerSearch] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
-    const [quickAddModal, setQuickAddModal] = useState(false);
-    const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
     const [variantModalItem, setVariantModalItem] = useState(null); // Tracks which item is being selected for variants
     const [menuSearch, setMenuSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -178,21 +175,21 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
         const cartKey = `new-${item.id}-${variantId || 'base'}`;
 
         const existingNew = cart.find(i => i.cartKey === cartKey && !i.isExisting);
-        
+
         if (existingNew) {
             setCart(cart.map(i => i.cartKey === cartKey ? { ...i, quantity: i.quantity + 1 } : i));
         } else {
-            setCart([...cart, { 
-                ...item, 
-                cartKey, 
-                variantId, 
-                variantName, 
+            setCart([...cart, {
+                ...item,
+                cartKey,
+                variantId,
+                variantName,
                 price, // Use variant price
-                quantity: 1, 
-                isExisting: false 
+                quantity: 1,
+                isExisting: false
             }]);
         }
-        
+
         setVariantModalItem(null);
         toast.success(`Added ${item.name}${variantName ? ` (${variantName})` : ''}`, { icon: '🍽️', position: 'bottom-center' });
     };
@@ -209,47 +206,8 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     };
 
     // ─── CUSTOMER ACTIONS ───────────────────────────────────────────
-    const handleCustomerSearch = async (query) => {
-        setCustomerSearch(query);
-        if (query.length < 2) {
-            setSearchResults([]);
-            return;
-        }
-        const token = localStorage.getItem('restroToken');
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/customers/search?query=${query}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (response.ok) setSearchResults(await response.json());
-        } catch (err) {
-            console.error('Customer search error', err);
-        }
-    };
-
     const handleQuickAdd = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-        const token = localStorage.getItem('restroToken');
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/customers`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(newCustomer)
-            });
-            const data = await response.json();
-            if (response.ok) {
-                setSelectedCustomer(data);
-                setQuickAddModal(false);
-                setShowCustomerSearch(false);
-                toast.success('Customer registered');
-            } else {
-                toast.error(data.error || 'Failed to add customer');
-            }
-        } catch (err) {
-            toast.error('Connection error');
-        } finally {
-            setSubmitting(false);
-        }
+        // Redundant - removed in favor of modal
     };
 
     const handleRemake = async (orderItemId) => {
@@ -264,7 +222,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
 
             if (response.ok) {
                 toast.success('Remake triggered! Sent to kitchen.');
-                fetchExistingOrder(); 
+                fetchExistingOrder();
             } else {
                 toast.error('Failed to trigger remake');
             }
@@ -280,7 +238,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
             toast.error('No new items to send');
             return;
         }
-        
+
         setSubmitting(true);
         const token = localStorage.getItem('restroToken');
 
@@ -462,13 +420,13 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                 cart.map(item => (
                                     <div key={item.cartKey || item.id} className="ot-basket-item">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <div className="qty" style={{ 
-                                                width: '28px', 
-                                                height: '28px', 
-                                                background: 'var(--primary-glow)', 
-                                                color: 'var(--primary)', 
-                                                borderRadius: '8px', 
-                                                fontSize: '0.8rem', 
+                                            <div className="qty" style={{
+                                                width: '28px',
+                                                height: '28px',
+                                                background: 'var(--primary-glow)',
+                                                color: 'var(--primary)',
+                                                borderRadius: '8px',
+                                                fontSize: '0.8rem',
                                                 fontWeight: 800,
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -481,9 +439,9 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                                 <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px', color: 'var(--text-heading)' }}>
                                                     {item.name}
                                                     {item.variantName && (
-                                                        <span style={{ 
-                                                            marginLeft: '0.5rem', 
-                                                            color: 'var(--primary)', 
+                                                        <span style={{
+                                                            marginLeft: '0.5rem',
+                                                            color: 'var(--primary)',
                                                             fontWeight: 600,
                                                             fontSize: '0.85rem'
                                                         }}>
@@ -491,11 +449,11 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                                         </span>
                                                     )}
                                                     {item.isExisting && (
-                                                        <span style={{ 
-                                                            marginLeft: '0.6rem', 
-                                                            fontSize: '0.6rem', 
-                                                            padding: '2px 6px', 
-                                                            background: 'rgba(255,255,255,0.05)', 
+                                                        <span style={{
+                                                            marginLeft: '0.6rem',
+                                                            fontSize: '0.6rem',
+                                                            padding: '2px 6px',
+                                                            background: 'rgba(255,255,255,0.05)',
                                                             color: 'var(--text-muted)',
                                                             borderRadius: '4px',
                                                             textTransform: 'uppercase',
@@ -541,7 +499,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                     <span>{formatCurrency(finalTotal)}</span>
                                 </div>
                             </div>
-                            
+
                             <button
                                 onClick={handleSubmitOrder}
                                 disabled={newItemCount === 0 || submitting}
@@ -578,121 +536,12 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
             </div>
 
 
-            {/* CUSTOMER SEARCH OVERLAY (Now single modal for search & reg) */}
+            {/* CUSTOMER SEARCH MODAL */}
             {showCustomerSearch && (
-                <div className="ot-customer-overlay" onClick={(e) => e.target === e.currentTarget && setShowCustomerSearch(false)}>
-                    <div className="ol-payment-sheet" style={{ maxWidth: '440px', borderRadius: 'var(--radius-xl)', minHeight: quickAddModal ? 'auto' : '60vh' }}>
-                        
-                        {/* HEADER */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
-                            <h2 style={{ fontSize: '1.2rem', margin: 0 }}>
-                                {quickAddModal ? 'New Guest Registration' : 'Guest Loyalty'}
-                            </h2>
-                            <button 
-                                onClick={() => { setShowCustomerSearch(false); setQuickAddModal(false); }} 
-                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {quickAddModal ? (
-                            /* REGISTRATION FORM */
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <div className="ot-search-wrapper" style={{ boxShadow: 'none' }}>
-                                    <input
-                                        className="ot-search-input"
-                                        placeholder="Full Name"
-                                        value={newCustomer.name}
-                                        onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                        style={{ paddingLeft: '1.25rem' }}
-                                    />
-                                </div>
-                                <div className="ot-search-wrapper" style={{ boxShadow: 'none' }}>
-                                    <input
-                                        className="ot-search-input"
-                                        placeholder="Phone Number"
-                                        value={newCustomer.phone}
-                                        onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                                        style={{ paddingLeft: '1.25rem' }}
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-                                    <button 
-                                        onClick={() => setQuickAddModal(false)} 
-                                        style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-heading)', fontWeight: 600, cursor: 'pointer' }}
-                                    >
-                                        Back to Search
-                                    </button>
-                                    <button 
-                                        onClick={handleQuickAdd} 
-                                        style={{ flex: 1, padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'var(--primary)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer' }}
-                                    >
-                                        Register & Select
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            /* SEARCH VIEW */
-                            <>
-                                <div className="ot-search-wrapper" style={{ marginBottom: '1.5rem' }}>
-                                    <SearchIcon className="ot-search-icon" size={18} />
-                                    <input
-                                        autoFocus
-                                        className="ot-search-input"
-                                        placeholder="Search by name or phone..."
-                                        value={customerSearch}
-                                        onChange={(e) => handleCustomerSearch(e.target.value)}
-                                    />
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {searchResults.map(c => (
-                                        <div
-                                            key={c.id}
-                                            onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }}
-                                            className="tm-card"
-                                            style={{ padding: '1rem', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--bg-input)' }}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <p style={{ fontWeight: 700, margin: 0 }}>{c.name}</p>
-                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{c.phone}</p>
-                                                </div>
-                                                <div style={{ background: 'var(--primary)', color: 'white', padding: '4px 10px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 700 }}>
-                                                    {c.points} Pts
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {(customerSearch.length > 2 || searchResults.length === 0) && (
-                                        <button 
-                                            onClick={() => {
-                                                setQuickAddModal(true);
-                                                // Pre-fill name or phone if it looks like one
-                                                const looksLikePhone = /^[0-9+]+$/.test(customerSearch);
-                                                setNewCustomer({
-                                                    name: looksLikePhone ? '' : customerSearch,
-                                                    phone: looksLikePhone ? customerSearch : ''
-                                                });
-                                            }} 
-                                            className="ot-customer-btn" 
-                                            style={{ borderStyle: 'dashed', marginTop: '0.5rem' }}
-                                        >
-                                            <UserPlus size={18} />
-                                            <span>
-                                                {searchResults.length === 0 && customerSearch.length > 0 
-                                                  ? `No guest found. Register "${customerSearch}"?`
-                                                  : 'Register New Guest'}
-                                            </span>
-                                        </button>
-                                    )}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
+                <CustomerSelectionModal
+                    onClose={() => setShowCustomerSearch(false)}
+                    onSelect={(customer) => setSelectedCustomer(customer)}
+                />
             )}
 
             {/* VARIANT SELECTION MODAL */}
@@ -701,18 +550,18 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                     <div className="premium-glass animate-pop" style={{ width: '90%', maxWidth: '400px', padding: '2rem', borderRadius: '24px' }} onClick={e => e.stopPropagation()}>
                         <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Select Option</h2>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>{variantModalItem.name}</p>
-                        
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             {variantModalItem.variants.map(v => (
                                 <button
                                     key={v.id}
                                     onClick={() => addToCart(variantModalItem, v)}
                                     className="tm-card"
-                                    style={{ 
-                                        display: 'flex', 
-                                        justifyContent: 'space-between', 
-                                        alignItems: 'center', 
-                                        padding: '1.25rem', 
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        padding: '1.25rem',
                                         border: '1px solid var(--border)',
                                         background: 'var(--glass-shine)',
                                         cursor: 'pointer',
@@ -724,8 +573,8 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                 </button>
                             ))}
                         </div>
-                        
-                        <button 
+
+                        <button
                             onClick={() => setVariantModalItem(null)}
                             style={{ width: '100%', marginTop: '1.5rem', padding: '1rem', background: 'none', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer' }}
                         >

@@ -2,6 +2,7 @@ import express from 'express';
 import prisma from '../services/prisma.js';
 import { notifyClient } from '../services/socket.js';
 import { createOrderSchema, updateOrderStatusSchema, paymentSchema } from '../validations/orderSchema.js';
+import { generateTaxInvoice } from './taxInvoice.js';
 
 const router = express.Router();
 
@@ -214,7 +215,8 @@ router.get('/', async (req, res) => {
                     } 
                 },
                 table: true,
-                customer: true
+                customer: true,
+                taxInvoice: true
             },
             orderBy: { createdAt: 'desc' }
         });
@@ -426,6 +428,9 @@ router.put('/:id/status', async (req, res) => {
                         data: { status: 'Available' }
                     });
                 }
+
+                // Auto-generate Tax Invoice for VAT-registered clients
+                await generateTaxInvoice(tx, id as string, req.clientId!);
             }
 
             // --- Activity Log ---
@@ -469,7 +474,8 @@ router.get('/table/:tableId', async (req, res) => {
             },
             orderBy: { createdAt: 'desc' },
             include: {
-                items: { include: { variant: true, menuItem: { include: { category: true } } } }
+                items: { include: { variant: true, menuItem: { include: { category: true } } } },
+                taxInvoice: true
             }
         });
         res.json(order || null);
@@ -690,6 +696,9 @@ router.post('/:id/pay', async (req, res) => {
 
             return updatedOrder;
         });
+
+        // Auto-generate Tax Invoice for VAT-registered clients
+        await generateTaxInvoice(prisma, id as string, req.clientId!);
 
         notifyClient(req.clientId!, 'ORDER_UPDATE', order);
         res.json(order);

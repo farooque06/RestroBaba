@@ -275,19 +275,54 @@ router.patch('/my-shop/regenerate', authorize(['ADMIN']), async (req: any, res: 
 
 // ─── Update Own Client Settings (ADMIN) ──────────────────────────────────────
 router.patch('/settings/me', authorize(['ADMIN']), async (req: any, res: Response) => {
-    const { useTax, taxRate, useServiceCharge, serviceChargeRate, restaurantName, qrCode } = req.body;
+    const { 
+        useTax, taxRate, useServiceCharge, serviceChargeRate, restaurantName, qrCode,
+        // Nepal IRD Compliance fields
+        taxMode, panNumber, vatNumber, businessAddress, businessPhone, invoicePrefix
+    } = req.body;
 
     try {
+        // Build update data
+        const updateData: any = {
+            name: restaurantName,
+            useServiceCharge: useServiceCharge !== undefined ? useServiceCharge === true : undefined,
+            serviceChargeRate: serviceChargeRate !== undefined ? parseFloat(serviceChargeRate) : undefined,
+            qrCode: qrCode !== undefined ? qrCode : undefined
+        };
+
+        // Nepal IRD Tax Mode Logic
+        if (taxMode !== undefined) {
+            updateData.taxMode = taxMode;
+
+            if (taxMode === 'VAT_REGISTERED') {
+                // VAT Registered: Force 13% VAT (Nepal standard rate)
+                updateData.useTax = true;
+                updateData.taxRate = 13;
+            } else if (taxMode === 'PAN_ONLY') {
+                // PAN Only: No VAT charged
+                updateData.useTax = false;
+                updateData.taxRate = 0;
+            } else {
+                // NONE: No tax at all
+                updateData.useTax = false;
+                updateData.taxRate = 0;
+            }
+        } else {
+            // Legacy support if taxMode not sent
+            updateData.useTax = useTax !== undefined ? useTax === true : undefined;
+            updateData.taxRate = taxRate !== undefined ? parseFloat(taxRate) : undefined;
+        }
+
+        // Nepal IRD fields
+        if (panNumber !== undefined) updateData.panNumber = panNumber || null;
+        if (vatNumber !== undefined) updateData.vatNumber = vatNumber || null;
+        if (businessAddress !== undefined) updateData.businessAddress = businessAddress || null;
+        if (businessPhone !== undefined) updateData.businessPhone = businessPhone || null;
+        if (invoicePrefix !== undefined) updateData.invoicePrefix = invoicePrefix || 'INV';
+
         const client = await prisma.client.update({
             where: { id: req.user.clientId },
-            data: {
-                name: restaurantName,
-                useTax: useTax !== undefined ? useTax === true : undefined,
-                taxRate: taxRate !== undefined ? parseFloat(taxRate) : undefined,
-                useServiceCharge: useServiceCharge !== undefined ? useServiceCharge === true : undefined,
-                serviceChargeRate: serviceChargeRate !== undefined ? parseFloat(serviceChargeRate) : undefined,
-                qrCode: qrCode !== undefined ? qrCode : undefined
-            }
+            data: updateData
         });
         res.json(client);
     } catch (error) {

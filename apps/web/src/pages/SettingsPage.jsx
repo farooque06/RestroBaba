@@ -27,11 +27,17 @@ const SettingsPage = () => {
 
     const FinancialSettings = () => {
         const [settings, setSettings] = useState({
+            taxMode: 'NONE',
             useTax: false,
             taxRate: 0,
             useServiceCharge: false,
             serviceChargeRate: 0,
             restaurantName: user?.clientName || '',
+            panNumber: '',
+            vatNumber: '',
+            businessAddress: '',
+            businessPhone: '',
+            invoicePrefix: 'INV',
             qrCode: ''
         });
         const [loading, setLoading] = useState(true);
@@ -53,11 +59,17 @@ const SettingsPage = () => {
                     const client = data.user.client;
                     if (client) {
                         setSettings({
+                            taxMode: client.taxMode || 'NONE',
                             useTax: client.useTax || false,
                             taxRate: client.taxRate || 0,
                             useServiceCharge: client.useServiceCharge || false,
                             serviceChargeRate: client.serviceChargeRate || 0,
                             restaurantName: client.name || user?.clientName || '',
+                            panNumber: client.panNumber || '',
+                            vatNumber: client.vatNumber || '',
+                            businessAddress: client.businessAddress || '',
+                            businessPhone: client.businessPhone || '',
+                            invoicePrefix: client.invoicePrefix || 'INV',
                             qrCode: client.qrCode || ''
                         });
                     }
@@ -70,6 +82,20 @@ const SettingsPage = () => {
         };
 
         const handleSave = async () => {
+            // Validation
+            if (settings.taxMode === 'VAT_REGISTERED' && !settings.panNumber) {
+                toast.error('PAN Number is required for VAT Registered businesses');
+                return;
+            }
+            if (settings.taxMode === 'PAN_ONLY' && !settings.panNumber) {
+                toast.error('PAN Number is required');
+                return;
+            }
+            if (settings.panNumber && !/^\d{9}$/.test(settings.panNumber)) {
+                toast.error('PAN Number must be exactly 9 digits');
+                return;
+            }
+
             setSaving(true);
             try {
                 const token = localStorage.getItem('restroToken');
@@ -83,7 +109,7 @@ const SettingsPage = () => {
                 });
 
                 if (response.ok) {
-                    toast.success('Financial settings updated');
+                    toast.success('Tax & business settings updated');
                     await refreshUser();
                 } else {
                     const data = await response.json();
@@ -124,6 +150,30 @@ const SettingsPage = () => {
             }
         };
 
+        const taxModes = [
+            {
+                id: 'NONE',
+                title: 'No Tax',
+                emoji: '🟡',
+                desc: 'Small business — no PAN, no VAT. Simple receipt only.',
+                color: '#94a3b8'
+            },
+            {
+                id: 'PAN_ONLY',
+                title: 'PAN Only',
+                emoji: '🟢',
+                desc: 'PAN registered but NOT VAT registered. Bill with PAN number.',
+                color: '#22c55e'
+            },
+            {
+                id: 'VAT_REGISTERED',
+                title: 'VAT Registered',
+                emoji: '🔵',
+                desc: 'Full IRD compliance — 13% VAT, legal tax invoices, audit-ready.',
+                color: '#3b82f6'
+            }
+        ];
+
         if (loading) return (
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
                 <Loader2 className="animate-spin" size={20} />
@@ -134,44 +184,139 @@ const SettingsPage = () => {
         return (
             <div className="settings-section-card animate-fade">
                 <div className="settings-header">
-                    <h2>Business & Finance</h2>
-                    <p>Configure your restaurant's tax policy and service charges.</p>
+                    <h2>Tax & Business Compliance</h2>
+                    <p>Configure your restaurant's tax mode as per Nepal IRD requirements.</p>
                 </div>
 
+                {/* Tax Mode Selector */}
+                <div style={{ marginBottom: '2.5rem' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '1rem' }}>
+                        Tax Compliance Mode
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                        {taxModes.map(mode => {
+                            const isActive = settings.taxMode === mode.id;
+                            return (
+                                <div
+                                    key={mode.id}
+                                    onClick={() => setSettings({ ...settings, taxMode: mode.id })}
+                                    className="premium-glass"
+                                    style={{
+                                        padding: '1.5rem',
+                                        cursor: 'pointer',
+                                        border: isActive ? `2px solid ${mode.color}` : '1px solid var(--glass-border)',
+                                        background: isActive ? `${mode.color}10` : 'rgba(255,255,255,0.02)',
+                                        transition: 'all 0.3s ease',
+                                        transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    {isActive && (
+                                        <div style={{
+                                            position: 'absolute', top: '10px', right: '10px',
+                                            width: '20px', height: '20px', borderRadius: '50%',
+                                            background: mode.color, display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '12px', color: 'white', fontWeight: 900
+                                        }}>✓</div>
+                                    )}
+                                    <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{mode.emoji}</div>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.5rem', color: isActive ? mode.color : 'var(--text-main)' }}>
+                                        {mode.title}
+                                    </h3>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+                                        {mode.desc}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* VAT Info Banner */}
+                {settings.taxMode === 'VAT_REGISTERED' && (
+                    <div className="premium-glass animate-fade" style={{
+                        padding: '1rem 1.5rem', marginBottom: '2rem',
+                        background: 'rgba(59, 130, 246, 0.05)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        display: 'flex', alignItems: 'center', gap: '1rem'
+                    }}>
+                        <Info size={20} color="#3b82f6" />
+                        <div>
+                            <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>
+                                VAT Rate is auto-locked to 13% as per Nepal IRD
+                            </p>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                Legal tax invoices with sequential numbering will be auto-generated for every paid order.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                    {/* VAT Section */}
-                    <div className="premium-glass" style={{ padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+                    {/* PAN / Business Details — Shown for PAN_ONLY and VAT_REGISTERED */}
+                    {(settings.taxMode === 'PAN_ONLY' || settings.taxMode === 'VAT_REGISTERED') && (
+                        <div className="premium-glass animate-fade" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
                                 <div style={{ background: 'var(--primary-glow)', padding: '8px', borderRadius: '10px' }}>
                                     <Receipt size={18} color="var(--primary)" />
                                 </div>
-                                <span style={{ fontWeight: 700 }}>Value Added Tax</span>
+                                <span style={{ fontWeight: 700 }}>Business Registration Details</span>
                             </div>
-                            <label className="switch">
-                                <input
-                                    type="checkbox"
-                                    checked={settings.useTax}
-                                    onChange={e => setSettings({ ...settings, useTax: e.target.checked })}
-                                />
-                                <span className="slider round"></span>
-                            </label>
-                        </div>
-                        <div style={{ opacity: settings.useTax ? 1 : 0.4, transition: 'opacity 0.3s' }}>
-                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>VAT Percentage (%)</label>
-                            <div className="input-with-icon">
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    className="auth-input"
-                                    disabled={!settings.useTax}
-                                    value={settings.taxRate}
-                                    onChange={e => setSettings({ ...settings, taxRate: e.target.value })}
-                                />
-                                <Percent size={14} className="input-icon-right" />
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                                        PAN Number <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="auth-input"
+                                        placeholder="123456789"
+                                        maxLength={9}
+                                        value={settings.panNumber}
+                                        onChange={e => setSettings({ ...settings, panNumber: e.target.value.replace(/\D/g, '').slice(0, 9) })}
+                                        style={{ letterSpacing: '2px', fontWeight: 700 }}
+                                    />
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>9-digit PAN from IRD</p>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Business Address</label>
+                                    <input
+                                        type="text"
+                                        className="auth-input"
+                                        placeholder="Kathmandu, Nepal"
+                                        value={settings.businessAddress}
+                                        onChange={e => setSettings({ ...settings, businessAddress: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Business Phone</label>
+                                    <input
+                                        type="text"
+                                        className="auth-input"
+                                        placeholder="01-XXXXXXX"
+                                        value={settings.businessPhone}
+                                        onChange={e => setSettings({ ...settings, businessPhone: e.target.value })}
+                                    />
+                                </div>
+                                {settings.taxMode === 'VAT_REGISTERED' && (
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Invoice Prefix</label>
+                                        <input
+                                            type="text"
+                                            className="auth-input"
+                                            placeholder="INV"
+                                            maxLength={5}
+                                            value={settings.invoicePrefix}
+                                            onChange={e => setSettings({ ...settings, invoicePrefix: e.target.value.toUpperCase().slice(0, 5) })}
+                                        />
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>Prefix for invoice numbers (e.g., INV-0001)</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Service Charge Section */}
                     <div className="premium-glass" style={{ padding: '1.5rem' }}>
@@ -207,6 +352,29 @@ const SettingsPage = () => {
                         </div>
                     </div>
 
+                    {/* VAT Display (Read-only for VAT_REGISTERED) */}
+                    {settings.taxMode === 'VAT_REGISTERED' && (
+                        <div className="premium-glass animate-fade" style={{ padding: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
+                                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '8px', borderRadius: '10px' }}>
+                                    <Receipt size={18} color="#3b82f6" />
+                                </div>
+                                <span style={{ fontWeight: 700 }}>Value Added Tax (VAT)</span>
+                            </div>
+                            <div style={{
+                                padding: '1.25rem',
+                                background: 'rgba(59, 130, 246, 0.05)',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(59, 130, 246, 0.15)',
+                                textAlign: 'center'
+                            }}>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#3b82f6' }}>13%</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Nepal Standard VAT Rate</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>Auto-applied to all orders</div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* QR Code Section */}
                     <div className="premium-glass" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
@@ -240,7 +408,7 @@ const SettingsPage = () => {
 
                             <div style={{ flex: 1, minWidth: '250px' }}>
                                 <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                                    Upload your restaurant's digital payment QR code (GPay, PhonePe, UPI, etc.). 
+                                    Upload your restaurant's digital payment QR code (eSewa, Khalti, FonePay, etc.). 
                                     This will be displayed to customers when they choose "Online" payment method.
                                 </p>
                                 
@@ -280,7 +448,7 @@ const SettingsPage = () => {
                         style={{ border: 'none', padding: '0.85rem 2rem', cursor: 'pointer', borderRadius: '12px' }}
                     >
                         {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        <span>Update Financial Policy</span>
+                        <span>Update Tax & Business Settings</span>
                     </button>
                 </div>
             </div>

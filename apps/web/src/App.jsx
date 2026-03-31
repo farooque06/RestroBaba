@@ -35,6 +35,7 @@ const ShiftManagement = React.lazy(() => import('./pages/ShiftManagement'));
 const HelpPage = React.lazy(() => import('./pages/HelpPage'));
 const Signup = React.lazy(() => import('./pages/Signup'));
 const LeadManagement = React.lazy(() => import('./pages/LeadManagement'));
+const TaxReports = React.lazy(() => import('./pages/TaxReports'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 import Sidebar from './components/layout/Sidebar';
@@ -174,6 +175,11 @@ function AppContent() {
                                     <Route path="shifts" element={
                                         <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} minPlan="GOLD">
                                             <ShiftManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="tax-reports" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} minPlan="GOLD">
+                                            <TaxReports />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="settings" element={<SettingsPage />} />
