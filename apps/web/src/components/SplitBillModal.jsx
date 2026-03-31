@@ -3,6 +3,7 @@ import { X, Users, List, Calculator, CreditCard, DollarSign, Smartphone, CheckCi
 import { formatCurrency } from '../utils/formatters';
 import { API_BASE_URL } from '../config';
 import toast from 'react-hot-toast';
+import Dropdown from './common/Dropdown';
 
 const SplitBillModal = ({ order, onClose, onPaymentProcessed }) => {
     const [activeTab, setActiveTab] = useState('equal'); // 'equal', 'items', 'custom'
@@ -319,22 +320,18 @@ const SplitBillModal = ({ order, onClose, onPaymentProcessed }) => {
                                                 style={{ marginBottom: 0, padding: '0.6rem' }}
                                             />
                                         </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Method</label>
-                                            <select
+                                        <div style={{ width: '120px' }}>
+                                            <Dropdown 
+                                                label="Method"
+                                                placeholder="Pay..."
+                                                options={['Cash', 'Card', 'UPI']}
                                                 value={p.method}
-                                                onChange={(e) => {
+                                                onChange={val => {
                                                     const newP = [...customPayers];
-                                                    newP[idx].method = e.target.value;
+                                                    newP[idx].method = val;
                                                     setCustomPayers(newP);
                                                 }}
-                                                className="auth-input"
-                                                style={{ marginBottom: 0, padding: '0.6rem', border: '1px solid var(--glass-border)' }}
-                                            >
-                                                <option value="Cash">Cash</option>
-                                                <option value="Card">Card</option>
-                                                <option value="UPI">UPI</option>
-                                            </select>
+                                            />
                                         </div>
                                         {customPayers.length > 1 && (
                                             <button onClick={() => setCustomPayers(customPayers.filter((_, i) => i !== idx))} style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', marginTop: '1.5rem' }}>

@@ -112,3 +112,32 @@
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.45);
   --shadow-glow: 0 0 25px var(--primary-glow);
 }
+
+/* Custom Scrollbar for Dropdowns and Modals */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Additional dropdown specific refinements */
+.dropdown-option:hover {
+  background: var(--bg-card-hover) !important;
+}
+
+.dropdown-option.selected {
+  background: var(--primary-glow) !important;
+  color: var(--primary) !important;
+}

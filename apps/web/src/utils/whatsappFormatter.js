@@ -20,7 +20,8 @@ export const formatWhatsAppReceipt = (order, client) => {
 
     order.items.forEach(item => {
         if (item.status === 'Waste') return;
-        const itemName = item.menuItem?.name || 'Item';
+        let itemName = item.menuItem?.name || 'Item';
+        if (item.variant?.name) itemName += ` (${item.variant.name})`;
         const qty = item.quantity;
         const total = formatCurrency(item.price * qty);
         message += `• ${itemName} x${qty} = ${total}\n`;

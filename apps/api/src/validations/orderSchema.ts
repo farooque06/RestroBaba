@@ -5,6 +5,7 @@ export const createOrderSchema = z.object({
     customerId: z.string().uuid().optional().nullable(),
     items: z.array(z.object({
         menuItemId: z.string().uuid(),
+        variantId: z.string().uuid().optional().nullable(),
         quantity: z.number().int().positive().or(z.string().regex(/^\d+$/).transform(v => parseInt(v))),
         price: z.number().positive().or(z.string().regex(/^\d+(\.\d+)?$/).transform(v => parseFloat(v))),
         notes: z.string().optional().nullable(),

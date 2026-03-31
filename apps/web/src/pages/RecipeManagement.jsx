@@ -2,43 +2,58 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 import { ChefHat, Plus, Save, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Dropdown from '../components/common/Dropdown';
 
 const RecipeManagement = ({ menuItem, onBack }) => {
     const [inventory, setInventory] = useState([]);
     const [ingredients, setIngredients] = useState([]);
+    const [selectedVariantId, setSelectedVariantId] = useState(''); // '' means Base Item
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        fetchRecipe();
+    }, [selectedVariantId]);
+
+    const fetchRecipe = async () => {
+        setLoading(true);
+        const token = localStorage.getItem('restroToken');
+        try {
+            const url = selectedVariantId 
+                ? `${API_BASE_URL}/api/recipes/${menuItem.id}?variantId=${selectedVariantId}`
+                : `${API_BASE_URL}/api/recipes/${menuItem.id}`;
+
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+
+            if (response.ok && data.length > 0) {
+                setIngredients(data.map(r => ({
+                    inventoryItemId: r.inventoryItemId,
+                    quantity: r.quantity
+                })));
+            } else {
+                setIngredients([]); // Reset if no recipe found for this variant
+            }
+        } catch (err) {
+            console.error('Failed to fetch recipe', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchData = async () => {
         const token = localStorage.getItem('restroToken');
         try {
-            const [invRes, recipeRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/inventory`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch(`${API_BASE_URL}/api/recipes/${menuItem.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
-            ]);
-
+            const invRes = await fetch(`${API_BASE_URL}/api/inventory`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const invData = await invRes.json();
-            const recipeData = await recipeRes.json();
-
             setInventory(invData);
-            if (recipeRes.ok && recipeData.length > 0) {
-                setIngredients(recipeData.map(r => ({
-                    inventoryItemId: r.inventoryItemId,
-                    quantity: r.quantity
-                })));
-            }
+            // Recipe is now fetched via the useEffect above
         } catch (err) {
-            console.error('Failed to fetch recipe data', err);
-        } finally {
-            setLoading(false);
+            console.error('Failed to pre-fetch inventory', err);
         }
     };
 
@@ -73,6 +88,7 @@ const RecipeManagement = ({ menuItem, onBack }) => {
                 },
                 body: JSON.stringify({
                     menuItemId: menuItem.id,
+                    variantId: selectedVariantId || null,
                     ingredients
                 })
             });
@@ -110,9 +126,24 @@ const RecipeManagement = ({ menuItem, onBack }) => {
                     <h2>Define Recipe: {menuItem.name}</h2>
                     <p>Specify the exact ingredients used for one portion of this dish to automate stock tracking.</p>
                 </div>
-                <button 
-                    onClick={handleSave} 
-                    disabled={submitting} 
+                
+                {menuItem.variants && menuItem.variants.length > 0 && (
+                    <div style={{ width: '250px' }}>
+                        <Dropdown 
+                            label="RECIPE FOR"
+                            options={[
+                                { value: '', label: 'Base Item (Default)' },
+                                ...menuItem.variants.map(v => ({ value: v.id, label: `Variant: ${v.name}` }))
+                            ]}
+                            value={selectedVariantId}
+                            onChange={setSelectedVariantId}
+                        />
+                    </div>
+                )}
+
+                <button
+                    onClick={handleSave}
+                    disabled={submitting}
                     className="nav-item active rm-save-btn"
                     style={{ border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' }}
                 >
@@ -125,20 +156,19 @@ const RecipeManagement = ({ menuItem, onBack }) => {
                 <div className="rm-ingredients-list">
                     {ingredients.map((ing, index) => (
                         <div key={index} className="rm-ingredient-row">
-                            <div className="input-group rm-input-item">
-                                <label>Ingredient (from Inventory)</label>
-                                <select
-                                    className="auth-input"
-                                    value={ing.inventoryItemId}
-                                    onChange={e => updateIngredient(index, 'inventoryItemId', e.target.value)}
-                                    style={{ appearance: 'auto' }}
-                                >
-                                    <option value="">Select Item...</option>
-                                    {inventory.map(item => (
-                                        <option key={item.id} value={item.id}>{item.name} ({item.quantity} {item.unit} available)</option>
-                                    ))}
-                                </select>
-                            </div>
+                                <div className="input-group rm-input-item">
+                                    <Dropdown 
+                                        label="Ingredient (from Inventory)"
+                                        placeholder="Select Item..."
+                                        isSearchable={true}
+                                        options={inventory.map(item => ({ 
+                                            value: item.id, 
+                                            label: `${item.name} (${item.quantity} ${item.unit} available)` 
+                                        }))}
+                                        value={ing.inventoryItemId}
+                                        onChange={val => updateIngredient(index, 'inventoryItemId', val)}
+                                    />
+                                </div>
                             <div className="input-group rm-input-qty">
                                 <label>Qty per Portion</label>
                                 <input

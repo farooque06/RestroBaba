@@ -9,6 +9,7 @@ import { formatCurrency } from '../utils/formatters';
 import toast from 'react-hot-toast';
 import MenuCard from '../components/menuManagement/MenuCard';
 import CategoryTabs from '../components/menuManagement/CategoryTabs';
+import Dropdown from '../components/common/Dropdown';
 
 const MenuManagement = () => {
     const { user } = useAuth();
@@ -28,7 +29,7 @@ const MenuManagement = () => {
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
     // Form States
-    const [newItem, setNewItem] = useState({ name: '', description: '', price: '', categoryId: '', image: '' });
+    const [newItem, setNewItem] = useState({ name: '', description: '', price: '', categoryId: '', image: '', variants: [] });
     const [newCategory, setNewCategory] = useState({ name: '', station: 'Kitchen' });
     const [editingCategoryId, setEditingCategoryId] = useState(null);
     const [rawCategories, setRawCategories] = useState([]);
@@ -215,7 +216,8 @@ const MenuManagement = () => {
             description: item.description || '',
             price: item.price.toString(),
             categoryId: item.categoryId,
-            image: item.image || ''
+            image: item.image || '',
+            variants: item.variants || []
         });
         setIsItemModalOpen(true);
     };
@@ -288,7 +290,7 @@ const MenuManagement = () => {
 
                 setIsItemModalOpen(false);
                 setEditingItem(null);
-                setNewItem({ name: '', description: '', price: '', categoryId: '', image: '' });
+                setNewItem({ name: '', description: '', price: '', categoryId: '', image: '', variants: [] });
                 setLinkedInventoryId('');
                 setShowQuickAddInventory(false);
                 setQuickInventory({ name: '', unit: 'pcs', quantity: 0 });
@@ -400,7 +402,7 @@ const MenuManagement = () => {
                             <button
                                 onClick={() => {
                                     setEditingItem(null);
-                                    setNewItem({ name: '', description: '', price: '', categoryId: '', image: '' });
+                                    setNewItem({ name: '', description: '', price: '', categoryId: '', image: '', variants: [] });
                                     setIsItemModalOpen(true);
                                 }}
                                 className="nav-item active"
@@ -529,19 +531,85 @@ const MenuManagement = () => {
                                     />
                                 </div>
                                 <div className="input-group">
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem', display: 'block' }}>CATEGORY</label>
-                                    <select
-                                        className="mm-search-input"
-                                        style={{ paddingLeft: '1.5rem', borderRadius: '12px', appearance: 'auto' }}
-                                        required
+                                    <Dropdown 
+                                        label="CATEGORY"
+                                        placeholder="Select Category"
+                                        isSearchable={true}
+                                        options={rawCategories.map(cat => ({ value: cat.id, label: cat.name }))}
                                         value={newItem.categoryId}
-                                        onChange={e => setNewItem({ ...newItem, categoryId: e.target.value })}
+                                        onChange={val => setNewItem({ ...newItem, categoryId: val })}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* VARIANTS SECTION */}
+                            <div style={{
+                                padding: '1.25rem',
+                                background: 'rgba(255,255,255,0.03)',
+                                borderRadius: '16px',
+                                border: '1px solid var(--border)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <List size={16} color="var(--primary)" />
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.05em' }}>VARIANTS & SIZES (OPTIONAL)</label>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const newVariants = [...(newItem.variants || [])];
+                                            newVariants.push({ name: '', price: '' });
+                                            setNewItem({ ...newItem, variants: newVariants });
+                                        }}
+                                        style={{ fontSize: '0.7rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 800, textTransform: 'uppercase' }}
                                     >
-                                        <option value="">Select Category</option>
-                                        {rawCategories.map(cat => (
-                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                        ))}
-                                    </select>
+                                        + Add Variant
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {(newItem.variants || []).map((variant, idx) => (
+                                        <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }} className="animate-fade">
+                                            <input
+                                                className="mm-search-input"
+                                                style={{ paddingLeft: '1rem', borderRadius: '10px', flex: 2, height: '40px' }}
+                                                placeholder="e.g. 30ml / Full"
+                                                value={variant.name}
+                                                onChange={e => {
+                                                    const newVariants = [...newItem.variants];
+                                                    newVariants[idx].name = e.target.value;
+                                                    setNewItem({ ...newItem, variants: newVariants });
+                                                }}
+                                            />
+                                            <input
+                                                className="mm-search-input"
+                                                style={{ paddingLeft: '1rem', borderRadius: '10px', flex: 1, height: '40px' }}
+                                                type="number"
+                                                placeholder="Price"
+                                                value={variant.price}
+                                                onChange={e => {
+                                                    const newVariants = [...newItem.variants];
+                                                    newVariants[idx].price = e.target.value;
+                                                    setNewItem({ ...newItem, variants: newVariants });
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newVariants = newItem.variants.filter((_, i) => i !== idx);
+                                                    setNewItem({ ...newItem, variants: newVariants });
+                                                }}
+                                                style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', opacity: 0.7 }}
+                                            >
+                                                <XCircle size={18} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {(!newItem.variants || newItem.variants.length === 0) && (
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', margin: '0.5rem 0' }}>
+                                            No variants added. Base price will be used.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
@@ -605,17 +673,16 @@ const MenuManagement = () => {
                                 </div>
 
                                 {!showQuickAddInventory ? (
-                                    <select
-                                        className="mm-search-input"
-                                        style={{ paddingLeft: '1.5rem', borderRadius: '12px', marginBottom: 0, appearance: 'auto' }}
+                                    <Dropdown 
+                                        placeholder="-- No Tracking (Service Item) --"
+                                        isSearchable={true}
+                                        options={inventoryItems.map(inv => ({ 
+                                            value: inv.id, 
+                                            label: `${inv.name} (${inv.quantity} ${inv.unit})` 
+                                        }))}
                                         value={linkedInventoryId}
-                                        onChange={e => setLinkedInventoryId(e.target.value)}
-                                    >
-                                        <option value="">-- No Tracking (Service Item) --</option>
-                                        {inventoryItems.map(inv => (
-                                            <option key={inv.id} value={inv.id}>{inv.name} ({inv.quantity} {inv.unit})</option>
-                                        ))}
-                                    </select>
+                                        onChange={setLinkedInventoryId}
+                                    />
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }} className="animate-fade">
                                         <input
@@ -688,18 +755,17 @@ const MenuManagement = () => {
                                     />
                                 </div>
                                 <div className="input-group">
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem', display: 'block' }}>STATION</label>
-                                    <select
-                                        className="mm-search-input"
-                                        style={{ paddingLeft: '1.25rem', height: '44px', borderRadius: '10px', appearance: 'auto' }}
+                                    <Dropdown 
+                                        label="STATION"
+                                        options={[
+                                            { value: 'Kitchen', label: 'Kitchen' },
+                                            { value: 'Bar', label: 'Bar' },
+                                            { value: 'Pizzeria', label: 'Pizzeria' },
+                                            { value: 'Bakery', label: 'Bakery' },
+                                        ]}
                                         value={newCategory.station}
-                                        onChange={e => setNewCategory({ ...newCategory, station: e.target.value })}
-                                    >
-                                        <option value="Kitchen">Kitchen</option>
-                                        <option value="Bar">Bar</option>
-                                        <option value="Pizzeria">Pizzeria</option>
-                                        <option value="Bakery">Bakery</option>
-                                    </select>
+                                        onChange={val => setNewCategory({ ...newCategory, station: val })}
+                                    />
                                 </div>
                                 <button type="submit" className="mm-category-pill active" style={{ height: '44px', border: 'none', padding: 0 }}>
                                     {editingCategoryId ? 'Save' : 'Add'}

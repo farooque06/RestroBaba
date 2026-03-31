@@ -8,6 +8,7 @@ import {
     Clock, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Dropdown from '../components/common/Dropdown';
 import { API_BASE_URL } from '../config';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -808,38 +809,16 @@ const ClientManagement = () => {
                                     </div>
 
                                     <div className="input-group">
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Payment Status</label>
-                                        <div className="input-wrapper" style={{
-                                            background: 'rgba(255,255,255,0.03)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '16px',
-                                            padding: '4px 12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            position: 'relative'
-                                        }}>
-                                            <CreditCard size={18} color="var(--primary)" />
-                                            <select
-                                                value={newClient.paymentStatus || 'PAID'}
-                                                onChange={e => setNewClient({ ...newClient, paymentStatus: e.target.value })}
-                                                style={{
-                                                    width: '100%',
-                                                    background: 'transparent',
-                                                    border: 'none',
-                                                    color: 'white',
-                                                    padding: '12px 0',
-                                                    fontSize: '1rem',
-                                                    fontWeight: 600,
-                                                    outline: 'none',
-                                                    appearance: 'none',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                <option value="PAID" style={{ background: 'var(--bg-card)', color: 'white' }}>✓ MARK AS PAID</option>
-                                                <option value="PENDING" style={{ background: 'var(--bg-card)', color: 'white' }}>⌛ PENDING</option>
-                                            </select>
-                                        </div>
+                                        <Dropdown 
+                                            label="Payment Status"
+                                            placeholder="Select Status..."
+                                            options={[
+                                                { value: 'PAID', label: '✓ MARK AS PAID' },
+                                                { value: 'PENDING', label: '⌛ PENDING' }
+                                            ]}
+                                            value={newClient.paymentStatus || 'PAID'}
+                                            onChange={val => setNewClient({ ...newClient, paymentStatus: val })}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -1076,39 +1055,17 @@ const ClientManagement = () => {
                                     </div>
 
                                     <div className="input-group">
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Payment Status</label>
-                                        <div className="input-wrapper" style={{
-                                            background: 'rgba(255,255,255,0.03)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '16px',
-                                            padding: '4px 12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            position: 'relative'
-                                        }}>
-                                            <CreditCard size={18} color="var(--primary)" />
-                                            <select
-                                                value={editClient.paymentStatus || 'PAID'}
-                                                onChange={e => setEditClient({ ...editClient, paymentStatus: e.target.value })}
-                                                style={{
-                                                    width: '100%',
-                                                    background: 'transparent',
-                                                    border: 'none',
-                                                    color: 'white',
-                                                    padding: '12px 0',
-                                                    fontSize: '1rem',
-                                                    fontWeight: 600,
-                                                    outline: 'none',
-                                                    appearance: 'none',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                <option value="PAID" style={{ background: 'var(--bg-card)', color: 'white' }}>✓ MARK AS PAID</option>
-                                                <option value="PENDING" style={{ background: 'var(--bg-card)', color: 'white' }}>⌛ PENDING</option>
-                                                <option value="OVERDUE" style={{ background: 'var(--bg-card)', color: 'white' }}>⚠ OVERDUE</option>
-                                            </select>
-                                        </div>
+                                        <Dropdown 
+                                            label="Payment Status"
+                                            placeholder="Select Status..."
+                                            options={[
+                                                { value: 'PAID', label: '✓ MARK AS PAID' },
+                                                { value: 'PENDING', label: '⌛ PENDING' },
+                                                { value: 'OVERDUE', label: '⚠ OVERDUE' }
+                                            ]}
+                                            value={editClient.paymentStatus || 'PAID'}
+                                            onChange={val => setEditClient({ ...editClient, paymentStatus: val })}
+                                        />
                                     </div>
                                 </div>
                             </div>

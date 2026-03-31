@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../config';
 import { Package, Plus, Search, AlertTriangle, ArrowRight, History, Loader2, Edit2, Trash2, Save, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import toast from 'react-hot-toast';
+import Dropdown from '../components/common/Dropdown';
 
 const InventoryManagement = () => {
     const [inventory, setInventory] = useState([]);
@@ -413,21 +414,20 @@ const InventoryManagement = () => {
                                     />
                                 </div>
                                 <div className="input-group">
-                                    <label>Reason & Category</label>
-                                    <select
-                                        className="auth-input"
+                                    <Dropdown 
+                                        label="Reason & Category"
+                                        options={[
+                                            { value: 'Manual Adjustment', label: 'Standard Adjustment' },
+                                            { value: 'Purchase', label: 'New Purchase / Refill' },
+                                            { value: 'Spoilage', label: 'Waste: Spoilage / Expired' },
+                                            { value: 'Spillage', label: 'Waste: Spillage / Damage' },
+                                            { value: 'Kitchen Error', label: 'Waste: Kitchen Error' },
+                                            { value: 'Complimentary', label: 'Promo: Complimentary / Freebie' },
+                                            { value: 'Correction', label: 'Inventory Correction' },
+                                        ]}
                                         value={adjustData.reason}
-                                        onChange={e => setAdjustData({ ...adjustData, reason: e.target.value })}
-                                        style={{ appearance: 'none' }}
-                                    >
-                                        <option value="Manual Adjustment">Standard Adjustment</option>
-                                        <option value="Purchase">New Purchase / Refill</option>
-                                        <option value="Spoilage">Waste: Spoilage / Expired</option>
-                                        <option value="Spillage">Waste: Spillage / Damage</option>
-                                        <option value="Kitchen Error">Waste: Kitchen Error</option>
-                                        <option value="Complimentary">Promo: Complimentary / Freebie</option>
-                                        <option value="Correction">Inventory Correction</option>
-                                    </select>
+                                        onChange={val => setAdjustData({ ...adjustData, reason: val })}
+                                    />
                                 </div>
 
                                 {adjustData.reason.includes('Waste') || ['Spoilage', 'Spillage', 'Kitchen Error'].includes(adjustData.reason) ? (

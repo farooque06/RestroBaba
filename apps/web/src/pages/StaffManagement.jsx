@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import Dropdown from '../components/common/Dropdown';
 import ConfirmModal from '../components/ConfirmModal';
 import AuthInput from '../components/AuthInput';
 import { formatCurrency } from '../utils/formatters';
@@ -479,14 +480,17 @@ const StaffManagement = () => {
                                             onChange={e => setFormData({ ...formData, salary: e.target.value })} style={{ fontWeight: 700 }} />
                                     </div>
                                 </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Type</label>
-                                    <select className="auth-input" value={formData.salaryType}
-                                        onChange={e => setFormData({ ...formData, salaryType: e.target.value })}
-                                        style={{ background: 'var(--glass-shine)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '0.75rem', borderRadius: '12px', width: '100%', height: '48px' }}>
-                                        <option value="MONTHLY">Monthly</option>
-                                        <option value="DAILY">Daily</option>
-                                    </select>
+                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <Dropdown 
+                                        label="Type"
+                                        placeholder="Select Type..."
+                                        options={[
+                                            { value: 'MONTHLY', label: 'Monthly' },
+                                            { value: 'DAILY', label: 'Daily' }
+                                        ]}
+                                        value={formData.salaryType}
+                                        onChange={val => setFormData({ ...formData, salaryType: val })}
+                                    />
                                 </div>
                             </div>
 

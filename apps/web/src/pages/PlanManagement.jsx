@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import toast from 'react-hot-toast';
+import Dropdown from '../components/common/Dropdown';
 
 const PlanManagement = () => {
     const [plans, setPlans] = useState([]);
@@ -205,17 +206,17 @@ const PlanManagement = () => {
                                         />
                                     </div>
                                     <div className="input-group">
-                                        <label className="input-label" style={{ fontSize: '0.75rem' }}>System Tier</label>
-                                        <select 
-                                            className="auth-input" 
-                                            style={{ height: '40px', fontSize: '0.9rem' }}
+                                        <Dropdown 
+                                            label="System Tier"
+                                            placeholder="Select Tier..."
+                                            options={[
+                                                { value: 'SILVER', label: 'SILVER' },
+                                                { value: 'GOLD', label: 'GOLD' },
+                                                { value: 'DIAMOND', label: 'DIAMOND' }
+                                            ]}
                                             value={editingPlan.tier}
-                                            onChange={e => setEditingPlan({...editingPlan, tier: e.target.value})}
-                                        >
-                                            <option value="SILVER">SILVER</option>
-                                            <option value="GOLD">GOLD</option>
-                                            <option value="DIAMOND">DIAMOND</option>
-                                        </select>
+                                            onChange={val => setEditingPlan({...editingPlan, tier: val})}
+                                        />
                                     </div>
                                 </div>
                             </section>

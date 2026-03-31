@@ -137,6 +137,7 @@ router.get('/items', async (req, res) => {
             },
             include: {
                 category: true,
+                variants: true,
                 recipe: {
                     include: {
                         inventoryItem: {
@@ -160,7 +161,7 @@ router.get('/items', async (req, res) => {
 router.post('/items', async (req, res) => {
     if ((req as any).user?.role === 'WAITER') return res.status(403).json({ error: 'Waiters cannot create menu items' });
 
-    const { name, description, price, categoryId, image, available } = req.body;
+    const { name, description, price, categoryId, image, available, variants } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
 
     try {
@@ -172,9 +173,15 @@ router.post('/items', async (req, res) => {
                 categoryId,
                 image,
                 available: available ?? true,
-                clientId: req.clientId!
+                clientId: req.clientId!,
+                variants: variants && variants.length > 0 ? {
+                    create: variants.map((v: any) => ({
+                        name: v.name,
+                        price: Number(v.price)
+                    }))
+                } : undefined
             },
-            include: { category: true }
+            include: { category: true, variants: true }
         });
 
         // Log Activity (Non-blocking)
@@ -201,24 +208,41 @@ router.put('/items/:id', async (req, res) => {
     if ((req as any).user?.role === 'WAITER') return res.status(403).json({ error: 'Waiters cannot update menu items' });
 
     const { id } = req.params;
-    const { name, description, price, categoryId, image, available } = req.body;
+    const { name, description, price, categoryId, image, available, variants } = req.body;
     if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
 
     try {
-        const item = await prisma.menuItem.update({
-            where: {
-                id: id as string,
-                clientId: req.clientId! // Security: Ensure item belongs to client
-            },
-            data: {
-                name,
-                description,
-                price: price ? Number(price) : undefined,
-                categoryId,
-                image,
-                available
-            },
-            include: { category: true }
+        // Use a transaction to update item and variants
+        const item = await prisma.$transaction(async (tx) => {
+            // 1. Delete existing variants if we are syncing
+            if (variants) {
+                await tx.menuItemVariant.deleteMany({
+                    where: { menuItemId: id as string }
+                });
+            }
+
+            // 2. Update the main item
+            return await tx.menuItem.update({
+                where: {
+                    id: id as string,
+                    clientId: req.clientId!
+                },
+                data: {
+                    name,
+                    description,
+                    price: price ? Number(price) : undefined,
+                    categoryId,
+                    image,
+                    available,
+                    variants: variants && variants.length > 0 ? {
+                        create: variants.map((v: any) => ({
+                            name: v.name,
+                            price: Number(v.price)
+                        }))
+                    } : undefined
+                },
+                include: { category: true, variants: true }
+            });
         });
 
         // Log Activity (Non-blocking)

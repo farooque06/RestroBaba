@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import Dropdown from '../components/common/Dropdown';
 import { formatCurrency } from '../utils/formatters';
 
 const WasteManagement = () => {
@@ -385,19 +386,20 @@ const WasteManagement = () => {
                                 </div>
 
                                 <div className="input-group">
-                                    <label>Reason for Loss</label>
-                                    <select
-                                        className="auth-input"
+                                    <Dropdown 
+                                        label="Reason for Loss"
+                                        placeholder="Select Reason..."
+                                        options={[
+                                            { value: 'Spoilage', label: 'Spoilage / Expired' },
+                                            { value: 'Spillage', label: 'Spillage / Damaged' },
+                                            { value: 'Kitchen Error', label: 'Kitchen Error / Burnt' },
+                                            { value: 'Customer Return', label: 'Customer Return' },
+                                            { value: 'Theft', label: 'Unaccounted / Theft' },
+                                            { value: 'Other', label: 'Other / Miscellaneous' }
+                                        ]}
                                         value={logData.reason}
-                                        onChange={e => setLogData({ ...logData, reason: e.target.value })}
-                                    >
-                                        <option value="Spoilage">Spoilage / Expired</option>
-                                        <option value="Spillage">Spillage / Damaged</option>
-                                        <option value="Kitchen Error">Kitchen Error / Burnt</option>
-                                        <option value="Customer Return">Customer Return</option>
-                                        <option value="Theft">Unaccounted / Theft</option>
-                                        <option value="Other">Other / Miscellaneous</option>
-                                    </select>
+                                        onChange={val => setLogData({ ...logData, reason: val })}
+                                    />
                                 </div>
 
                                 <div style={{

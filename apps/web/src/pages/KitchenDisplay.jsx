@@ -366,7 +366,10 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
                         <div className="qty-box">{item.quantity}x</div>
                         <div className="item-details">
                             <div className="name-row">
-                                <span className="item-name">{item.menuItem?.name}</span>
+                                <span className="item-name">
+                                    {item.menuItem?.name}
+                                    {item.variant?.name && <span className="item-variant"> ({item.variant.name})</span>}
+                                </span>
                                 {item.status === 'Pending' && <span className="new-badge">NEW</span>}
                                 {item.cookingStartedAt && order.status === 'Cooking' && (
                                     <span className="item-elapsed">

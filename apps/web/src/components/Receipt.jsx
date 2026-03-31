@@ -96,7 +96,10 @@ const Receipt = React.forwardRef(({ order, client }, ref) => {
                     ) : (
                         items.map((item, idx) => (
                             <tr key={idx}>
-                                <td style={{ padding: '3px 0' }}>{item.menuItem?.name || 'Unknown Item'}</td>
+                                <td style={{ padding: '3px 0' }}>
+                                    {item.menuItem?.name || 'Unknown Item'}
+                                    {item.variant?.name && <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>({item.variant.name})</div>}
+                                </td>
                                 <td style={{ textAlign: 'center', padding: '3px 0' }}>{item.quantity}</td>
                                 <td style={{ textAlign: 'right', padding: '3px 0' }}>
                                     {formatCurrency((item.price || 0) * (item.quantity || 0))}

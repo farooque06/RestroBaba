@@ -73,6 +73,7 @@ router.post('/', async (req, res) => {
                 const newItemsData = items.map((item: any) => ({
                     orderId,
                     menuItemId: item.menuItemId,
+                    variantId: item.variantId, // NEW
                     quantity: parseInt(item.quantity),
                     price: parseFloat(item.price),
                     notes: item.notes,
@@ -93,6 +94,7 @@ router.post('/', async (req, res) => {
                         items: {
                             create: items.map((item: any) => ({
                                 menuItemId: item.menuItemId,
+                                variantId: item.variantId, // NEW
                                 quantity: parseInt(item.quantity),
                                 price: parseFloat(item.price),
                                 notes: item.notes,
@@ -134,7 +136,7 @@ router.post('/', async (req, res) => {
                     totalAmount,
                     status: initialStatus
                 },
-                include: { items: { include: { menuItem: { include: { category: true } } } }, table: true }
+                include: { items: { include: { variant: true, menuItem: { include: { category: true } } } }, table: true }
             });
 
             // 4. Loyalty Points (incremental based on new items only)
@@ -205,7 +207,12 @@ router.get('/', async (req, res) => {
         const orders = await prisma.order.findMany({
             where: whereClause,
             include: {
-                items: { include: { menuItem: { include: { category: true } } } },
+                items: { 
+                    include: { 
+                        menuItem: { include: { category: true } },
+                        variant: true 
+                    } 
+                },
                 table: true,
                 customer: true
             },
@@ -253,7 +260,14 @@ router.put('/:id/status', async (req, res) => {
         const order = await prisma.$transaction(async (tx) => {
             const currentOrder = await tx.order.findUnique({
                 where: { id: id as string },
-                include: { items: { include: { menuItem: { include: { recipe: true } } } } }
+                include: { 
+                    items: { 
+                        include: { 
+                            variant: { include: { recipe: true } }, 
+                            menuItem: { include: { recipe: true } } 
+                        } 
+                    } 
+                }
             });
 
             if (!currentOrder) throw new Error('Order not found');
@@ -268,7 +282,15 @@ router.put('/:id/status', async (req, res) => {
             const updatedOrder = await tx.order.update({
                 where: { id: id as string, clientId: req.clientId! },
                 data: { status },
-                include: { items: { include: { menuItem: { include: { recipe: true, category: true } } } }, table: true }
+                include: { 
+                    items: { 
+                        include: { 
+                            variant: { include: { recipe: true } }, 
+                            menuItem: { include: { recipe: true, category: true } } 
+                        } 
+                    }, 
+                    table: true 
+                }
             });
 
             const now = new Date();
@@ -277,7 +299,12 @@ router.put('/:id/status', async (req, res) => {
             if (status === 'Cooking') {
                 const pendingItems = updatedOrder.items.filter(item => item.status === 'Pending');
                 for (const item of pendingItems) {
-                    for (const recipeItem of item.menuItem.recipe) {
+                    // Decide which recipe to use: Variant specific or Base item
+                    const recipe = (item.variant && item.variant.recipe && item.variant.recipe.length > 0) 
+                        ? item.variant.recipe 
+                        : item.menuItem.recipe;
+
+                    for (const recipeItem of recipe) {
                         const amountToDeduct = recipeItem.quantity * item.quantity;
                         await tx.inventoryItem.update({
                             where: { id: recipeItem.inventoryItemId },
@@ -326,7 +353,11 @@ router.put('/:id/status', async (req, res) => {
             if (status === 'Cancelled' && ['Cooking', 'Ready', 'Served'].includes(currentOrder.status)) {
                 const restorableItems = updatedOrder.items.filter(item => item.status !== 'Waste' && item.status !== 'Pending');
                 for (const item of restorableItems) {
-                    for (const recipeItem of item.menuItem.recipe) {
+                    const recipe = (item.variant && item.variant.recipe && item.variant.recipe.length > 0)
+                        ? item.variant.recipe
+                        : item.menuItem.recipe;
+
+                    for (const recipeItem of recipe) {
                         const amountToRestore = recipeItem.quantity * item.quantity;
                         await tx.inventoryItem.update({
                             where: { id: recipeItem.inventoryItemId },
@@ -438,7 +469,7 @@ router.get('/table/:tableId', async (req, res) => {
             },
             orderBy: { createdAt: 'desc' },
             include: {
-                items: { include: { menuItem: { include: { category: true } } } }
+                items: { include: { variant: true, menuItem: { include: { category: true } } } }
             }
         });
         res.json(order || null);
@@ -497,6 +528,7 @@ router.post('/item/:itemId/remake', async (req, res) => {
                 where: { id: itemId },
                 include: {
                     order: true,
+                    variant: { include: { recipe: { include: { inventoryItem: true } } } },
                     menuItem: { include: { recipe: { include: { inventoryItem: true } } } }
                 }
             });
@@ -505,7 +537,11 @@ router.post('/item/:itemId/remake', async (req, res) => {
             if (item.order.clientId !== req.clientId) throw new Error('Unauthorized');
 
             // Log ingredients as WASTE and deduct for remake
-            for (const recipeItem of item.menuItem.recipe) {
+            const recipe = (item.variant && item.variant.recipe && item.variant.recipe.length > 0)
+                ? item.variant.recipe
+                : item.menuItem.recipe;
+
+            for (const recipeItem of recipe) {
                 const wasteQuantity = recipeItem.quantity * item.quantity;
 
                 await tx.inventoryItem.update({
@@ -537,6 +573,7 @@ router.post('/item/:itemId/remake', async (req, res) => {
                 data: {
                     orderId: item.orderId,
                     menuItemId: item.menuItemId,
+                    variantId: item.variantId,
                     quantity: item.quantity,
                     price: item.price,
                     status: 'Pending',

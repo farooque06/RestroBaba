@@ -26,6 +26,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
     const [quickAddModal, setQuickAddModal] = useState(false);
     const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
+    const [variantModalItem, setVariantModalItem] = useState(null); // Tracks which item is being selected for variants
     const [menuSearch, setMenuSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [visibleCount, setVisibleCount] = useState(12);
@@ -117,6 +118,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                             id: item.menuItem?.id || item.menuItemId,
                             orderItemId: item.id,
                             name: item.menuItem?.name || 'Unknown Item',
+                            variantName: item.variant?.name || null, // ADDED
                             price: item.price ?? item.menuItem?.price ?? 0,
                             quantity: item.quantity || 1,
                             image: item.menuItem?.image || '',
@@ -163,14 +165,36 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     };
 
     // ─── CART ACTIONS ───────────────────────────────────────────────
-    const addToCart = (item) => {
-        const existingNew = cart.find(i => i.id === item.id && !i.isExisting);
-        if (existingNew) {
-            setCart(cart.map(i => i.cartKey === existingNew.cartKey ? { ...i, quantity: i.quantity + 1 } : i));
-        } else {
-            setCart([...cart, { ...item, cartKey: `new-${item.id}-${Date.now()}`, quantity: 1, isExisting: false }]);
+    const addToCart = (item, variant = null) => {
+        // If item has variants and none was selected yet, open modal
+        if (item.variants && item.variants.length > 0 && !variant) {
+            setVariantModalItem(item);
+            return;
         }
-        toast.success(`Added ${item.name}`, { icon: '🍽️', position: 'bottom-center' });
+
+        const price = variant ? parseFloat(variant.price) : parseFloat(item.price);
+        const variantId = variant ? variant.id : null;
+        const variantName = variant ? variant.name : null;
+        const cartKey = `new-${item.id}-${variantId || 'base'}`;
+
+        const existingNew = cart.find(i => i.cartKey === cartKey && !i.isExisting);
+        
+        if (existingNew) {
+            setCart(cart.map(i => i.cartKey === cartKey ? { ...i, quantity: i.quantity + 1 } : i));
+        } else {
+            setCart([...cart, { 
+                ...item, 
+                cartKey, 
+                variantId, 
+                variantName, 
+                price, // Use variant price
+                quantity: 1, 
+                isExisting: false 
+            }]);
+        }
+        
+        setVariantModalItem(null);
+        toast.success(`Added ${item.name}${variantName ? ` (${variantName})` : ''}`, { icon: '🍽️', position: 'bottom-center' });
     };
 
     const removeFromCart = (cartKey) => {
@@ -273,6 +297,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                     customerId: selectedCustomer?.id,
                     items: newItems.map(item => ({
                         menuItemId: item.id,
+                        variantId: item.variantId, // NEW
                         quantity: item.quantity,
                         price: item.price
                     }))
@@ -455,6 +480,16 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                             <div style={{ flex: 1 }}>
                                                 <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px', color: 'var(--text-heading)' }}>
                                                     {item.name}
+                                                    {item.variantName && (
+                                                        <span style={{ 
+                                                            marginLeft: '0.5rem', 
+                                                            color: 'var(--primary)', 
+                                                            fontWeight: 600,
+                                                            fontSize: '0.85rem'
+                                                        }}>
+                                                            ({item.variantName})
+                                                        </span>
+                                                    )}
                                                     {item.isExisting && (
                                                         <span style={{ 
                                                             marginLeft: '0.6rem', 
@@ -656,6 +691,46 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                 </div>
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* VARIANT SELECTION MODAL */}
+            {variantModalItem && (
+                <div className="ot-customer-overlay" onClick={() => setVariantModalItem(null)}>
+                    <div className="premium-glass animate-pop" style={{ width: '90%', maxWidth: '400px', padding: '2rem', borderRadius: '24px' }} onClick={e => e.stopPropagation()}>
+                        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Select Option</h2>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>{variantModalItem.name}</p>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {variantModalItem.variants.map(v => (
+                                <button
+                                    key={v.id}
+                                    onClick={() => addToCart(variantModalItem, v)}
+                                    className="tm-card"
+                                    style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center', 
+                                        padding: '1.25rem', 
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--glass-shine)',
+                                        cursor: 'pointer',
+                                        textAlign: 'left'
+                                    }}
+                                >
+                                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{v.name}</span>
+                                    <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{formatCurrency(v.price)}</span>
+                                </button>
+                            ))}
+                        </div>
+                        
+                        <button 
+                            onClick={() => setVariantModalItem(null)}
+                            style={{ width: '100%', marginTop: '1.5rem', padding: '1rem', background: 'none', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </div>
             )}
