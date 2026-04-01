@@ -35,6 +35,7 @@ const KitchenDisplay = () => {
     const [activeStation, setActiveStation] = useState(localStorage.getItem('kdsStation') || 'All');
     const [currentTime, setCurrentTime] = useState(new Date());
     const [activeTab, setActiveTab] = useState('Pending');
+    const [togglingItems, setTogglingItems] = useState({});
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 10000);
@@ -252,6 +253,8 @@ const KitchenDisplay = () => {
                                     variant="warning"
                                     currentTime={currentTime}
                                     onRefresh={() => fetchOrders(true)}
+                                    togglingItems={togglingItems}
+                                    setTogglingItems={setTogglingItems}
                                 />
                             ))}
                         </div>
@@ -281,6 +284,8 @@ const KitchenDisplay = () => {
                                     variant="primary"
                                     currentTime={currentTime}
                                     onRefresh={() => fetchOrders(true)}
+                                    togglingItems={togglingItems}
+                                    setTogglingItems={setTogglingItems}
                                 />
                             ))}
                         </div>
@@ -310,6 +315,8 @@ const KitchenDisplay = () => {
                                     variant="success"
                                     currentTime={currentTime}
                                     onRefresh={() => fetchOrders(true)}
+                                    togglingItems={togglingItems}
+                                    setTogglingItems={setTogglingItems}
                                 />
                             ))}
                         </div>
@@ -321,7 +328,7 @@ const KitchenDisplay = () => {
 };
 
 // ── ORDER CARD COMPONENT ──
-const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, currentTime, onRefresh }) => {
+const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, currentTime, onRefresh, togglingItems = {}, setTogglingItems = () => {} }) => {
     const ageInMins = Math.floor((currentTime - new Date(order.displayTime)) / 1000 / 60);
 
     let urgencyClass = '';
@@ -361,48 +368,63 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
 
             {/* Items List */}
             <div className="kds-item-list">
-                {order.items.map((item, idx) => (
-                    <div key={idx} className={`kds-item-row ${item.status === 'Ready' ? 'ready' : ''}`}>
-                        <div className="qty-box">{item.quantity}x</div>
-                        <div className="item-details">
-                            <div className="name-row">
-                                <span className="item-name">
-                                    {item.menuItem?.name}
-                                    {item.variant?.name && <span className="item-variant"> ({item.variant.name})</span>}
-                                </span>
-                                {item.status === 'Pending' && <span className="new-badge">NEW</span>}
-                                {item.cookingStartedAt && order.status === 'Cooking' && (
-                                    <span className="item-elapsed">
-                                        <Clock size={10} /> {getElapsedTime(item.cookingStartedAt)}
-                                    </span>
+                {[...order.items]
+                    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt) || a.id.localeCompare(b.id))
+                    .map((item) => {
+                        const isToggling = togglingItems[item.id];
+                        const displayReady = isToggling 
+                            ? (item.status !== 'Ready') // Optimistic: flip the status visually
+                            : (item.status === 'Ready');
+                        return (
+                            <div key={item.id} className={`kds-item-row ${displayReady ? 'ready' : ''}`}>
+                                <div className="qty-box">{item.quantity}x</div>
+                                <div className="item-details">
+                                    <div className="name-row">
+                                        <span className="item-name">
+                                            {item.menuItem?.name}
+                                            {item.variant?.name && <span className="item-variant"> ({item.variant.name})</span>}
+                                        </span>
+                                        {item.status === 'Pending' && !isToggling && <span className="new-badge">NEW</span>}
+                                        {item.cookingStartedAt && order.status === 'Cooking' && (
+                                            <span className="item-elapsed">
+                                                <Clock size={10} /> {getElapsedTime(item.cookingStartedAt)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {item.notes && <div className="item-notes">📝 {item.notes}</div>}
+                                </div>
+
+                                {order.status === 'Cooking' && (
+                                    <button
+                                        className={`item-check-btn ${displayReady ? 'checked' : ''}`}
+                                        disabled={isToggling}
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const newStatus = item.status === 'Ready' ? 'Pending' : 'Ready';
+                                            // Optimistic update — show checkmark immediately
+                                            setTogglingItems(prev => ({ ...prev, [item.id]: true }));
+                                            const token = localStorage.getItem('restroToken');
+                                            try {
+                                                const res = await fetch(`${API_BASE_URL}/api/orders/item/${item.id}/status`, {
+                                                    method: 'PATCH',
+                                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                                    body: JSON.stringify({ status: newStatus })
+                                                });
+                                                if (res.ok) {
+                                                    toast.success(newStatus === 'Ready' ? 'Item Prepared ✓' : 'Item Reset');
+                                                }
+                                            } finally {
+                                                setTogglingItems(prev => { const n = {...prev}; delete n[item.id]; return n; });
+                                                if (onRefresh) onRefresh();
+                                            }
+                                        }}
+                                    >
+                                        <CheckCircle2 size={22} />
+                                    </button>
                                 )}
                             </div>
-                            {item.notes && <div className="item-notes">📝 {item.notes}</div>}
-                        </div>
-
-                        {order.status === 'Cooking' && (
-                            <button
-                                className={`item-check-btn ${item.status === 'Ready' ? 'checked' : ''}`}
-                                onClick={async (e) => {
-                                    e.stopPropagation();
-                                    const newStatus = item.status === 'Ready' ? 'Pending' : 'Ready';
-                                    const token = localStorage.getItem('restroToken');
-                                    const res = await fetch(`${API_BASE_URL}/api/orders/item/${item.id}/status`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                        body: JSON.stringify({ status: newStatus })
-                                    });
-                                    if (res.ok) {
-                                        toast.success(newStatus === 'Ready' ? 'Item Prepared ✓' : 'Item Reset');
-                                        if (onRefresh) onRefresh();
-                                    }
-                                }}
-                            >
-                                <CheckCircle2 size={22} />
-                            </button>
-                        )}
-                    </div>
-                ))}
+                        );
+                    })}
             </div>
 
             {/* Action Button */}
