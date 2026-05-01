@@ -47,7 +47,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     useEffect(() => {
         const init = async () => {
             await Promise.all([fetchMenu(), fetchClientSettings()]);
-            if (table.status === 'Occupied') {
+            if (table.id !== 'takeaway' && table.status === 'Occupied') {
                 await fetchExistingOrder();
             }
         };
@@ -250,7 +250,8 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    tableId: table.id,
+                    tableId: table.id === 'takeaway' ? null : table.id,
+                    type: table.type || 'DINE_IN',
                     totalAmount: finalTotal,
                     customerId: selectedCustomer?.id,
                     items: newItems.map(item => ({

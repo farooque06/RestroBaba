@@ -8,6 +8,7 @@ import {
     Clock, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import CardErrorBoundary from '../components/CardErrorBoundary';
 import Dropdown from '../components/common/Dropdown';
 import { API_BASE_URL } from '../config';
 import ConfirmModal from '../components/ConfirmModal';
@@ -460,34 +461,53 @@ const ClientManagement = () => {
                         <p style={{ opacity: 0.6 }}>Try adjusting your search or filters.</p>
                     </div>
                 ) : (
-                    filteredClients.map(client => (
-                        <div
-                            key={client.id}
-                            className="premium-glass animate-slideUp"
-                            style={{
-                                padding: '1.75rem',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '1.5rem',
-                                border: '1px solid var(--border)',
-                                opacity: client.isActive ? 1 : 0.8,
-                                background: client.isActive ? 'rgba(255,255,255,0.02)' : 'rgba(239, 68, 68, 0.02)',
-                                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                                cursor: 'default'
-                            }}
-                        >
+                    filteredClients.map(client => {
+                        let daysLeft = Infinity;
+                        let isExpired = false;
+                        let isExpiringSoon = false;
+
+                        try {
+                            if (client.subscriptionEnd) {
+                                const subEnd = new Date(client.subscriptionEnd);
+                                if (!isNaN(subEnd.getTime())) {
+                                    daysLeft = Math.ceil((subEnd - new Date()) / (1000 * 60 * 60 * 24));
+                                    isExpired = daysLeft <= 0;
+                                    isExpiringSoon = daysLeft > 0 && daysLeft <= 7;
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Date calculation error for client:", client.name, e);
+                        }
+
+                        return (
+                            <CardErrorBoundary key={client.id}>
+                                <div
+                                    className="premium-glass animate-slideUp"
+                                    style={{
+                                        padding: '1.75rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '1.5rem',
+                                        border: isExpired ? '1px solid #ef4444' : isExpiringSoon ? '1px solid #f59e0b' : '1px solid var(--border)',
+                                        opacity: client.isActive ? 1 : 0.8,
+                                        background: isExpired ? 'rgba(239, 68, 68, 0.08)' : isExpiringSoon ? 'rgba(245, 158, 11, 0.05)' : client.isActive ? 'rgba(255,255,255,0.02)' : 'rgba(239, 68, 68, 0.02)',
+                                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                        cursor: 'default',
+                                        boxShadow: isExpired ? '0 0 15px rgba(239, 68, 68, 0.1)' : 'none'
+                                    }}
+                                >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                     <div style={{
                                         width: '56px',
                                         height: '56px',
                                         borderRadius: '18px',
-                                        background: client.isActive ? 'var(--primary-glow)' : 'rgba(239, 68, 68, 0.1)',
+                                        background: isExpired ? 'rgba(239, 68, 68, 0.2)' : isExpiringSoon ? 'rgba(245, 158, 11, 0.2)' : client.isActive ? 'var(--primary-glow)' : 'rgba(239, 68, 68, 0.1)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center'
                                     }}>
-                                        <Store size={28} color={client.isActive ? 'var(--primary)' : '#ef4444'} />
+                                        <Store size={28} color={isExpired ? '#ef4444' : isExpiringSoon ? '#f59e0b' : client.isActive ? 'var(--primary)' : '#ef4444'} />
                                     </div>
                                     <div>
                                         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-heading)', marginBottom: '4px' }}>{client.name}</h3>
@@ -508,17 +528,9 @@ const ClientManagement = () => {
                                 <div className="stat-card" style={{ padding: '1rem', borderRadius: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)' }}>
                                     <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Subscription</span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Clock size={16} color={
-                                            (() => {
-                                                const days = Math.ceil((new Date(client.subscriptionEnd) - new Date()) / (1000 * 60 * 60 * 24));
-                                                return days < 3 ? '#ef4444' : days < 15 ? '#fbbf24' : 'var(--primary)';
-                                            })()
-                                        } />
+                                        <Clock size={16} color={isExpired ? '#ef4444' : isExpiringSoon ? '#f59e0b' : 'var(--primary)'} />
                                         <span style={{ fontWeight: 700 }}>
-                                            {(() => {
-                                                const days = Math.ceil((new Date(client.subscriptionEnd) - new Date()) / (1000 * 60 * 60 * 24));
-                                                return days <= 0 ? 'Expired' : `${days}d left`;
-                                            })()}
+                                            {daysLeft === Infinity ? 'Lifetime' : daysLeft <= 0 ? 'Expired' : `${daysLeft}d left`}
                                         </span>
                                     </div>
                                 </div>
@@ -535,9 +547,9 @@ const ClientManagement = () => {
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: client.isActive ? 'var(--success)' : 'var(--danger)' }} />
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: client.isActive ? 'var(--success)' : 'var(--danger)' }}>
-                                        {client.isActive ? 'LIVE SYSTEM' : 'SUSPENDED'}
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isExpired ? '#ef4444' : isExpiringSoon ? '#f59e0b' : client.isActive ? 'var(--success)' : 'var(--danger)' }} />
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isExpired ? '#ef4444' : isExpiringSoon ? '#f59e0b' : client.isActive ? 'var(--success)' : 'var(--danger)' }}>
+                                        {isExpired ? 'EXPIRED' : isExpiringSoon ? 'EXPIRING SOON' : client.isActive ? 'LIVE SYSTEM' : 'SUSPENDED'}
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -556,8 +568,16 @@ const ClientManagement = () => {
                                                 serviceChargeRate: client.serviceChargeRate,
                                                 plan: client.plan || 'SILVER',
                                                 planDuration: client.planDuration || '1m',
-                                                subscriptionStart: client.subscriptionStart ? new Date(client.subscriptionStart).toISOString().split('T')[0] : '',
-                                                subscriptionEnd: client.subscriptionEnd ? new Date(client.subscriptionEnd).toISOString().split('T')[0] : '',
+                                                subscriptionStart: (() => {
+                                                    if (!client.subscriptionStart) return '';
+                                                    const d = new Date(client.subscriptionStart);
+                                                    return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : '';
+                                                })(),
+                                                subscriptionEnd: (() => {
+                                                    if (!client.subscriptionEnd) return '';
+                                                    const d = new Date(client.subscriptionEnd);
+                                                    return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : '';
+                                                })(),
                                                 paymentStatus: client.paymentStatus || 'PAID'
                                             });
                                             setIsEditModalOpen(true);
@@ -594,8 +614,10 @@ const ClientManagement = () => {
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                            </div>
+                            </CardErrorBoundary>
+                        );
+                    })
                 )}
             </div>
 

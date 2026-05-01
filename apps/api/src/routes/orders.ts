@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
     if (!validation.success) {
         return res.status(400).json({ error: 'Validation Error', details: validation.error.issues });
     }
-    const { tableId, items, customerId } = validation.data;
+    const { tableId, items, customerId, type } = validation.data;
 
     try {
         const order = await prisma.$transaction(async (tx) => {
@@ -88,6 +88,7 @@ router.post('/', async (req, res) => {
                     data: {
                         tableId,
                         customerId,
+                        type: type || 'DINE_IN',
                         subtotal: 0,
                         totalAmount: 0,
                         clientId: req.clientId!,

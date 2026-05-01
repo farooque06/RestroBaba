@@ -273,7 +273,12 @@ const Dashboard = () => {
                                         <div key={client.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div>
                                                 <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{client.name}</div>
-                                                <div style={{ fontSize: '0.7rem', color: '#fbbf24' }}>Expires {new Date(client.subscriptionEnd).toLocaleDateString()}</div>
+                                                <div style={{ fontSize: '0.7rem', color: '#fbbf24' }}>
+                                                    Expires {(() => {
+                                                        const d = new Date(client.subscriptionEnd);
+                                                        return !isNaN(d.getTime()) ? d.toLocaleDateString() : 'Invalid Date';
+                                                    })()}
+                                                </div>
                                             </div>
                                             <Link to={`/clients?search=${client.name}`} className="icon-button" style={{ color: 'var(--primary)' }}><ChevronRight size={18} /></Link>
                                         </div>
@@ -313,6 +318,40 @@ const Dashboard = () => {
     // --- ADMIN / STAFF VIEW ---
     return (
         <div className="page-container animate-fade">
+            {user?.subscriptionWarning !== null && user?.subscriptionWarning <= 7 && user?.role !== 'SUPER_ADMIN' && (
+                <div className="premium-glass animate-slideDown" style={{ 
+                    padding: '1rem 1.5rem', 
+                    background: 'rgba(245, 158, 11, 0.1)', 
+                    border: '1px solid rgba(245, 158, 11, 0.2)', 
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '2rem'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Clock size={20} color="#f59e0b" />
+                        <div>
+                            <div style={{ fontWeight: 800, color: '#f59e0b', fontSize: '0.9rem' }}>Subscription Expiring Soon</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                Your system access will expire in {user.subscriptionWarning} {user.subscriptionWarning <= 0 ? 'today' : `${user.subscriptionWarning} ${user.subscriptionWarning === 1 ? 'day' : 'days'}`}. Please renew to avoid service interruption.
+                            </div>
+                        </div>
+                    </div>
+                    <Link to="/billing" style={{ 
+                        padding: '8px 16px', 
+                        background: '#f59e0b', 
+                        color: 'white', 
+                        borderRadius: '8px', 
+                        textDecoration: 'none', 
+                        fontSize: '0.85rem', 
+                        fontWeight: 700 
+                    }}>
+                        Renew Now
+                    </Link>
+                </div>
+            )}
+
             <div className="dashboard-header">
                 <div>
                     <h1 className="dashboard-title">

@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const createOrderSchema = z.object({
     tableId: z.string().uuid().optional().nullable(),
     customerId: z.string().uuid().optional().nullable(),
+    type: z.enum(['DINE_IN', 'TAKEAWAY', 'DELIVERY']).optional().default('DINE_IN'),
     items: z.array(z.object({
         menuItemId: z.string().uuid(),
         variantId: z.string().uuid().optional().nullable(),

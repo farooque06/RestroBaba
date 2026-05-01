@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../config';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import OrderTaking from '../components/OrderTaking';
 import toast from 'react-hot-toast';
@@ -377,15 +377,25 @@ const TableManagement = () => {
                             Live occupancy tracking for <strong style={{ color: 'var(--primary)' }}>{user?.clientName}</strong>
                         </p>
                     </div>
-                    <button 
-                        onClick={() => setIsModalOpen(true)} 
-                        className="tm-add-btn" 
-                        disabled={tables.length >= maxTables}
-                        style={{ height: '52px', padding: '0 1.75rem', borderRadius: '16px' }}
-                    >
-                        <Plus size={20} strokeWidth={3} />
-                        <span>Add Table</span>
-                    </button>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button 
+                            onClick={() => setSelectedTable({ id: 'takeaway', number: 'Takeaway', type: 'TAKEAWAY' })} 
+                            className="tm-add-btn" 
+                            style={{ height: '52px', padding: '0 1.25rem', borderRadius: '16px', background: 'rgba(212, 168, 83, 0.1)', border: '1px solid rgba(212, 168, 83, 0.2)', color: 'var(--primary)', gap: '8px' }}
+                        >
+                            <ShoppingCart size={20} />
+                            <span>Parcel / Takeaway</span>
+                        </button>
+                        <button 
+                            onClick={() => setIsModalOpen(true)} 
+                            className="tm-add-btn" 
+                            disabled={tables.length >= maxTables}
+                            style={{ height: '52px', padding: '0 1.75rem', borderRadius: '16px' }}
+                        >
+                            <Plus size={20} strokeWidth={3} />
+                            <span>Add Table</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="plan-limit-container">

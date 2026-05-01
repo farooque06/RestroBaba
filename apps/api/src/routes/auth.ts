@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError, UnauthorizedError, ForbiddenError, BadRequestError } from '../utils/errors.js';
+import logger from '../services/logger.js';
 import prisma from '../services/prisma.js';
 import { authMiddleware as authenticate } from '../middleware/authMiddleware.js';
 
@@ -65,113 +68,138 @@ function generateShopCode(): string {
     return code;
 }
 
+// Helper: Check subscription status
+function checkSubscription(client: any) {
+    if (!client || !client.subscriptionEnd) return { expired: false, daysLeft: Infinity };
+    
+    try {
+        const expiry = new Date(client.subscriptionEnd);
+        if (isNaN(expiry.getTime())) {
+            return { expired: false, daysLeft: Infinity };
+        }
+
+        const now = new Date();
+        const diff = expiry.getTime() - now.getTime();
+        const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        
+        return {
+            expired: daysLeft <= 0,
+            daysLeft
+        };
+    } catch (e) {
+        console.error("Subscription check error:", e);
+        return { expired: false, daysLeft: Infinity };
+    }
+}
+
 // ─── Email + Password Login ─────────────────────────────────────────────────
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
 
     if (isRateLimited(rateLimitMap, `login:${ip}`, 10, 5 * 60 * 1000)) {
         const remaining = getRemainingLockout(rateLimitMap, `login:${ip}`);
-        return res.status(429).json({ error: `Too many login attempts. Try again in ${remaining}s.` });
+        throw new AppError(`Too many login attempts. Try again in ${remaining}s.`, 429);
     }
 
-    try {
-        const user = await prisma.user.findUnique({
-            where: { email },
-            include: { client: { include: { subscriptionPlan: true } } }
-        });
+    const user = await prisma.user.findUnique({
+        where: { email },
+        include: { client: { include: { subscriptionPlan: true } } }
+    });
 
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid email or password' });
+    if (!user) {
+        throw new UnauthorizedError('Invalid email or password');
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+        throw new UnauthorizedError('Invalid email or password');
+    }
+
+    if (!user.isActive) {
+        throw new ForbiddenError('Your account has been deactivated.');
+    }
+
+    // --- Subscription Enforcement ---
+    if (user.role !== 'SUPER_ADMIN' && user.client) {
+        if (!user.client.isActive) {
+            throw new ForbiddenError('This restaurant system has been deactivated by the administrator.');
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Invalid email or password' });
+        const { expired } = checkSubscription(user.client);
+        if (expired) {
+            throw new ForbiddenError('Your subscription is expired please renue or contact 9765231402 whatsapp for extending or additional time');
         }
+    }
 
-        if (!user.isActive) {
-            return res.status(403).json({ error: 'Your account has been deactivated.' });
-        }
-
-        // If not a Super Admin, check if their restaurant (client) is active
-        // @ts-ignore
-        if (user.role !== 'SUPER_ADMIN' && user.client && !user.client.isActive) {
-            return res.status(403).json({ error: 'This restaurant system has been deactivated by the administrator.' });
-        }
-
-        // ── Super Admin → TOTP 2FA ──
-        if (user.role === 'SUPER_ADMIN') {
-            console.log('DEBUG: Super Admin login, checking TOTP...');
-            // First time? Generate TOTP secret and return QR code for setup
-            if (!user.totpSecret) {
-                const secret = speakeasy.generateSecret({ 
-                    name: `RestroFlow (${user.email})`,
-                    issuer: 'RestroFlow',
-                    otpauth_url: true
-                });
-                
-                if (!secret.otpauth_url) {
-                    throw new Error('Failed to generate TOTP auth URL');
-                }
-
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { totpSecret: secret.base32 }
-                });
-
-                const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url);
-
-                return res.json({
-                    requiresTOTP: true,
-                    needsSetup: true,
-                    userId: user.id,
-                    qrCode: qrDataUrl,
-                    secret: secret.base32, // Show manual entry key
-                    message: 'Scan this QR code with Google Authenticator'
-                });
+    // ── Super Admin → TOTP 2FA ──
+    if (user.role === 'SUPER_ADMIN') {
+        // First time? Generate TOTP secret and return QR code for setup
+        if (!user.totpSecret) {
+            const secret = speakeasy.generateSecret({ 
+                name: `RestroFlow (${user.email})`,
+                issuer: 'RestroFlow',
+                otpauth_url: true
+            });
+            
+            if (!secret.otpauth_url) {
+                throw new Error('Failed to generate TOTP auth URL');
             }
 
-            // Already setup → just ask for code
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { totpSecret: secret.base32 }
+            });
+
+            const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+
             return res.json({
                 requiresTOTP: true,
-                needsSetup: false,
+                needsSetup: true,
                 userId: user.id,
-                message: 'Enter your authenticator code'
+                qrCode: qrDataUrl,
+                secret: secret.base32,
+                message: 'Scan this QR code with Google Authenticator'
             });
         }
 
-        // ── Regular users → direct token ──
-        const token = jwt.sign(
-            {
-                userId: user.id,
-                clientId: user.clientId,
-                role: user.role,
-                plan: user.client?.plan || 'SILVER',
-                clientName: user.client?.name || 'System'
-            },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                clientId: user.clientId,
-                clientName: user.client?.name || 'System',
-                shopCode: user.client?.shopCode || null,
-                client: user.client
-            }
+        // Already setup → just ask for code
+        return res.json({
+            requiresTOTP: true,
+            needsSetup: false,
+            userId: user.id,
+            message: 'Enter your authenticator code'
         });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal server error' });
     }
-});
+
+    // ── Regular users → direct token ──
+    const token = jwt.sign(
+        {
+            userId: user.id,
+            clientId: user.clientId,
+            role: user.role,
+            plan: user.client?.plan || 'SILVER',
+            clientName: user.client?.name || 'System'
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+
+    res.json({
+        token,
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            clientId: user.clientId,
+            clientName: user.client?.name || 'System',
+            shopCode: user.client?.shopCode || null,
+            client: user.client
+        },
+        subscriptionWarning: user.client ? checkSubscription(user.client).daysLeft : null
+    });
+}));
 
 // ─── Verify TOTP Code (Super Admin 2FA) ─────────────────────────────────────
 router.post('/verify-totp', async (req: Request, res: Response) => {
@@ -310,8 +338,18 @@ router.post('/pin-login', async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'Invalid PIN or inactive account' });
         }
 
-        if (user.client && !user.client.isActive) {
-            return res.status(403).json({ error: 'Restaurant system is deactivated' });
+        if (user.role !== 'SUPER_ADMIN' && user.client) {
+            if (!user.client.isActive) {
+                return res.status(403).json({ error: 'Restaurant system is deactivated' });
+            }
+
+            const sub = checkSubscription(user.client);
+            if (sub.expired) {
+                return res.status(403).json({ 
+                    error: 'Your subscription is expired please renue or contact 9765231402 whatsapp for extending or additional time',
+                    isExpired: true
+                });
+            }
         }
 
         // Clear fails on success
@@ -340,7 +378,8 @@ router.post('/pin-login', async (req: Request, res: Response) => {
                 clientName: user.client?.name || 'System',
                 shopCode: user.client?.shopCode || null,
                 client: user.client
-            }
+            },
+            subscriptionWarning: user.client ? checkSubscription(user.client).daysLeft : null
         });
     } catch (error) {
         console.error('PIN login error:', error);
@@ -477,7 +516,8 @@ router.get('/me', authenticate, async (req: any, res: Response) => {
                 clientName: user.client?.name || 'System',
                 shopCode: user.client?.shopCode || null,
                 client: user.client // This includes the tax/SC settings
-            }
+            },
+            subscriptionWarning: user.client ? checkSubscription(user.client).daysLeft : null
         });
     } catch (error) {
         console.error('Fetch profile error:', error);

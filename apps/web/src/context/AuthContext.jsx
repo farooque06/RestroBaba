@@ -18,8 +18,9 @@ export const AuthProvider = ({ children }) => {
                 try {
                     const data = await apiClient('/api/auth/me');
                     if (data?.user) {
-                        setUser(data.user);
-                        localStorage.setItem('restroUser', JSON.stringify(data.user));
+                        const userWithWarning = { ...data.user, subscriptionWarning: data.subscriptionWarning };
+                        setUser(userWithWarning);
+                        localStorage.setItem('restroUser', JSON.stringify(userWithWarning));
                     }
                 } catch (err) {
                     console.error('Initial auth refresh failed:', err);
@@ -33,8 +34,9 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const handleAuthSuccess = (data) => {
-        setUser(data.user);
-        localStorage.setItem('restroUser', JSON.stringify(data.user));
+        const userWithWarning = { ...data.user, subscriptionWarning: data.subscriptionWarning };
+        setUser(userWithWarning);
+        localStorage.setItem('restroUser', JSON.stringify(userWithWarning));
         localStorage.setItem('restroToken', data.token);
         localStorage.setItem('restroClientId', data.user.clientId);
     };
@@ -114,9 +116,10 @@ export const AuthProvider = ({ children }) => {
         try {
             const data = await apiClient('/api/auth/me');
             if (data?.user) {
-                setUser(data.user);
-                localStorage.setItem('restroUser', JSON.stringify(data.user));
-                return { success: true, user: data.user };
+                const userWithWarning = { ...data.user, subscriptionWarning: data.subscriptionWarning };
+                setUser(userWithWarning);
+                localStorage.setItem('restroUser', JSON.stringify(userWithWarning));
+                return { success: true, user: userWithWarning };
             }
         } catch (err) {
             console.error('Failed to refresh user:', err);
