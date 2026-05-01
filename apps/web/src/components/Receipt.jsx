@@ -108,8 +108,11 @@ const Receipt = React.forwardRef(({ order, client }, ref) => {
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>Order #{order.id?.slice(-6).toUpperCase()}</span>
-                    <span>Table: {order.table?.number || 'Walk-in'}</span>
+                    <span>{order.type === 'TAKEAWAY' ? 'Type: PARCEL' : `Table: ${order.table?.number || 'Walk-in'}`}</span>
                 </div>
+                {order.type === 'TAKEAWAY' && (
+                    <div style={{ fontWeight: 'bold', textAlign: 'center', margin: '6px 0', border: '1px solid black', padding: '4px', fontSize: '13px' }}>PARCEL / TAKEAWAY</div>
+                )}
                 <div>Date: {new Date(order.createdAt).toLocaleString()}</div>
                 {/* Customer info if available */}
                 {order.customer?.name && (

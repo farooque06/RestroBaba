@@ -43,6 +43,7 @@ const TableManagement = () => {
     const [customerPhone, setCustomerPhone] = useState('');
     const [showPhonePrompt, setShowPhonePrompt] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [processingPayment, setProcessingPayment] = useState(false);
     const receiptRef = useRef(null);
 
     useEffect(() => {
@@ -188,6 +189,8 @@ const TableManagement = () => {
     };
 
     const processPayment = async (orderId) => {
+        if (processingPayment) return;
+        setProcessingPayment(true);
         const token = localStorage.getItem('restroToken');
         try {
             const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
@@ -210,6 +213,8 @@ const TableManagement = () => {
             }
         } catch (err) {
             toast.error('Payment error');
+        } finally {
+            setProcessingPayment(false);
         }
     };
 
@@ -458,6 +463,7 @@ const TableManagement = () => {
                 customerPhone={customerPhone}
                 setCustomerPhone={setCustomerPhone}
                 onProcessPayment={processPayment}
+                processingPayment={processingPayment}
                 onWhatsApp={handleWhatsApp}
                 onPrint={(order) => { performAutoCapture(order.id); handlePrint(order); }}
                 onDownload={(order) => { performAutoCapture(order.id); handleDownload(order); }}

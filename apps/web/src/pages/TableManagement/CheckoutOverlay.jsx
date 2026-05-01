@@ -12,12 +12,13 @@ const CheckoutOverlay = ({
     setShowPhonePrompt, 
     customerPhone, 
     setCustomerPhone, 
-    onProcessPayment, 
-    onWhatsApp, 
-    onPrint, 
+    onProcessPayment,
+    onWhatsApp,
+    onPrint,
     onDownload, 
     onSplit, 
-    onClose 
+    onClose,
+    processingPayment
 }) => {
     if (!order) return null;
 
@@ -120,9 +121,23 @@ const CheckoutOverlay = ({
                     ) : null}
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                        <button onClick={() => onProcessPayment(order.id)} className="ol-action-btn pay" style={{ height: 'auto', padding: '1rem', gridColumn: 'span 2' }}>
-                            <DollarSign size={18} />
-                            <span>Confirm {paymentMethod === 'UPI' ? 'Online' : paymentMethod} Payment</span>
+                        <button 
+                            onClick={() => onProcessPayment(order.id)} 
+                            className="ol-action-btn pay" 
+                            disabled={processingPayment}
+                            style={{ height: 'auto', padding: '1rem', gridColumn: 'span 2', opacity: processingPayment ? 0.7 : 1, position: 'relative' }}
+                        >
+                            {processingPayment ? (
+                                <>
+                                    <div className="animate-spin" style={{ width: '18px', height: '18px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                                    <span>Processing...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <DollarSign size={18} />
+                                    <span>Confirm {paymentMethod === 'UPI' ? 'Online' : paymentMethod} Payment</span>
+                                </>
+                            )}
                         </button>
                         
                         <button onClick={() => onWhatsApp(order)} className="ol-action-btn" style={{ height: 'auto', padding: '1rem', background: '#25D366', color: 'white', border: 'none' }}>

@@ -349,7 +349,10 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
                     <div className="order-num">#{order.id.slice(-4).toUpperCase()}</div>
                     <div className="table-info">
                         <Utensils size={12} />
-                        Table {order.table?.number || 'Walk-in'}
+                        {order.type === 'TAKEAWAY' ? 'Parcel / Takeaway' : `Table ${order.table?.number || 'Walk-in'}`}
+                        {order.type === 'TAKEAWAY' && (
+                            <span className="parcel-badge" style={{ marginLeft: '0.5rem', background: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>PARCEL</span>
+                        )}
                     </div>
                 </div>
                 <div className={`timer ${urgencyClass}`}>
