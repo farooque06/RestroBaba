@@ -11,7 +11,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     const isPublicAuthRoute = req.path.startsWith('/api/auth/') &&
         ['/login', '/verify-totp', '/totp-setup-qr', '/resolve-shop-code'].some(p => req.path.includes(p));
 
-    if (req.path === '/health' || isPublicAuthRoute) {
+    if (req.path.startsWith('/health') || isPublicAuthRoute) {
         return next();
     }
 

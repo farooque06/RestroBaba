@@ -17,7 +17,7 @@ const TableCard = ({
             className={`tm-card status-${table.status.toLowerCase()}`}
             style={{ animationDelay: `${idx * 0.05}s` }}
         >
-            {/* Card top */}
+            {/* ── Card Header ── */}
             <div className="tm-card-top">
                 <div>
                     <div className="tm-card-title">Table {table.number}</div>
@@ -25,7 +25,7 @@ const TableCard = ({
                         <Users size={14} strokeWidth={2.5} />
                         <span>Seats {table.capacity}</span>
                         {table.status === 'Occupied' && table.activeOrderCreatedAt && (
-                            <div className="tm-card-timer animate-pulse-gentle">
+                            <div className="tm-card-timer">
                                 <Clock size={12} strokeWidth={3} />
                                 <span>
                                     {Math.floor((currentTime - new Date(table.activeOrderCreatedAt)) / (1000 * 60))}m
@@ -36,93 +36,88 @@ const TableCard = ({
                 </div>
                 <div className="tm-card-icons">
                     <button 
-                        onClick={() => onQrClick(table)} 
+                        onClick={(e) => { e.stopPropagation(); onQrClick(table); }} 
                         className="tm-card-icon-btn" 
-                        title="QR Code"
+                        title="Scanner QR"
                     >
-                        <QrCode size={18} strokeWidth={2.5} />
+                        <QrCode size={16} strokeWidth={2.5} />
                     </button>
                     {table.status === 'Occupied' && (
                         <button 
-                            onClick={() => onTransferClick(table)} 
+                            onClick={(e) => { e.stopPropagation(); onTransferClick(table); }} 
                             className="tm-card-icon-btn" 
-                            title="Transfer Guest"
                         >
-                            <MoveHorizontal size={18} strokeWidth={2.5} />
+                            <MoveHorizontal size={16} strokeWidth={2.5} />
                         </button>
                     )}
                     <button 
-                        onClick={() => onDeleteClick(table.id)} 
+                        onClick={(e) => { e.stopPropagation(); onDeleteClick(table.id); }} 
                         className="tm-card-icon-btn danger" 
-                        title="Delete"
                     >
-                        <Trash2 size={18} strokeWidth={2.5} />
+                        <Trash2 size={16} strokeWidth={2.5} />
                     </button>
                 </div>
             </div>
 
-            {/* Status */}
+            {/* ── Status Indicator ── */}
             <div className="tm-card-status">
                 <span className={`status-dot ${table.status === 'Available' ? 'green' : table.status === 'Occupied' ? 'blue' : 'amber'}`} />
-                <span style={{ fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.7rem' }}>
-                    {table.status === 'Available' ? 'Ready & Available' : table.status === 'Occupied' ? 'Active Table' : 'Reserved'}
+                <span style={{ fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-main)' }}>
+                    {table.status === 'Available' ? 'Ready & Available' : table.status === 'Occupied' ? 'Active Guests' : 'Reserved Slot'}
                 </span>
             </div>
 
-            {/* Actions */}
+            {/* ── Actions ── */}
             <div className="tm-card-actions">
                 {table.status === 'Available' ? (
-                    <div style={{ display: 'flex', gap: '0.75rem', width: '100%', alignItems: 'center' }}>
+                    <>
                         <button
                             onClick={() => onSelectTable(table)}
                             className="tm-action-btn seat"
-                            style={{ flex: 1 }}
+                            style={{ flex: 2 }}
                         >
-                            <Utensils size={18} />
-                            <span>Take Order</span>
+                            <Utensils size={16} strokeWidth={2.5} />
+                            <span>Quick Order</span>
                         </button>
                         <button
                             onClick={() => onToggleReservation(table)}
                             className="tm-action-btn view"
-                            title="Reserve"
-                            style={{ flex: '0 0 48px', padding: 0 }}
                         >
-                            <Calendar size={18} />
+                            <Calendar size={16} strokeWidth={2.5} />
                         </button>
-                    </div>
+                    </>
                 ) : table.status === 'Reserved' ? (
-                    <div style={{ display: 'flex', gap: '0.75rem', width: '100%', alignItems: 'center' }}>
+                    <>
                         <button
                             onClick={() => onSelectTable(table)}
                             className="tm-action-btn seat"
-                            style={{ flex: 1 }}
+                            style={{ flex: 2 }}
                         >
-                            <Utensils size={18} />
+                            <UserCheck size={16} strokeWidth={2.5} />
                             <span>Arrived</span>
                         </button>
                         <button
                             onClick={() => onToggleReservation(table)}
                             className="tm-action-btn view"
-                            title="Cancel Reservation"
-                            style={{ flex: '0 0 48px', padding: 0, color: '#ef4444' }}
+                            style={{ color: '#ef4444' }}
                         >
-                            <CalendarX size={18} />
+                            <CalendarX size={16} strokeWidth={2.5} />
                         </button>
-                    </div>
+                    </>
                 ) : (
                     <>
                         <button
                             onClick={() => onSelectTable(table)}
                             className="tm-action-btn view"
                         >
-                            <Edit2 size={16} />
+                            <Edit2 size={16} strokeWidth={2.5} />
                             <span>Modify</span>
                         </button>
                         <button
                             onClick={() => onHandleBill(table)}
                             className="tm-action-btn bill"
                         >
-                            <DollarSign size={18} />
+                            <DollarSign size={16} strokeWidth={3} />
                             <span>Checkout</span>
                         </button>
                     </>

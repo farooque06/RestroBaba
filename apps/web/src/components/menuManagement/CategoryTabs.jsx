@@ -30,7 +30,7 @@ const CategoryTabs = ({ categories, selectedCategory, onSelect, viewMode = 'clas
             >
                 All Dishes
             </button>
-            
+
             {selectedCategory !== 'All' && (
                 <div className="animate-fade" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '0.05em' }}>SHOWING</span>
@@ -41,7 +41,7 @@ const CategoryTabs = ({ categories, selectedCategory, onSelect, viewMode = 'clas
             )}
 
             <div style={{ width: '220px' }}>
-                <Dropdown 
+                <Dropdown
                     placeholder="Find Category..."
                     isSearchable={true}
                     options={categories.filter(c => c !== 'All')}

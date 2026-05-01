@@ -328,7 +328,7 @@ const KitchenDisplay = () => {
 };
 
 // ── ORDER CARD COMPONENT ──
-const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, currentTime, onRefresh, togglingItems = {}, setTogglingItems = () => {} }) => {
+const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, currentTime, onRefresh, togglingItems = {}, setTogglingItems = () => { } }) => {
     const ageInMins = Math.floor((currentTime - new Date(order.displayTime)) / 1000 / 60);
 
     let urgencyClass = '';
@@ -372,7 +372,7 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
                     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt) || a.id.localeCompare(b.id))
                     .map((item) => {
                         const isToggling = togglingItems[item.id];
-                        const displayReady = isToggling 
+                        const displayReady = isToggling
                             ? (item.status !== 'Ready') // Optimistic: flip the status visually
                             : (item.status === 'Ready');
                         return (
@@ -414,7 +414,7 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
                                                     toast.success(newStatus === 'Ready' ? 'Item Prepared ✓' : 'Item Reset');
                                                 }
                                             } finally {
-                                                setTogglingItems(prev => { const n = {...prev}; delete n[item.id]; return n; });
+                                                setTogglingItems(prev => { const n = { ...prev }; delete n[item.id]; return n; });
                                                 if (onRefresh) onRefresh();
                                             }
                                         }}

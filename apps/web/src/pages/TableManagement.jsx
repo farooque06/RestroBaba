@@ -354,6 +354,9 @@ const TableManagement = () => {
     const occCount = tables.filter(t => t.status === 'Occupied').length;
     const resCount = tables.filter(t => t.status === 'Reserved').length;
 
+    const maxTables = user?.client?.subscriptionPlan?.maxTables || 10;
+    const capacityPercentage = Math.min((tables.length / maxTables) * 100, 100);
+
     if (loading) {
         return (
             <div className="page-container flex-center" style={{ height: '100vh' }}>
@@ -370,34 +373,37 @@ const TableManagement = () => {
                 <div className="tm-header-top">
                     <div>
                         <h1>Floor Plan</h1>
-                        <p className="tm-subtitle" style={{ fontSize: '1rem' }}>
-                            Live table management for <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{user?.clientName}</span>
+                        <p className="tm-subtitle">
+                            Live occupancy tracking for <strong style={{ color: 'var(--primary)' }}>{user?.clientName}</strong>
                         </p>
                     </div>
                     <button 
                         onClick={() => setIsModalOpen(true)} 
                         className="tm-add-btn" 
-                        disabled={tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10)}
-                        style={{ height: '48px', padding: '0 1.5rem', borderRadius: '14px' }}
+                        disabled={tables.length >= maxTables}
+                        style={{ height: '52px', padding: '0 1.75rem', borderRadius: '16px' }}
                     >
-                        <Plus size={18} />
-                        <span>Add New Table</span>
+                        <Plus size={20} strokeWidth={3} />
+                        <span>Add Table</span>
                     </button>
                 </div>
-                <div className="plan-limit-container" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(10px)', border: '1px solid var(--glass-border)' }}>
-                    <div className="plan-limit-text" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+                
+                <div className="plan-limit-container">
+                    <div className="plan-limit-text">
                         <span>Restaurant Capacity</span>
-                        <span>
-                            <strong style={{ color: tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10) ? 'var(--danger)' : 'var(--text-main)' }}>{tables.length}</strong> / {user?.client?.subscriptionPlan?.maxTables || 10}
+                        <span style={{ color: tables.length >= maxTables ? 'var(--danger)' : '#fff' }}>
+                            {tables.length} / {maxTables}
                         </span>
                     </div>
-                    <div className="plan-limit-bar" style={{ height: '8px', marginTop: '0.75rem' }}>
-                        <div style={{ 
-                            width: `${Math.min((tables.length / (user?.client?.subscriptionPlan?.maxTables || 10)) * 100, 100)}%`, 
-                            background: tables.length >= (user?.client?.subscriptionPlan?.maxTables || 10) ? 'var(--danger)' : 'var(--primary-gradient)',
-                            transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
-                            boxShadow: '0 0 10px var(--primary-glow)'
-                        }} className="plan-limit-fill" />
+                    <div className="plan-limit-bar">
+                        <div 
+                            className="plan-limit-fill"
+                            style={{ 
+                                width: `${capacityPercentage}%`, 
+                                background: tables.length >= maxTables ? '#ef4444' : 'linear-gradient(to right, #d4a853, #f59e0b)',
+                                boxShadow: tables.length >= maxTables ? '0 0 15px rgba(239, 68, 68, 0.4)' : '0 0 15px rgba(212, 168, 83, 0.4)'
+                            }} 
+                        />
                     </div>
                 </div>
             </div>

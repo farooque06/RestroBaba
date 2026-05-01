@@ -40,6 +40,33 @@ const httpServer = createServer(app);
 // Initialize Socket.io
 initSocket(httpServer);
 
+// --- Fast Health Checks (Bypass security overhead for pinger services) ---
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'RestroBaBa API is running', 
+        multiTenant: true, 
+        timestamp: new Date().toISOString() 
+    });
+});
+
+app.get('/health/deep', async (req, res) => {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        res.json({ 
+            status: 'Healthy', 
+            database: 'Connected', 
+            timestamp: new Date().toISOString() 
+        });
+    } catch (err: any) {
+        logger.error(`[HEALTH CHECK FAILED]: ${err.message}`);
+        res.status(503).json({ 
+            status: 'Unhealthy', 
+            database: 'Disconnected', 
+            error: err.message 
+        });
+    }
+});
+
 // Security Middlewares
 app.use(helmet());
 // CORS Configuration
@@ -87,9 +114,6 @@ declare global {
 }
 
 // Public & Auth Routes (Rate Limited)
-app.get('/health', (req, res) => {
-    res.json({ status: 'RestroBaBa API is running', multiTenant: true });
-});
 app.use('/api/auth', limiter, authRoutes);
 app.use('/api/public', limiter, publicRoutes);
 app.use('/api/leads', leadsRoutes);

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    LayoutDashboard, 
-    UtensilsCrossed, 
-    Loader2, 
-    BarChart3, 
-    TrendingUp, 
-    ChevronRight, 
+import {
+    LayoutDashboard,
+    UtensilsCrossed,
+    Loader2,
+    BarChart3,
+    TrendingUp,
+    ChevronRight,
     Package,
     Building2,
     ShieldCheck,
@@ -59,7 +59,7 @@ const Dashboard = () => {
                     fetch(`${API_BASE_URL}/api/stats/super-admin`, { headers }),
                     fetch(`${API_BASE_URL}/api/activity?type=PLATFORM&limit=10`, { headers })
                 ]);
-                
+
                 const [statsData, activityData] = await Promise.all([
                     statsRes.json(),
                     activityRes.json()
@@ -67,14 +67,14 @@ const Dashboard = () => {
 
                 if (statsRes.ok) setSuperStats(statsData);
                 if (activityRes.ok) setGlobalActivity(activityData.logs || []);
-                
+
                 setLoading(false);
                 return;
             }
 
             // Parallel fetching for high performance (ADMIN)
             const canAccessShifts = ['ADMIN', 'MANAGER'].includes(user?.role) && hasPlan(user, 'GOLD');
-            
+
             const fetchPromises = [
                 fetch(`${API_BASE_URL}/api/stats`, { headers }),
                 fetch(`${API_BASE_URL}/api/stats/daily-sales`, { headers }),
@@ -82,7 +82,7 @@ const Dashboard = () => {
                 fetch(`${API_BASE_URL}/api/stats/staff-performance`, { headers }),
                 fetch(`${API_BASE_URL}/api/reports/profit`, { headers }),
             ];
-            
+
             if (canAccessShifts) {
                 fetchPromises.push(fetch(`${API_BASE_URL}/api/shifts/current`, { headers }));
             }
@@ -141,7 +141,7 @@ const Dashboard = () => {
                         <h1>Platform Intelligence</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginTop: '4px' }}>Global performance metrics across all node clusters.</p>
                     </div>
-                    
+
                     <div className="sa-header-actions">
                         <Link to="/clients" className="nav-item active" style={{ textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Building2 size={18} />
@@ -233,10 +233,10 @@ const Dashboard = () => {
                                 <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No recent activity detected.</p>
                             ) : globalActivity.map((log, idx) => (
                                 <div key={log.id || idx} className="sa-activity-item premium-glass">
-                                    <div style={{ 
-                                        padding: '8px', borderRadius: '10px', 
+                                    <div style={{
+                                        padding: '8px', borderRadius: '10px',
                                         background: log.action.includes('CREATE') ? 'rgba(16,185,129,0.1)' : 'rgba(56,189,248,0.1)',
-                                        color: log.action.includes('CREATE') ? 'var(--success)' : '#38bdf8' 
+                                        color: log.action.includes('CREATE') ? 'var(--success)' : '#38bdf8'
                                     }}>
                                         <History size={16} />
                                     </div>
@@ -255,8 +255,8 @@ const Dashboard = () => {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                         {/* Urgent Interventions */}
-                         {(superStats.clientKPIs.upcomingRenewals.length > 0 || superStats.clientKPIs.pendingPayments.length > 0) && (
+                        {/* Urgent Interventions */}
+                        {(superStats.clientKPIs.upcomingRenewals.length > 0 || superStats.clientKPIs.pendingPayments.length > 0) && (
                             <div className="premium-glass" style={{ padding: '2rem', border: '1px solid rgba(239,68,68,0.15)' }}>
                                 <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--danger)' }}>Urgent Interventions</h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -351,7 +351,7 @@ const Dashboard = () => {
                     <div className="dashboard-section-indicator" />
                     <h3 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Quick Operations</h3>
                 </div>
-                
+
                 <div className="dashboard-ops-grid">
                     {[
                         { label: 'New Order', icon: UtensilsCrossed, path: '/tables', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER' },
@@ -361,16 +361,16 @@ const Dashboard = () => {
                         { label: 'Staff Ops', icon: Users, path: '/staff', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER' },
                         { label: 'Analytics', icon: BarChart3, path: '/reports', color: 'var(--success)', variant: 'success', minPlan: 'SILVER' },
                     ].filter(action => hasPlan(user, action.minPlan)).map((action, idx) => (
-                        <Link 
-                            key={idx} 
-                            to={action.path} 
-                            className="premium-glass dashboard-ops-card" 
-                            style={{ 
-                                padding: '1.25rem', 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                alignItems: 'center', 
-                                gap: '0.75rem', 
+                        <Link
+                            key={idx}
+                            to={action.path}
+                            className="premium-glass dashboard-ops-card"
+                            style={{
+                                padding: '1.25rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.75rem',
                                 textDecoration: 'none',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 cursor: 'pointer',
@@ -389,9 +389,9 @@ const Dashboard = () => {
                                 e.currentTarget.style.boxShadow = 'none';
                             }}
                         >
-                            <div style={{ 
-                                padding: '10px', 
-                                borderRadius: '12px', 
+                            <div style={{
+                                padding: '10px',
+                                borderRadius: '12px',
                                 background: idx === 0 ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
                                 color: action.color,
                                 marginBottom: '0.25rem'
@@ -399,19 +399,19 @@ const Dashboard = () => {
                                 <action.icon size={22} />
                             </div>
                             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', textAlign: 'center' }}>{action.label}</span>
-                            
+
                             {/* Subtle background glow for first item (conversion focus) */}
                             {idx === 0 && (
-                                <div style={{ 
-                                    position: 'absolute', 
-                                    top: '-20%', 
-                                    right: '-20%', 
-                                    width: '60%', 
-                                    height: '60%', 
-                                    background: 'var(--primary)', 
-                                    filter: 'blur(30px)', 
-                                    opacity: 0.1, 
-                                    zIndex: -1 
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-20%',
+                                    right: '-20%',
+                                    width: '60%',
+                                    height: '60%',
+                                    background: 'var(--primary)',
+                                    filter: 'blur(30px)',
+                                    opacity: 0.1,
+                                    zIndex: -1
                                 }} />
                             )}
                         </Link>
@@ -452,7 +452,7 @@ const Dashboard = () => {
                         </span>
                         <span className="badge badge-success">Gross Sales</span>
                     </div>
-                    
+
                     <div className="stat-card analytics" style={{ background: 'var(--bg-main)' }}>
                         <span className="stat-label">Inventory Loss (Waste)</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -501,13 +501,13 @@ const Dashboard = () => {
                                             </span>
                                         </div>
                                         <div className="ranking-progress-bg">
-                                            <div 
-                                                className="ranking-progress-fill" 
-                                                style={{ 
+                                            <div
+                                                className="ranking-progress-fill"
+                                                style={{
                                                     width: `${widthPercent}%`,
                                                     background: 'var(--primary-gradient)',
                                                     boxShadow: '0 2px 10px var(--primary-glow)'
-                                                }} 
+                                                }}
                                             />
                                         </div>
                                     </div>
@@ -590,9 +590,9 @@ const Dashboard = () => {
                 }}>
                     <UtensilsCrossed size={40} color="var(--primary)" />
                 </div>
-                <h2 style={{ 
-                    marginBottom: '1rem', 
-                    fontSize: '1.75rem', 
+                <h2 style={{
+                    marginBottom: '1rem',
+                    fontSize: '1.75rem',
                     fontWeight: 800,
                     letterSpacing: '-0.02em',
                     background: 'var(--primary-gradient)',
@@ -601,10 +601,10 @@ const Dashboard = () => {
                 }}>
                     A Passion for Perfect Service
                 </h2>
-                <p style={{ 
-                    color: 'var(--text-muted)', 
-                    maxWidth: '500px', 
-                    fontSize: '1rem', 
+                <p style={{
+                    color: 'var(--text-muted)',
+                    maxWidth: '500px',
+                    fontSize: '1rem',
                     lineHeight: 1.7,
                     fontStyle: 'italic',
                     margin: '0 auto 2rem'

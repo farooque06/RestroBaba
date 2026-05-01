@@ -110,7 +110,7 @@ const Billing = () => {
                 unit: 'mm',
                 format: [80, canvas.height * 80 / canvas.width] // Match receipt width
             });
-            
+
             pdf.addImage(imgData, 'PNG', 0, 0, 80, canvas.height * 80 / canvas.width);
             pdf.save(`Receipt-${order.id.slice(-6).toUpperCase()}.pdf`);
             setPrintingOrder(null);
@@ -265,14 +265,14 @@ const Billing = () => {
             {/* Operational Controls */}
             <div className="billing-controls">
                 <div className="view-toggle">
-                    <button 
+                    <button
                         className={`toggle-btn ${activeTab === 'pending' ? 'active' : ''}`}
                         onClick={() => setActiveTab('pending')}
                     >
                         <AlertCircle size={16} />
                         Pending Payment
                     </button>
-                    <button 
+                    <button
                         className={`toggle-btn ${activeTab === 'paid' ? 'active' : ''}`}
                         onClick={() => setActiveTab('paid')}
                     >
@@ -298,17 +298,17 @@ const Billing = () => {
                     {activeTab === 'pending' && (
                         <div className="billing-grid-mode animate-fade">
                             {filteredPending.map(order => (
-                                <div 
-                                    key={order.id} 
+                                <div
+                                    key={order.id}
                                     className={`billing-table-card ${printingOrder?.id === order.id ? 'selected' : ''}`}
                                     onClick={() => setPrintingOrder(order)}
                                 >
                                     <div className="table-card-header">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{ 
-                                                width: '40px', 
-                                                height: '40px', 
-                                                borderRadius: '10px', 
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: '10px',
                                                 background: 'var(--primary-glow)',
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -323,20 +323,20 @@ const Billing = () => {
                                         </div>
                                         <div className="table-amount">{formatCurrency(order.totalAmount)}</div>
                                     </div>
-                                    
+
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '8px' }}>
                                         {order.items.length} items · <Clock size={10} style={{ verticalAlign: 'middle' }} /> {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                                        <button 
+                                        <button
                                             onClick={(e) => { e.stopPropagation(); processPayment(order.id); }}
                                             className="nav-item active"
                                             style={{ flex: 1, padding: '0.6rem', fontSize: '0.75rem', border: 'none', borderRadius: '8px' }}
                                         >
                                             Quick Pay
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={(e) => { e.stopPropagation(); handlePrint(order); }}
                                             className="premium-glass"
                                             style={{ padding: '0.6rem', borderRadius: '8px', cursor: 'pointer' }}
@@ -428,7 +428,7 @@ const Billing = () => {
                             </div>
                         )}
                     </div>
-                    
+
                     <div style={{ flex: 1, overflowY: 'auto', background: activeTab === 'pending' ? 'var(--bg-card)' : 'white' }}>
                         {printingOrder ? (
                             <div style={{ padding: '1.5rem' }}>
@@ -438,7 +438,7 @@ const Billing = () => {
                                         <div style={{ marginBottom: '1rem' }}>
                                             {printingOrder.customer ? (
                                                 <div className="premium-glass" style={{
-                                                    padding: '0.75rem', 
+                                                    padding: '0.75rem',
                                                     borderRadius: '10px',
                                                     display: 'flex',
                                                     justifyContent: 'space-between',
@@ -455,22 +455,22 @@ const Billing = () => {
                                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{printingOrder.customer.phone}</div>
                                                         </div>
                                                     </div>
-                                                    <button 
+                                                    <button
                                                         onClick={() => linkCustomerToOrder(printingOrder.id, null)}
-                                                        className="btn-ghost" 
+                                                        className="btn-ghost"
                                                         style={{ padding: '4px', minWidth: 'auto' }}
                                                     >
                                                         <X size={14} />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <button 
+                                                <button
                                                     onClick={() => setShowCustomerSearch(true)}
-                                                    className="btn-ghost" 
-                                                    style={{ 
-                                                        width: '100%', 
-                                                        padding: '0.75rem', 
-                                                        border: '1px dashed var(--border)', 
+                                                    className="btn-ghost"
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '0.75rem',
+                                                        border: '1px dashed var(--border)',
                                                         borderRadius: '10px',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -492,7 +492,7 @@ const Billing = () => {
                                         client={user?.client}
                                     />
                                 </div>
-                                
+
                                 {activeTab === 'pending' && (
                                     <div style={{ marginTop: '2rem' }}>
                                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '1rem', fontWeight: 700, textTransform: 'uppercase' }}>Select Payment Method</span>
@@ -502,9 +502,9 @@ const Billing = () => {
                                                 { id: 'Card', label: 'Card', icon: CreditCard },
                                                 { id: 'UPI', label: 'Online', icon: QrCode }
                                             ].map(method => (
-                                                <button 
+                                                <button
                                                     key={method.id}
-                                                    className={`payment-method-btn ${ (selectedMethods[printingOrder.id] || 'Cash') === method.id ? 'active' : ''}`}
+                                                    className={`payment-method-btn ${(selectedMethods[printingOrder.id] || 'Cash') === method.id ? 'active' : ''}`}
                                                     onClick={() => setSelectedMethods({ ...selectedMethods, [printingOrder.id]: method.id })}
                                                 >
                                                     <method.icon size={20} />
@@ -515,9 +515,9 @@ const Billing = () => {
 
                                         {/* QR Code Display for Online (UPI) */}
                                         {(selectedMethods[printingOrder.id] || 'Cash') === 'UPI' && (
-                                            <div className="premium-glass animate-fade" style={{ 
-                                                padding: '1rem', 
-                                                marginBottom: '1.5rem', 
+                                            <div className="premium-glass animate-fade" style={{
+                                                padding: '1rem',
+                                                marginBottom: '1.5rem',
                                                 textAlign: 'center',
                                                 border: '1px solid var(--primary)',
                                                 background: 'rgba(59, 130, 246, 0.05)'
@@ -541,7 +541,7 @@ const Billing = () => {
                                         {showPhonePrompt ? (
                                             <div style={{ marginBottom: '1.5rem' }} className="animate-fade">
                                                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Enter Customer Phone for WhatsApp</label>
-                                                <input 
+                                                <input
                                                     type="tel"
                                                     placeholder="98XXXXXXXX"
                                                     className="form-input"
@@ -553,7 +553,7 @@ const Billing = () => {
                                             </div>
                                         ) : null}
 
-                                        <button 
+                                        <button
                                             onClick={() => processPayment(printingOrder.id)}
                                             className="nav-item active"
                                             style={{ width: '100%', padding: '1rem', fontSize: '1rem', border: 'none', borderRadius: '12px' }}
@@ -596,15 +596,15 @@ const Billing = () => {
 
             {/* Hidden Receipt Area for Printing - Improved for capture and print */}
             {createPortal(
-                <div 
+                <div
                     id="printable-receipt-container"
-                    style={{ 
-                        position: 'fixed', 
-                        top: 0, 
-                        left: 0, 
-                        width: '80mm', 
-                        zIndex: -1, 
-                        opacity: 0, 
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '80mm',
+                        zIndex: -1,
+                        opacity: 0,
                         pointerEvents: 'none',
                         background: 'white'
                     }}
