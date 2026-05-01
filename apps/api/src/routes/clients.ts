@@ -141,6 +141,55 @@ router.post('/', authorize(['SUPER_ADMIN']), async (req: Request, res: Response)
                 }
             });
 
+            // If marked as PAID during onboarding, create an initial ledger entry
+            if (req.body.paymentStatus === 'PAID' && subPlan) {
+                let baseAmount = subPlan.monthlyPrice;
+                if (planDuration === '12m') baseAmount = subPlan.yearlyPrice;
+                else if (planDuration === '3m') baseAmount = subPlan.quarterlyPrice;
+
+                await tx.subscriptionPayment.create({
+                    data: {
+                        clientId: client.id,
+                        planTier: plan || 'SILVER',
+                        planDuration: planDuration || '1m',
+                        baseAmount: baseAmount,
+                        discount: 0,
+                        totalPayable: baseAmount,
+                        amountPaid: baseAmount,
+                        balance: 0,
+                        method: 'Initial Setup',
+                        remarks: `Onboarding Payment [Covers until ${sEnd.toLocaleDateString()}]`,
+                        date: new Date()
+                    }
+                });
+            } else if (req.body.paymentStatus === 'PENDING' && subPlan) {
+                 let baseAmount = subPlan.monthlyPrice;
+                 if (planDuration === '12m') baseAmount = subPlan.yearlyPrice;
+                 else if (planDuration === '3m') baseAmount = subPlan.quarterlyPrice;
+                 
+                 // Update client balance to reflect the pending debt
+                 await tx.client.update({
+                     where: { id: client.id },
+                     data: { balance: baseAmount }
+                 });
+                 
+                 await tx.subscriptionPayment.create({
+                    data: {
+                        clientId: client.id,
+                        planTier: plan || 'SILVER',
+                        planDuration: planDuration || '1m',
+                        baseAmount: baseAmount,
+                        discount: 0,
+                        totalPayable: baseAmount,
+                        amountPaid: 0,
+                        balance: baseAmount,
+                        method: 'Pending Invoice',
+                        remarks: `Initial Onboarding - Payment Pending [For: ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}]`,
+                        date: new Date()
+                    }
+                });
+            }
+
             return client;
         });
 
@@ -412,6 +461,129 @@ router.patch('/my-shop/upgrade', authorize(['ADMIN']), async (req: any, res: Res
     } catch (error) {
         console.error('Plan upgrade/renewal error:', error);
         res.status(500).json({ error: 'Internal server error during upgrade/renewal' });
+    }
+});
+
+// ─── Get Client Payments (Paginated) ─────────────────────────────────────────
+router.get('/:id/payments', authorize(['SUPER_ADMIN']), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const limit = parseInt(req.query.limit as string) || 5; // Default to small chunk for performance
+    const page = parseInt(req.query.page as string) || 1;
+    
+    try {
+        const [payments, total] = await Promise.all([
+            prisma.subscriptionPayment.findMany({
+                where: { clientId: id as string },
+                orderBy: { date: 'desc' },
+                take: limit,
+                skip: (page - 1) * limit
+            }),
+            prisma.subscriptionPayment.count({
+                where: { clientId: id as string }
+            })
+        ]);
+
+        res.json({
+            payments,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch payments' });
+    }
+});
+
+// ─── Record Client Payment ─────────────────────────────────────────────────
+router.post('/:id/payments', authorize(['SUPER_ADMIN']), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { 
+        amountPaid, 
+        method, 
+        transactionId, 
+        remarks, 
+        extendSubscription, 
+        extensionMonths,
+        planTier,
+        planDuration,
+        baseAmount,
+        discount,
+        totalPayable,
+        billingMonth
+    } = req.body;
+
+    try {
+        const client = await prisma.client.findUnique({ where: { id: id as string } });
+        if (!client) return res.status(404).json({ error: 'Client not found' });
+
+        const balanceAdjustment = parseFloat((totalPayable - amountPaid).toFixed(2));
+
+        const result = await prisma.$transaction(async (tx) => {
+            // 2. Calculate new subscription end date
+            let newSubscriptionEnd = client.subscriptionEnd;
+            let coverageRemark = billingMonth ? ` [For: ${billingMonth}]` : "";
+
+            if (extendSubscription && extensionMonths) {
+                const current = client.subscriptionEnd ? new Date(client.subscriptionEnd) : new Date();
+                const now = new Date();
+                const baseDate = current > now ? current : now;
+                
+                const fresh = new Date(baseDate);
+                fresh.setMonth(fresh.getMonth() + parseInt(extensionMonths));
+                newSubscriptionEnd = fresh;
+                
+                coverageRemark = ` [Covers until ${newSubscriptionEnd.toLocaleDateString()}]`;
+            }
+
+            // 1. Create payment record
+            const payment = await tx.subscriptionPayment.create({
+                data: {
+                    clientId: id as string,
+                    planTier,
+                    planDuration,
+                    baseAmount: parseFloat(baseAmount || 0),
+                    discount: parseFloat(discount || 0),
+                    totalPayable: parseFloat(totalPayable || 0),
+                    amountPaid: parseFloat(amountPaid || 0),
+                    balance: balanceAdjustment,
+                    method,
+                    transactionId,
+                    remarks: (remarks || "") + coverageRemark,
+                    date: new Date()
+                }
+            });
+
+            // 3. Update client
+            const newTotalBalance = parseFloat((client.balance + balanceAdjustment).toFixed(2));
+            
+            const updatedClient = await tx.client.update({
+                where: { id: id as string },
+                data: {
+                    subscriptionEnd: newSubscriptionEnd,
+                    paymentStatus: newTotalBalance > 0 ? 'PENDING' : 'PAID',
+                    lastPaymentDate: new Date(),
+                    balance: { increment: balanceAdjustment }
+                }
+            });
+
+            await tx.activityLog.create({
+                data: {
+                    action: 'PAYMENT_RECORDED',
+                    details: `Recorded payment of ${amountPaid} (Plan: ${planTier}, Bal: ${balanceAdjustment})`,
+                    type: 'PLATFORM',
+                    userId: (req as any).user.userId,
+                    role: (req as any).user.role,
+                    clientId: id as string
+                }
+            });
+
+            return { payment, updatedClient };
+        });
+
+        res.status(201).json(result);
+    } catch (error) {
+        console.error('Payment record error:', error);
+        res.status(500).json({ error: 'Failed to record payment' });
     }
 });
 

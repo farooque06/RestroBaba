@@ -50,8 +50,10 @@ model Client {
   subscriptionEnd       DateTime?
   paymentStatus         String                 @default("PAID") // PAID, PENDING, OVERDUE
   lastPaymentDate       DateTime?              @default(now())
+  balance               Float                  @default(0) // Total outstanding debt
   qrCode                String?
   taxInvoices           TaxInvoice[]
+  subscriptionPayments  SubscriptionPayment[]
 }
 
 model SubscriptionPlan {
@@ -466,4 +468,28 @@ model TaxInvoice {
   @@index([clientId])
   @@index([fiscalYear])
   @@unique([invoiceNumber, clientId, fiscalYear])
+}
+
+model SubscriptionPayment {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  
+  planTier      String?  // Plan being paid for
+  planDuration  String?  // 1m, 3m, 12m
+  
+  baseAmount    Float    @default(0)
+  discount      Float    @default(0)
+  totalPayable  Float    @default(0)
+  amountPaid    Float    @default(0) // The actual cash received
+  balance       Float    @default(0) // Remaining amount if partial
+  
+  method        String   // Cash, Bank Transfer, eSewa, Khalti, QR, etc.
+  transactionId String?  // Reference ID from payment provider
+  date          DateTime @default(now())
+  remarks       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([clientId])
 }
