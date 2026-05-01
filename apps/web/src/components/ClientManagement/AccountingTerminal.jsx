@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, AlertTriangle, Calendar, Clock, Loader2 } from 'lucide-react';
+import { CreditCard, AlertTriangle, Calendar, Clock, Loader2, Search, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../../config';
 import { generateInvoice } from '../../utils/generateInvoice';
@@ -9,6 +9,8 @@ const AccountingTerminal = ({ isOpen, onClose, selectedClient, setSelectedClient
     const [paymentPage, setPaymentPage] = useState(1);
     const [hasMorePayments, setHasMorePayments] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
+    const [filterStartDate, setFilterStartDate] = useState('');
+    const [filterEndDate, setFilterEndDate] = useState('');
     const [paymentForm, setPaymentForm] = useState({
         amountPaid: '',
         method: 'Bank Transfer',
@@ -40,10 +42,14 @@ const AccountingTerminal = ({ isOpen, onClose, selectedClient, setSelectedClient
         }
     }, [isOpen, selectedClient]);
 
-    const fetchPayments = async (id, page = 1, append = false) => {
+    const fetchPayments = async (id, page = 1, append = false, sDate = filterStartDate, eDate = filterEndDate) => {
         try {
             const token = localStorage.getItem('restroToken');
-            const response = await fetch(`${API_BASE_URL}/api/clients/${id}/payments?page=${page}&limit=5`, {
+            let url = `${API_BASE_URL}/api/clients/${id}/payments?page=${page}&limit=5`;
+            if (sDate) url += `&startDate=${sDate}`;
+            if (eDate) url += `&endDate=${eDate}`;
+
+            const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -384,6 +390,17 @@ const AccountingTerminal = ({ isOpen, onClose, selectedClient, setSelectedClient
                             </p>
                         </div>
                         <span className="badge badge-subtle">{clientPayments.length} Entries</span>
+                    </div>
+
+                    {/* Date Filters */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem', background: 'rgba(255,255,255,0.02)', padding: '0.5rem', borderRadius: '12px', border: '1px solid var(--border)', alignItems: 'center' }}>
+                        <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', outline: 'none' }} />
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
+                        <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', outline: 'none' }} />
+                        <button type="button" onClick={() => fetchPayments(selectedClient.id, 1, false, filterStartDate, filterEndDate)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}><Search size={12} /> Filter</button>
+                        {(filterStartDate || filterEndDate) && (
+                            <button type="button" onClick={() => { setFilterStartDate(''); setFilterEndDate(''); fetchPayments(selectedClient.id, 1, false, '', ''); }} style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef444433', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem' }}><X size={12} /> Clear</button>
+                        )}
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }} className="custom-scrollbar">

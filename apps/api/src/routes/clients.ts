@@ -467,19 +467,32 @@ router.patch('/my-shop/upgrade', authorize(['ADMIN']), async (req: any, res: Res
 // ─── Get Client Payments (Paginated) ─────────────────────────────────────────
 router.get('/:id/payments', authorize(['SUPER_ADMIN']), async (req: Request, res: Response) => {
     const { id } = req.params;
-    const limit = parseInt(req.query.limit as string) || 5; // Default to small chunk for performance
+    const limit = parseInt(req.query.limit as string) || 5;
     const page = parseInt(req.query.page as string) || 1;
+    const { startDate, endDate } = req.query;
     
     try {
+        const whereClause: any = { clientId: id as string };
+        
+        if (startDate || endDate) {
+            whereClause.date = {};
+            if (startDate) whereClause.date.gte = new Date(startDate as string);
+            if (endDate) {
+                const end = new Date(endDate as string);
+                end.setHours(23, 59, 59, 999);
+                whereClause.date.lte = end;
+            }
+        }
+
         const [payments, total] = await Promise.all([
             prisma.subscriptionPayment.findMany({
-                where: { clientId: id as string },
+                where: whereClause,
                 orderBy: { date: 'desc' },
                 take: limit,
                 skip: (page - 1) * limit
             }),
             prisma.subscriptionPayment.count({
-                where: { clientId: id as string }
+                where: whereClause
             })
         ]);
 
