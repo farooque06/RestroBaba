@@ -74,14 +74,15 @@ const TableCard = ({
                         <button
                             onClick={() => onSelectTable(table)}
                             className="tm-action-btn seat"
-                            style={{ flex: 2 }}
+                            style={{ flex: 3 }}
                         >
                             <Utensils size={16} strokeWidth={2.5} />
-                            <span>Quick Order</span>
+                            <span className="btn-text">Order</span>
                         </button>
                         <button
                             onClick={() => onToggleReservation(table)}
                             className="tm-action-btn view"
+                            style={{ flex: 1 }}
                         >
                             <Calendar size={16} strokeWidth={2.5} />
                         </button>
@@ -91,15 +92,15 @@ const TableCard = ({
                         <button
                             onClick={() => onSelectTable(table)}
                             className="tm-action-btn seat"
-                            style={{ flex: 2 }}
+                            style={{ flex: 3 }}
                         >
-                            <UserCheck size={16} strokeWidth={2.5} />
-                            <span>Arrived</span>
+                            <Users size={16} strokeWidth={2.5} />
+                            <span className="btn-text">Arrive</span>
                         </button>
                         <button
                             onClick={() => onToggleReservation(table)}
                             className="tm-action-btn view"
-                            style={{ color: '#ef4444' }}
+                            style={{ flex: 1, color: '#ef4444' }}
                         >
                             <CalendarX size={16} strokeWidth={2.5} />
                         </button>
@@ -109,16 +110,18 @@ const TableCard = ({
                         <button
                             onClick={() => onSelectTable(table)}
                             className="tm-action-btn view"
+                            style={{ flex: 1 }}
                         >
                             <Edit2 size={16} strokeWidth={2.5} />
-                            <span>Modify</span>
+                            <span className="btn-text">Edit</span>
                         </button>
                         <button
                             onClick={() => onHandleBill(table)}
                             className="tm-action-btn bill"
+                            style={{ flex: 1 }}
                         >
                             <DollarSign size={16} strokeWidth={3} />
-                            <span>Checkout</span>
+                            <span className="btn-text">Bill</span>
                         </button>
                     </>
                 )}

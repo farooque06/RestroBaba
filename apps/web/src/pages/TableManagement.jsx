@@ -393,52 +393,44 @@ const TableManagement = () => {
     return (
         <div className="page-container animate-fade">
             {/* Header */}
-            <div className="tm-header">
-                <div className="tm-header-top">
-                    <div>
+            <div className="tm-header-new">
+                <div className="tm-header-info">
+                    <div className="tm-title-row">
                         <h1>Floor Plan</h1>
-                        <p className="tm-subtitle">
-                            Live occupancy tracking for <strong style={{ color: 'var(--primary)' }}>{user?.clientName}</strong>
-                        </p>
+                        <div className="tm-capacity-pill">
+                            <div className="tm-capacity-bar-mini">
+                                <div 
+                                    className="tm-capacity-fill-mini" 
+                                    style={{ 
+                                        width: `${capacityPercentage}%`,
+                                        background: tables.length >= maxTables ? 'var(--danger)' : 'var(--primary)'
+                                    }} 
+                                />
+                            </div>
+                            <span>{tables.length}/{maxTables} <small>Tables</small></span>
+                        </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <button 
-                            onClick={() => setSelectedTable({ id: 'takeaway', number: 'Takeaway', type: 'TAKEAWAY' })} 
-                            className="tm-add-btn" 
-                            style={{ height: '52px', padding: '0 1.25rem', borderRadius: '16px', background: 'rgba(212, 168, 83, 0.1)', border: '1px solid rgba(212, 168, 83, 0.2)', color: 'var(--primary)', gap: '8px' }}
-                        >
-                            <ShoppingCart size={20} />
-                            <span>Parcel / Takeaway</span>
-                        </button>
-                        <button 
-                            onClick={() => setIsModalOpen(true)} 
-                            className="tm-add-btn" 
-                            disabled={tables.length >= maxTables}
-                            style={{ height: '52px', padding: '0 1.75rem', borderRadius: '16px' }}
-                        >
-                            <Plus size={20} strokeWidth={3} />
-                            <span>Add Table</span>
-                        </button>
-                    </div>
+                    <p className="tm-subtitle">
+                        Live occupancy for <strong style={{ color: 'var(--primary)' }}>{user?.clientName}</strong>
+                    </p>
                 </div>
-                
-                <div className="plan-limit-container">
-                    <div className="plan-limit-text">
-                        <span>Restaurant Capacity</span>
-                        <span style={{ color: tables.length >= maxTables ? 'var(--danger)' : '#fff' }}>
-                            {tables.length} / {maxTables}
-                        </span>
-                    </div>
-                    <div className="plan-limit-bar">
-                        <div 
-                            className="plan-limit-fill"
-                            style={{ 
-                                width: `${capacityPercentage}%`, 
-                                background: tables.length >= maxTables ? '#ef4444' : 'linear-gradient(to right, #d4a853, #f59e0b)',
-                                boxShadow: tables.length >= maxTables ? '0 0 15px rgba(239, 68, 68, 0.4)' : '0 0 15px rgba(212, 168, 83, 0.4)'
-                            }} 
-                        />
-                    </div>
+
+                <div className="tm-header-actions">
+                    <button 
+                        onClick={() => setSelectedTable({ id: 'takeaway', number: 'Takeaway', type: 'TAKEAWAY' })} 
+                        className="tm-action-pill takeaway"
+                    >
+                        <ShoppingCart size={18} />
+                        <span>Takeaway</span>
+                    </button>
+                    <button 
+                        onClick={() => setIsModalOpen(true)} 
+                        className="tm-action-pill add"
+                        disabled={tables.length >= maxTables}
+                    >
+                        <Plus size={18} />
+                        <span>Add Table</span>
+                    </button>
                 </div>
             </div>
 
