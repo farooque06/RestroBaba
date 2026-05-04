@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { DollarSign, CreditCard, QrCode, MessageCircle, Printer, Split, Download } from 'lucide-react';
+import { DollarSign, CreditCard, QrCode, MessageCircle, Printer, Split, Download, UserPlus, Users, X } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import CustomerSelectionModal from '../../components/CustomerSelectionModal';
 
 const CheckoutOverlay = ({ 
     order, 
@@ -17,22 +18,75 @@ const CheckoutOverlay = ({
     onPrint,
     onDownload, 
     onSplit, 
+    onLinkCustomer,
     onClose,
     processingPayment
 }) => {
+    const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+
     if (!order) return null;
 
     return createPortal(
         <div className="ol-payment-overlay">
             <div className="ol-payment-sheet">
-                <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '1px dashed var(--border)', paddingBottom: '1rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '1rem', borderBottom: '1px dashed var(--border)', paddingBottom: '0.75rem' }}>
                     <h2 style={{ fontSize: '1.3rem', marginBottom: '0.35rem' }}>Checkout</h2>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         Table {order.tableNumber} — Order #{order.id?.slice(-6).toUpperCase()}
                     </p>
                 </div>
 
-                <div style={{ marginBottom: '1.5rem', maxHeight: '200px', overflowY: 'auto' }}>
+                {/* Customer Section */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                    {order.customer ? (
+                        <div className="premium-glass" style={{
+                            padding: '0.75rem',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            border: '1px solid var(--primary-glow)',
+                            background: 'rgba(212, 168, 83, 0.05)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Users size={16} color="white" />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>{order.customer.name}</div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{order.customer.phone}</div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => onLinkCustomer(order.id, null)}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setShowCustomerSearch(true)}
+                            className="btn-ghost"
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                border: '1px dashed var(--border)',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                fontSize: '0.8rem',
+                                fontWeight: 700
+                            }}
+                        >
+                            <UserPlus size={16} /> Link Guest (Optional)
+                        </button>
+                    )}
+                </div>
+
+                <div style={{ marginBottom: '1rem', maxHeight: '150px', overflowY: 'auto' }}>
                     {order.items?.filter(i => i.status !== 'Waste').map(item => (
                         <div key={item.id} className="ol-item-row">
                             <span><span className="qty">{item.quantity}</span>{item.menuItem?.name || 'Unknown'}</span>
@@ -41,7 +95,7 @@ const CheckoutOverlay = ({
                     ))}
                 </div>
 
-                <div style={{ borderTop: '2px solid var(--border)', paddingTop: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ borderTop: '2px solid var(--border)', paddingTop: '0.75rem', marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary)' }}>
                         <span>Total</span>
                         <span>{formatCurrency(order.totalAmount ?? 0)}</span>
@@ -92,7 +146,7 @@ const CheckoutOverlay = ({
                             </div>
                             {user?.client?.qrCode ? (
                                 <div style={{ background: 'white', padding: '8px', borderRadius: '10px', display: 'inline-block' }}>
-                                    <img src={user.client.qrCode} alt="Online Payment QR" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+                                    <img src={user.client.qrCode} alt="Online Payment QR" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
                                 </div>
                             ) : (
                                 <div style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
@@ -161,11 +215,19 @@ const CheckoutOverlay = ({
                             <span>PDF</span>
                         </button>
                     </div>
-                    <button onClick={onClose} className="btn-ghost" style={{ width: '100%', marginTop: '1rem' }}>
+                    <button onClick={onClose} className="btn-ghost" style={{ width: '100%', marginTop: '0.75rem' }}>
                         Back
                     </button>
                 </div>
             </div>
+
+            {showCustomerSearch && (
+                <CustomerSelectionModal
+                    orderId={order.id}
+                    onClose={() => setShowCustomerSearch(false)}
+                    onSelect={(customer) => onLinkCustomer(order.id, customer.id)}
+                />
+            )}
         </div>,
         document.body
     );

@@ -127,20 +127,14 @@ const ShiftManagement = () => {
             {/* Header */}
             <div className="dashboard-header">
                 <div>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '0.5rem' }}>
+                    <h1>
                         Shift Management
                     </h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Track daily operations and reconcile financials</p>
                 </div>
-                <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.5rem', 
-                    padding: '0.75rem 1.25rem', 
+                <div className="status-badge" style={{ 
                     background: currentShift ? 'var(--primary-glow)' : 'rgba(239, 68, 68, 0.1)', 
                     color: currentShift ? 'var(--primary)' : '#ef4444', 
-                    borderRadius: '16px', 
-                    fontWeight: 700, 
                     border: `1px solid ${currentShift ? 'var(--primary)' : 'rgba(239, 68, 68, 0.3)'}`
                 }}>
                     <Clock size={18} />

@@ -332,9 +332,21 @@ const Billing = () => {
                                         <button
                                             onClick={(e) => { e.stopPropagation(); processPayment(order.id); }}
                                             className="nav-item active"
-                                            style={{ flex: 1, padding: '0.6rem', fontSize: '0.75rem', border: 'none', borderRadius: '8px' }}
+                                            style={{ flex: 2, padding: '0.6rem', fontSize: '0.75rem', border: 'none', borderRadius: '8px' }}
                                         >
                                             Quick Pay
+                                        </button>
+                                        <button
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setPrintingOrder(order);
+                                                setShowCustomerSearch(true);
+                                            }}
+                                            className="premium-glass"
+                                            style={{ padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', color: order.customer ? 'var(--primary)' : 'inherit' }}
+                                            title="Add/Edit Guest"
+                                        >
+                                            <UserPlus size={16} />
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handlePrint(order); }}
@@ -407,10 +419,19 @@ const Billing = () => {
                     )}
                 </div>
 
-                {/* Right Preview Pane (Desktop) */}
-                <div className="billing-preview-pane">
+                {/* Right Preview Pane (Desktop) / Overlay (Mobile) */}
+                <div className={`billing-preview-pane ${printingOrder ? 'mobile-show' : ''}`}>
                     <div className="preview-header">
-                        <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Live Receipt Preview</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <button 
+                                className="ot-mobile-only" 
+                                onClick={() => setPrintingOrder(null)}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}
+                            >
+                                <X size={20} />
+                            </button>
+                            <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Live Receipt Preview</span>
+                        </div>
                         {printingOrder && (
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button onClick={() => handlePrintWithCapture(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px' }} title="Print Now">

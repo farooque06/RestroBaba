@@ -12,10 +12,13 @@ import {
     ChevronRight,
     Edit2,
     Calendar,
-    ShoppingBag
+    ShoppingBag,
+    RotateCcw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
+import '../styles/components/customers.css';
+import '../styles/components/common.css';
 
 const CustomerManagement = () => {
     const [customers, setCustomers] = useState([]);
@@ -124,12 +127,28 @@ const CustomerManagement = () => {
         }
     };
 
+    const syncPoints = async (customerId) => {
+        const token = localStorage.getItem('restroToken');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/orders/sync-points/${customerId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                toast.success('Points recalculated!');
+                fetchCustomers();
+            }
+        } catch (err) {
+            toast.error('Sync failed');
+        }
+    };
+
     return (
         <div className="page-container animate-fade">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Customer Loyalty</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Track guest visits and award loyalty points.</p>
+            <div className="dashboard-header" style={{ marginBottom: '2rem' }}>
+                <div className="settings-header" style={{ margin: 0 }}>
+                    <h1 style={{ fontSize: '2.4rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Customer Loyalty</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>Track guest visits and award loyalty points.</p>
                 </div>
                 <button
                     onClick={() => {
@@ -137,8 +156,8 @@ const CustomerManagement = () => {
                         setFormData({ name: '', phone: '', email: '' });
                         setIsModalOpen(true);
                     }}
-                    className="nav-item active"
-                    style={{ border: 'none', display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.5rem', borderRadius: '12px', cursor: 'pointer' }}
+                    className="plan-button plan-button-primary"
+                    style={{ padding: '0.85rem 2rem', width: 'auto' }}
                 >
                     <Plus size={20} />
                     <span>New Customer</span>
@@ -146,80 +165,91 @@ const CustomerManagement = () => {
             </div>
 
             {/* Search Bar */}
-            <div className="search-bar">
-                <Search size={18} />
-                <input
-                    type="text"
-                    placeholder="Search customers by name or phone..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                />
+            <div className="ot-search-container" style={{ padding: 0, marginBottom: '2rem' }}>
+                <div className="ot-search-wrapper" style={{ height: '56px' }}>
+                    <Search className="ot-search-icon" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Search customers by name or phone..."
+                        className="ot-search-input"
+                        value={searchQuery}
+                        onChange={handleSearch}
+                    />
+                </div>
             </div>
 
             {/* Customer List */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            <div className="customer-grid">
                 {loading ? (
                     Array(6).fill(0).map((_, i) => (
-                        <div key={i} className="stat-card animate-pulse" style={{ height: '180px' }}></div>
+                        <div key={i} className="customer-card animate-pulse" style={{ height: '220px', background: 'var(--bg-side)' }}></div>
                     ))
                 ) : (
                     customers.map(customer => (
-                        <div key={customer.id} className="stat-card premium-glass" style={{ padding: '1.5rem', position: 'relative' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-                                <div>
-                                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>{customer.name}</h3>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                        <Phone size={12} />
-                                        <span>{customer.phone}</span>
+                        <div key={customer.id} className="customer-card animate-fade">
+                            <div className="customer-header">
+                                <div className="customer-info">
+                                    <h3>{customer.name}</h3>
+                                    <div className="customer-meta">
+                                        <Calendar size={12} />
+                                        <span>Joined {new Date(customer.createdAt).toLocaleDateString()}</span>
                                     </div>
                                 </div>
-                                <div style={{
-                                    background: 'rgba(255, 215, 0, 0.1)',
-                                    color: '#ffd700',
-                                    padding: '0.4rem 0.8rem',
-                                    borderRadius: '12px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.4rem',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 700,
-                                    border: '1px solid rgba(255, 215, 0, 0.2)'
-                                }}>
-                                    <Award size={14} />
+                                <div className="points-badge" style={{ position: 'relative' }}>
+                                    <Award size={16} />
                                     <span>{customer.points} Pts</span>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            syncPoints(customer.id);
+                                        }}
+                                        style={{ 
+                                            background: 'none', 
+                                            border: 'none', 
+                                            color: 'var(--primary)', 
+                                            marginLeft: '6px', 
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            opacity: 0.6
+                                        }}
+                                        title="Recalculate Points"
+                                    >
+                                        <RotateCcw size={12} />
+                                    </button>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                            <div className="customer-contact">
+                                <div className="contact-item">
+                                    <Phone size={14} />
+                                    <span>{customer.phone}</span>
+                                </div>
                                 {customer.email && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                        <Mail size={12} />
+                                    <div className="contact-item">
+                                        <Mail size={14} />
                                         <span>{customer.email}</span>
                                     </div>
                                 )}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                    <Calendar size={12} />
-                                    <span>Joined {new Date(customer.createdAt).toLocaleDateString()}</span>
-                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
+                            <div className="customer-actions">
                                 <button
+                                    className="action-btn"
                                     onClick={() => fetchHistory(customer)}
-                                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.6rem', borderRadius: '8px', background: 'var(--glass-shine)', border: '1px solid var(--glass-border)', color: 'white', fontSize: '0.85rem', cursor: 'pointer' }}
                                 >
-                                    <History size={14} />
+                                    <History size={16} />
                                     History
                                 </button>
                                 <button
+                                    className="action-btn edit"
                                     onClick={() => {
                                         setSelectedCustomer(customer);
                                         setFormData({ name: customer.name, phone: customer.phone, email: customer.email || '' });
                                         setIsModalOpen(true);
                                     }}
-                                    style={{ padding: '0.6rem', borderRadius: '8px', background: 'var(--glass-shine)', border: '1px solid var(--glass-border)', color: 'white', fontSize: '0.85rem', cursor: 'pointer' }}
                                 >
-                                    <Edit2 size={14} />
+                                    <Edit2 size={16} />
                                 </button>
                             </div>
                         </div>
@@ -307,28 +337,32 @@ const CustomerManagement = () => {
                                     <Loader2 className="animate-spin" color="var(--primary)" />
                                 </div>
                             ) : orderHistory.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '4rem', color: '#555' }}>
+                                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
                                     <ShoppingBag size={48} style={{ opacity: 0.1, marginBottom: '1rem' }} />
                                     <p>No transactions found for this customer.</p>
                                 </div>
                             ) : (
                                 orderHistory.map(order => (
-                                    <div key={order.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                                <span style={{ fontWeight: 700 }}>Order #{order.id.slice(-6).toUpperCase()}</span>
-                                                <span className="badge" style={{ fontSize: '0.65rem' }}>{order.status}</span>
+                                    <div key={order.id} className="history-order-card">
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                                <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-heading)' }}>Order #{order.id.slice(-6).toUpperCase()}</span>
+                                                <span className={`status-badge ${order.status.toLowerCase()}`}>{order.status}</span>
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: '#555' }}>
-                                                {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}
+                                            <div className="customer-meta" style={{ marginBottom: '0.75rem' }}>
+                                                <Calendar size={12} />
+                                                <span>{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}</span>
                                             </div>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                                                 {order.items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(', ')}
                                             </div>
                                         </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontWeight: 800, color: 'var(--primary)', marginBottom: '0.25rem' }}>{formatCurrency(order.totalAmount)}</div>
-                                            <div style={{ fontSize: '0.7rem', color: '#ffd700', fontWeight: 600 }}>+{Math.floor(order.totalAmount / 100)} Points</div>
+                                        <div style={{ textAlign: 'right', marginLeft: '1.5rem' }}>
+                                            <div style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--primary)', marginBottom: '4px' }}>{formatCurrency(order.totalAmount)}</div>
+                                            <div className="order-points-gain">
+                                                <Award size={12} />
+                                                <span>+{Math.floor(order.totalAmount / 100)} Points</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))

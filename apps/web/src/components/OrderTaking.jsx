@@ -540,6 +540,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
             {/* CUSTOMER SEARCH MODAL */}
             {showCustomerSearch && (
                 <CustomerSelectionModal
+                    orderId={existingOrderId}
                     onClose={() => setShowCustomerSearch(false)}
                     onSelect={(customer) => setSelectedCustomer(customer)}
                 />

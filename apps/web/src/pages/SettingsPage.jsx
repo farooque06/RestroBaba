@@ -574,7 +574,7 @@ const SettingsPage = () => {
                     </div>
                 </div>
 
-                <div className="theme-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
+                <div className="subscription-grid">
                     {plans.map(p => {
                         const isCurrent = currentPlan === p.tier;
 
@@ -596,91 +596,41 @@ const SettingsPage = () => {
                         const color = p.tier === 'GOLD' ? '#fbbf24' : p.tier === 'DIAMOND' ? '#38bdf8' : '#94a3b8';
 
                         return (
-                            <div
-                                key={p.id}
-                                className={`premium-glass ${isCurrent ? 'active' : ''}`}
-                                style={{
-                                    padding: '2.5rem 2rem',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '2rem',
-                                    border: isCurrent ? `2px solid ${color}` : '1px solid var(--glass-border)',
-                                    background: isCurrent ? `${color}08` : 'rgba(255,255,255,0.02)',
-                                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    transform: isCurrent ? 'scale(1.02)' : 'scale(1)',
-                                    position: 'relative',
-                                    overflow: 'hidden'
-                                }}
-                            >
-                                {isCurrent && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '12px',
-                                        right: '-35px',
-                                        background: color,
-                                        color: '#000',
-                                        fontSize: '0.7rem',
-                                        fontWeight: 900,
-                                        padding: '4px 40px',
-                                        transform: 'rotate(45deg)',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                                    }}>
-                                        CURRENT
-                                    </div>
-                                )}
-
+                            <div key={p.id} className={`plan-card ${isCurrent ? 'active' : ''}`}>
+                                {isCurrent && <div className="plan-badge">CURRENT</div>}
+                                
                                 {p.offerTag && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '12px',
-                                        left: '12px',
-                                        background: 'var(--primary-gradient)',
-                                        color: '#000',
-                                        fontSize: '0.65rem',
-                                        fontWeight: 800,
-                                        padding: '4px 10px',
-                                        borderRadius: '8px',
-                                        textTransform: 'uppercase'
-                                    }}>
+                                    <div className={`plan-tag ${
+                                        p.offerTag.toLowerCase().includes('limited') ? 'limited-time' : 
+                                        p.offerTag.toLowerCase().includes('value') ? 'best-value' : 
+                                        p.offerTag.toLowerCase().includes('pro') ? 'pro-choice' : ''
+                                    }`}>
                                         {p.offerTag}
                                     </div>
                                 )}
 
-                                <div style={{ textAlign: 'center' }}>
-                                    <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-                                        {p.name}
-                                    </h3>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '4px' }}>
-                                        <span style={{ fontSize: '1.25rem', fontWeight: 700, color: color }}>Rs.</span>
-                                        <span style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-main)' }}>{price.toLocaleString()}</span>
-                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{durationLabel}</span>
+                                <div className="plan-price-container">
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{p.name}</h3>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center' }}>
+                                        <span className="plan-currency">Rs.</span>
+                                        <span className="plan-price">{price.toLocaleString()}</span>
+                                        <span className="plan-duration">{durationLabel}</span>
                                     </div>
-                                    {isOffer && (
-                                        <div style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: 700, marginTop: '4px' }}>
-                                            {p.discountLabel || 'Promotional Offer'}
-                                        </div>
-                                    )}
-
-                                    {isCurrent && user?.client?.subscriptionEnd && (
-                                        <div style={{ marginTop: '1rem', padding: '8px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)' }}>
-                                            <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '2px' }}>
-                                                Expires On
-                                            </div>
-                                            <div style={{ fontWeight: 800, color: new Date(user.client.subscriptionEnd) < new Date() ? '#ef4444' : 'var(--text-main)' }}>
-                                                {new Date(user.client.subscriptionEnd).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                {new Date(user.client.subscriptionEnd) < new Date() && " (EXPIRED)"}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
 
-                                <div style={{ height: '1px', background: 'var(--glass-border)' }} />
+                                    {isCurrent && user?.client?.subscriptionEnd && (
+                                        <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'center' }}>
+                                            Renews: {new Date(user.client.subscriptionEnd).toLocaleDateString()}
+                                        </div>
+                                    )}
 
-                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div style={{ height: '1px', background: 'var(--border)', opacity: 0.5 }} />
+
+                                <ul className="plan-features">
                                     {p.features.map((f, i) => (
-                                        <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.95rem', color: 'var(--text-muted)' }}>
-                                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Shield size={12} color={color} />
+                                        <li key={i} className="plan-feature-item">
+                                            <div className="plan-feature-icon" style={{ background: `${color}20` }}>
+                                                <Shield size={14} color={color} />
                                             </div>
                                             {f}
                                         </li>
@@ -690,24 +640,10 @@ const SettingsPage = () => {
                                 <button
                                     onClick={() => handleUpgrade(p.tier)}
                                     disabled={loading}
-                                    className={`nav-item ${isCurrent ? 'active' : 'active'}`}
-                                    style={{
-                                        width: '100%',
-                                        justifyContent: 'center',
-                                        marginTop: 'auto',
-                                        padding: '1rem',
-                                        borderRadius: '14px',
-                                        background: isCurrent ? 'var(--primary-gradient)' : color,
-                                        color: '#000',
-                                        fontSize: '1rem',
-                                        fontWeight: 800,
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.3s ease',
-                                        boxShadow: isCurrent ? '0 10px 20px -10px var(--primary)' : 'none'
-                                    }}
+                                    className="plan-button plan-button-primary"
+                                    style={{ background: isCurrent ? 'var(--primary-gradient)' : color }}
                                 >
-                                    {loading ? <Loader2 size={18} className="animate-spin" /> : isCurrent ? 'Renew / Extend Plan' : `Upgrade to ${p.name}`}
+                                    {loading ? <Loader2 size={18} className="animate-spin" /> : isCurrent ? 'Renew / Extend Plan' : `Get Started`}
                                 </button>
                             </div>
                         );

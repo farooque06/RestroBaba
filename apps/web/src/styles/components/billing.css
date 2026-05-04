@@ -180,6 +180,16 @@
     .billing-preview-pane {
         display: none;
     }
+    .billing-preview-pane.mobile-show {
+        display: flex;
+        position: fixed;
+        inset: 0;
+        z-index: 500;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
 }
 
 @media (max-width: 768px) {

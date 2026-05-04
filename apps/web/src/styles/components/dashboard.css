@@ -1,29 +1,6 @@
 /* =====================================================
    DASHBOARD CARDS
    ===================================================== */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 2rem;
-}
-
-.grid-span-2 {
-    grid-column: span 2;
-}
-
-.responsive-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-}
-
-@media (max-width: 768px) {
-    .grid-span-2 {
-        grid-column: span 1;
-    }
-}
-
 .stat-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -77,23 +54,6 @@
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2.5rem;
-}
-
-.dashboard-header {
-    margin-bottom: 2.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-}
-
-@media (max-width: 640px) {
-    .dashboard-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
 }
 
 .dashboard-section-header {
@@ -212,6 +172,36 @@
     }
 
     .dashboard-header h1 {
-        font-size: 1.75rem !important;
+        font-size: 1.5rem !important;
     }
-}
+
+    .premium-glass h3 {
+        font-size: 1.25rem !important;
+    }
+
+    .premium-glass p {
+        font-size: 0.9rem !important;
+    }
+
+    .responsive-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    .status-badge {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.85rem !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+}
+
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+}

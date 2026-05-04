@@ -6,6 +6,8 @@ import { formatCurrency } from '../utils/formatters';
 import { initSocket, disconnectSocket } from '../services/socket';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../components/ConfirmModal';
+import CheckoutOverlay from './TableManagement/CheckoutOverlay';
+import { formatWhatsAppReceipt } from '../utils/whatsappFormatter';
 
 const OrderList = () => {
     const { user } = useAuth();
@@ -16,6 +18,10 @@ const OrderList = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ title: '', message: '', onConfirm: () => { } });
     const [paymentOrder, setPaymentOrder] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [showPhonePrompt, setShowPhonePrompt] = useState(false);
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [processingPayment, setProcessingPayment] = useState(false);
 
     useEffect(() => {
         fetchOrders();
@@ -54,8 +60,9 @@ const OrderList = () => {
         }
     };
 
-    const updateStatus = async (orderId, status) => {
+    const updateStatus = async (orderId, status, method = 'Cash') => {
         const token = localStorage.getItem('restroToken');
+        setProcessingPayment(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
                 method: 'PUT',
@@ -63,19 +70,56 @@ const OrderList = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ status })
+                body: JSON.stringify({ status, paymentMethod: method })
             });
             if (response.ok) {
                 toast.success(`Order marked as ${status}`);
                 fetchOrders(true);
                 setPaymentOrder(null);
+                setShowPhonePrompt(false);
             } else {
                 const data = await response.json();
                 toast.error(data.error || 'Failed to update status');
             }
         } catch (err) {
             toast.error('Connection error');
+        } finally {
+            setProcessingPayment(false);
         }
+    };
+
+    const linkCustomerToOrder = async (orderId, customerId) => {
+        const token = localStorage.getItem('restroToken');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/customer`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ customerId })
+            });
+            if (response.ok) {
+                toast.success(customerId ? 'Guest linked!' : 'Guest removed');
+                const updatedOrder = await response.json();
+                setPaymentOrder(updatedOrder);
+                fetchOrders(true);
+            }
+        } catch (err) {
+            toast.error('Failed to link guest');
+        }
+    };
+
+    const handleWhatsApp = async (order) => {
+        if (!customerPhone || customerPhone.length < 10) {
+            setShowPhonePrompt(true);
+            toast.error('Please enter customer phone number');
+            return;
+        }
+
+        const message = formatWhatsAppReceipt(order, { name: user?.clientName });
+        let phone = customerPhone.replace(/\D/g, '');
+        if (phone.length === 10) phone = '977' + phone;
+
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+        toast.success('WhatsApp receipt generated');
     };
 
     // Issue #6: Cancel order
@@ -277,61 +321,25 @@ const OrderList = () => {
                 )}
             </div>
 
-            {/* ── Payment Modal ── */}
-            {paymentOrder && (
-                <div className="ol-payment-overlay">
-                    <div className="ol-payment-sheet">
-                        <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '1px dashed var(--border)', paddingBottom: '1rem' }}>
-                            <h2 style={{ fontSize: '1.3rem', marginBottom: '0.35rem' }}>Collect Payment</h2>
-                            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                Order #{paymentOrder.id.slice(-6).toUpperCase()} | {paymentOrder.table ? `Table ${paymentOrder.table.number}` : 'Walk-in'}
-                            </p>
-                        </div>
-
-                        <div style={{ marginBottom: '1.5rem', maxHeight: '200px', overflowY: 'auto' }}>
-                            {paymentOrder.items.filter(i => i.status !== 'Waste').map(item => (
-                                <div key={item.id} className="ol-item-row">
-                                    <span><span className="qty">{item.quantity}</span>{item.menuItem?.name || 'Unknown'}</span>
-                                    <span className="price">{formatCurrency((item.price || 0) * item.quantity)}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div style={{ borderTop: '2px solid var(--border)', paddingTop: '1rem', marginBottom: '1.5rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Subtotal</span>
-                                <span>{formatCurrency(paymentOrder.subtotal || 0)}</span>
-                            </div>
-                            {paymentOrder.taxAmount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>VAT</span>
-                                    <span>{formatCurrency(paymentOrder.taxAmount)}</span>
-                                </div>
-                            )}
-                            {paymentOrder.serviceChargeAmount > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Service Charge</span>
-                                    <span>{formatCurrency(paymentOrder.serviceChargeAmount)}</span>
-                                </div>
-                            )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary)', marginTop: '0.5rem', borderTop: '1px dashed var(--border)', paddingTop: '0.5rem' }}>
-                                <span>Grand Total</span>
-                                <span>{formatCurrency(paymentOrder.totalAmount ?? 0)}</span>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <button onClick={() => updateStatus(paymentOrder.id, 'Paid')} className="ol-action-btn pay" style={{ padding: '0.85rem' }}>
-                                <DollarSign size={18} />
-                                <span>Confirm Payment</span>
-                            </button>
-                            <button onClick={() => setPaymentOrder(null)} className="btn-ghost" style={{ width: '100%' }}>
-                                Back
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* ── Payment Overlay ── */}
+            <CheckoutOverlay 
+                order={paymentOrder ? { ...paymentOrder, tableNumber: paymentOrder.table?.number || 'Walk-in' } : null}
+                user={user}
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                showPhonePrompt={showPhonePrompt}
+                setShowPhonePrompt={setShowPhonePrompt}
+                customerPhone={customerPhone}
+                setCustomerPhone={setCustomerPhone}
+                onProcessPayment={(id) => updateStatus(id, 'Paid', paymentMethod)}
+                processingPayment={processingPayment}
+                onWhatsApp={handleWhatsApp}
+                onPrint={(order) => { window.print(); }} // Simplified for now
+                onDownload={() => {}} // Simplified for now
+                onSplit={() => toast.error('Split bill is currently only available from Floor Plan view')}
+                onLinkCustomer={linkCustomerToOrder}
+                onClose={() => { setPaymentOrder(null); setShowPhonePrompt(false); }}
+            />
 
             <ConfirmModal
                 isOpen={isConfirmModalOpen}

@@ -188,6 +188,25 @@ const TableManagement = () => {
         }
     };
 
+    const linkCustomerToOrder = async (orderId, customerId) => {
+        const token = localStorage.getItem('restroToken');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/customer`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ customerId })
+            });
+            if (response.ok) {
+                toast.success(customerId ? 'Guest linked!' : 'Guest removed');
+                const updatedOrder = await response.json();
+                setCheckoutOrder({ ...updatedOrder, tableNumber: checkoutOrder?.tableNumber || updatedOrder.table?.number });
+                fetchTables(true);
+            }
+        } catch (err) {
+            toast.error('Failed to link guest');
+        }
+    };
+
     const processPayment = async (orderId) => {
         if (processingPayment) return;
         setProcessingPayment(true);
@@ -468,6 +487,7 @@ const TableManagement = () => {
                 onPrint={(order) => { performAutoCapture(order.id); handlePrint(order); }}
                 onDownload={(order) => { performAutoCapture(order.id); handleDownload(order); }}
                 onSplit={setSplitOrder}
+                onLinkCustomer={linkCustomerToOrder}
                 onClose={() => { setCheckoutOrder(null); setShowPhonePrompt(false); }}
             />
 

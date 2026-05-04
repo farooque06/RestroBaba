@@ -138,23 +138,10 @@ router.post('/', async (req, res) => {
                     totalAmount,
                     status: initialStatus
                 },
-                include: { items: { include: { variant: true, menuItem: { include: { category: true } } } }, table: true }
+                include: { items: { include: { variant: true, menuItem: { include: { category: true } } } }, table: true, customer: true }
             });
 
-            // 4. Loyalty Points (incremental based on new items only)
-            if (customerId) {
-                const newItemsTotal = items.reduce((sum: number, item: any) => sum + (parseFloat(item.price) * parseInt(item.quantity)), 0);
-                const incrementalPoints = Math.floor(newItemsTotal / 100);
-
-                if (incrementalPoints > 0) {
-                    await tx.customer.update({
-                        where: { id: customerId },
-                        data: { points: { increment: incrementalPoints } }
-                    });
-                }
-            }
-
-            // 5. Activity Log
+            // 4. Activity Log
             await tx.activityLog.create({
                 data: {
                     action: action === 'ORDER_NEW' ? 'ORDER_CREATE' : 'ORDER_ADD_ITEMS',
@@ -240,6 +227,18 @@ router.put('/:id/customer', async (req, res) => {
             data: { customerId },
             include: { customer: true }
         });
+
+        // --- NEW: Award Loyalty Points if linking to an ALREADY PAID order ---
+        if (order.status === 'Paid') {
+            const pointsToAward = Math.floor(order.totalAmount / 100);
+            if (pointsToAward > 0) {
+                await prisma.customer.update({
+                    where: { id: customerId },
+                    data: { points: { increment: pointsToAward } }
+                });
+            }
+        }
+
         res.json(order);
     } catch (error) {
         console.error('Failed to link customer', error);
@@ -292,7 +291,8 @@ router.put('/:id/status', async (req, res) => {
                             menuItem: { include: { recipe: true, category: true } } 
                         } 
                     }, 
-                    table: true 
+                    table: true,
+                    customer: true
                 }
             });
 
@@ -432,6 +432,17 @@ router.put('/:id/status', async (req, res) => {
 
                 // Auto-generate Tax Invoice for VAT-registered clients
                 await generateTaxInvoice(tx, id as string, req.clientId!);
+
+                // --- NEW: Award Loyalty Points on Payment ---
+                if (currentOrder.customerId) {
+                    const pointsToAward = Math.floor(currentOrder.totalAmount / 100);
+                    if (pointsToAward > 0) {
+                        await tx.customer.update({
+                            where: { id: currentOrder.customerId },
+                            data: { points: { increment: pointsToAward } }
+                        });
+                    }
+                }
             }
 
             // --- Activity Log ---
@@ -476,7 +487,8 @@ router.get('/table/:tableId', async (req, res) => {
             orderBy: { createdAt: 'desc' },
             include: {
                 items: { include: { variant: true, menuItem: { include: { category: true } } } },
-                taxInvoice: true
+                taxInvoice: true,
+                customer: true
             }
         });
         res.json(order || null);
@@ -673,7 +685,7 @@ router.post('/:id/pay', async (req, res) => {
                     status: 'Paid',
                     paymentMethod: payments.length > 1 ? 'Split' : payments[0].method
                 },
-                include: { table: true }
+                include: { table: true, customer: true }
             });
 
             // 3. Free the table
@@ -694,6 +706,17 @@ router.post('/:id/pay', async (req, res) => {
                     clientId: req.clientId!
                 }
             });
+
+            // 5. Award Loyalty Points on Payment
+            if (currentOrder.customerId) {
+                const pointsToAward = Math.floor(currentOrder.totalAmount / 100);
+                if (pointsToAward > 0) {
+                    await tx.customer.update({
+                        where: { id: currentOrder.customerId },
+                        data: { points: { increment: pointsToAward } }
+                    });
+                }
+            }
 
             return updatedOrder;
         });
@@ -742,7 +765,7 @@ router.post('/:id/transfer', async (req, res) => {
             const updatedOrder = await tx.order.update({
                 where: { id: id as string },
                 data: { tableId: targetTableId },
-                include: { table: true }
+                include: { table: true, customer: true }
             });
 
             // 3. Set source table to Available (if it exists)
@@ -782,6 +805,34 @@ router.post('/:id/transfer', async (req, res) => {
     } catch (error: any) {
         console.error('Transfer error:', error);
         res.status(500).json({ error: error.message || 'Failed to transfer table' });
+    }
+});
+
+// Sync all points for a customer based on history
+router.post('/sync-points/:customerId', async (req, res) => {
+    const { customerId } = req.params;
+    if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
+
+    try {
+        const totalPoints = await prisma.$transaction(async (tx) => {
+            const orders = await tx.order.findMany({
+                where: { customerId, status: 'Paid', clientId: req.clientId! },
+                select: { totalAmount: true }
+            });
+
+            const points = orders.reduce((sum, o) => sum + Math.floor(o.totalAmount / 100), 0);
+
+            await tx.customer.update({
+                where: { id: customerId },
+                data: { points }
+            });
+
+            return points;
+        });
+
+        res.json({ success: true, points: totalPoints });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to sync points' });
     }
 });
 
