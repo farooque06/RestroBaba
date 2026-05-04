@@ -116,42 +116,39 @@ const CustomerSelectionModal = ({ onClose, onSelect, orderId = null, initialSear
 
                 {isRegisterMode ? (
                     /* REGISTRATION FORM */
-                    <form onSubmit={handleRegister} className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Full Name</label>
+                    <form onSubmit={handleRegister} className="selection-register-form animate-fade">
+                        <div className="selection-form-group">
+                            <label>Full Name</label>
                             <input
                                 autoFocus
-                                className="form-input"
+                                className="selection-form-input"
                                 placeholder="Enter guest name..."
                                 value={newGuest.name}
                                 onChange={e => setNewGuest({ ...newGuest, name: e.target.value })}
-                                style={{ padding: '0.85rem 1.15rem', background: 'var(--bg-side)', border: '1px solid var(--border)', borderRadius: '12px' }}
                             />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Phone Number</label>
+                        <div className="selection-form-group">
+                            <label>Phone Number</label>
                             <input
-                                className="form-input"
+                                className="selection-form-input"
                                 type="tel"
                                 placeholder="98XXXXXXXX"
                                 value={newGuest.phone}
                                 onChange={e => setNewGuest({ ...newGuest, phone: e.target.value })}
-                                style={{ padding: '0.85rem 1.15rem', background: 'var(--bg-side)', border: '1px solid var(--border)', borderRadius: '12px' }}
                             />
                         </div>
-                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <div className="selection-form-actions">
                             <button 
                                 type="button"
                                 onClick={() => setIsRegisterMode(false)} 
-                                style={{ flex: 1, padding: '0.85rem', borderRadius: '12px', background: 'none', border: '1px solid var(--border)', color: 'var(--text-heading)', fontWeight: 700 }}
+                                className="selection-btn-cancel"
                             >
                                 Cancel
                             </button>
                             <button 
                                 type="submit"
                                 disabled={submitting}
-                                className="nav-item active"
-                                style={{ flex: 2, padding: '0.85rem', borderRadius: '12px', border: 'none', fontWeight: 800, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+                                className="selection-btn-submit"
                             >
                                 {submitting ? <Loader2 className="animate-spin" size={20} /> : <><UserPlus size={18} /> Register & Select</>}
                             </button>
@@ -159,7 +156,7 @@ const CustomerSelectionModal = ({ onClose, onSelect, orderId = null, initialSear
                     </form>
                 ) : (
                     /* SEARCH VIEW */
-                    <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div className="selection-search-view animate-fade">
                         <div className="selection-search-wrapper">
                             <Search size={18} className="selection-search-icon" />
                             <input
@@ -169,7 +166,7 @@ const CustomerSelectionModal = ({ onClose, onSelect, orderId = null, initialSear
                                 value={search}
                                 onChange={(e) => handleSearch(e.target.value)}
                             />
-                            {loading && <Loader2 size={18} className="animate-spin" style={{ position: 'absolute', right: '1.25rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />}
+                            {loading && <Loader2 size={18} className="selection-search-loader animate-spin" />}
                         </div>
 
                         <div className="selection-results-list custom-scroll">
@@ -179,11 +176,11 @@ const CustomerSelectionModal = ({ onClose, onSelect, orderId = null, initialSear
                                     onClick={() => handleSelection(c)}
                                     className="customer-selection-item"
                                 >
-                                    <div>
-                                        <p style={{ fontWeight: 800, margin: '0 0 2px 0', fontSize: '1.05rem', color: 'var(--text-heading)' }}>{c.name}</p>
-                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, fontWeight: 500 }}>{c.phone}</p>
+                                    <div className="selection-item-info">
+                                        <p className="selection-item-name">{c.name}</p>
+                                        <p className="selection-item-phone">{c.phone}</p>
                                     </div>
-                                    <div className="points">
+                                    <div className="selection-item-points">
                                         <Award size={12} /> {c.points} Pts
                                     </div>
                                 </div>
@@ -198,20 +195,7 @@ const CustomerSelectionModal = ({ onClose, onSelect, orderId = null, initialSear
                                         phone: looksLikePhone ? search : ''
                                     });
                                 }} 
-                                className="btn-ghost" 
-                                style={{ 
-                                    padding: '1.25rem', 
-                                    borderRadius: '16px', 
-                                    border: '1px dashed var(--border)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '10px',
-                                    marginTop: '0.75rem',
-                                    fontSize: '0.9rem',
-                                    fontWeight: 700,
-                                    color: 'var(--primary)'
-                                }}
+                                className="selection-register-btn" 
                             >
                                 <UserPlus size={20} />
                                 <span>
@@ -230,7 +214,7 @@ const CustomerSelectionModal = ({ onClose, onSelect, orderId = null, initialSear
                     </div>
                 )}
                 
-                <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                <div className="selection-modal-footer">
                     Linked guests earn loyalty points on every visit!
                 </div>
             </div>

@@ -12,39 +12,46 @@ export const formatWhatsAppReceipt = (order, client) => {
     const hasPAN = taxMode === 'PAN_ONLY' || taxMode === 'VAT_REGISTERED';
     const invoiceNumber = order.taxInvoice?.invoiceNumber;
     
-    const date = new Date(order.createdAt).toLocaleDateString();
+    const date = new Date(order.createdAt).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
     const time = new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    let title = 'RECEIPT';
-    if (isVAT) title = 'PROFORMA INVOICE';
-    else if (hasPAN) title = 'BILL';
+    let docIcon = '📄';
+    let docTitle = 'ORDER SLIP';
+    if (isVAT) {
+        docIcon = '🧾';
+        docTitle = 'TAX INVOICE';
+    } else if (hasPAN) {
+        docIcon = '💵';
+        docTitle = 'SALES BILL';
+    }
 
-    let message = `*${title} | ${client?.name?.toUpperCase() || 'RESTROBABA'}*\n`;
-    message += `--------------------------------\n`;
+    let message = `*${docIcon} ${docTitle} | ${client?.name?.toUpperCase() || 'RESTROBABA'}*\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━\n`;
     
     if (isVAT && invoiceNumber) {
-        message += `*Invoice No:* ${invoiceNumber}\n`;
+        message += `*Inv No:* ${invoiceNumber}\n`;
     }
     
     if (hasPAN && client?.panNumber) {
         message += `*PAN No:* ${client.panNumber}\n`;
     }
 
-    message += `*Order ID:* #${order.id.slice(-6).toUpperCase()}\n`;
-    message += `*Date:* ${date} | ${time}\n`;
+    message += `*Order:* #${order.id.slice(-6).toUpperCase()}\n`;
+    message += `*Date:* ${date}  ${time}\n`;
     message += `*Table:* ${order.table ? order.table.number : 'Walk-in'}\n`;
-    message += `--------------------------------\n\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
 
+    message += `*🛒 ITEMS ORDERED:*\n`;
     order.items?.forEach(item => {
         if (item.status === 'Waste') return;
         let itemName = item.menuItem?.name || 'Item';
         if (item.variant?.name) itemName += ` (${item.variant.name})`;
         const qty = item.quantity;
         const total = formatCurrency((item.price || 0) * qty);
-        message += `• ${itemName} x${qty} = ${total}\n`;
+        message += `▫️ ${itemName} × ${qty} = *${total}*\n`;
     });
 
-    message += `\n--------------------------------\n`;
+    message += `\n━━━━━━━━━━━━━━━━━━━━\n`;
     message += `*Subtotal:* ${formatCurrency(order.subtotal || 0)}\n`;
     
     if (order.serviceChargeAmount > 0) {
@@ -52,19 +59,18 @@ export const formatWhatsAppReceipt = (order, client) => {
     }
 
     if (isVAT && order.taxAmount > 0) {
-        message += `*Taxable Amt:* ${formatCurrency((order.subtotal || 0) + (order.serviceChargeAmount || 0))}\n`;
         message += `*VAT (13%):* ${formatCurrency(order.taxAmount)}\n`;
-    } else if (order.taxAmount > 0) {
-        message += `*Tax:* ${formatCurrency(order.taxAmount)}\n`;
     }
 
-    message += `*TOTAL:* ${formatCurrency(order.totalAmount)}\n`;
-    message += `--------------------------------\n\n`;
+    message += `*TOTAL AMOUNT: ${formatCurrency(order.totalAmount)}*\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
     
-    message += `*Payment:* ${order.paymentMethod || 'Paid'}\n`;
-    message += `_Thank you for dining with us!_\n`;
-    message += `_Note: This is a computer-generated internal estimate and not a legal tax invoice._\n`;
-    message += `~ Software by RestroBaBa`;
+    message += `✅ *Payment:* ${order.paymentMethod || 'Paid'}\n`;
+    if (order.customer?.name) {
+        message += `👤 *Guest:* ${order.customer.name}\n`;
+    }
+    message += `\n_Thank you for dining with ${client?.name || 'us'}!_\n`;
+    message += `\n--- _RestroBaba Cloud POS_ ---`;
 
     return encodeURIComponent(message);
 };

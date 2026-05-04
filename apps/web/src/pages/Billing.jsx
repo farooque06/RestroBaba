@@ -12,6 +12,7 @@ import { jsPDF } from 'jspdf';
 import { formatWhatsAppReceipt } from '../utils/whatsappFormatter';
 import { createPortal } from 'react-dom';
 import CustomerSelectionModal from '../components/CustomerSelectionModal';
+import '../styles/components/checkout-overlay.css';
 
 const Billing = () => {
     const { user } = useAuth();
@@ -239,25 +240,25 @@ const Billing = () => {
 
     return (
         <div className="page-container animate-fade">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div className="billing-page-header">
                 <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Billing & Invoices</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Process payments and view receipt history.</p>
+                    <h1>Billing & Invoices</h1>
+                    <p className="billing-page-subtitle">Process payments and view receipt history.</p>
                 </div>
             </div>
 
-            <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '2rem' }}>
+            <div className="billing-stats">
                 <div className="stat-card">
-                    <span className="stat-label">Total Revenue (All Time)</span>
+                    <span className="stat-label">Total Revenue</span>
                     <span className="stat-value">{formatCurrency(totalRevenue)}</span>
                 </div>
                 <div className="stat-card">
-                    <span className="stat-label">Invoices Paid</span>
+                    <span className="stat-label">Paid</span>
                     <span className="stat-value">{paidOrders.length}</span>
                 </div>
-                <div className="stat-card" style={{ borderLeft: pendingOrders.length > 0 ? '4px solid var(--warning)' : undefined }}>
-                    <span className="stat-label">Awaiting Payment</span>
-                    <span className="stat-value" style={{ color: pendingOrders.length > 0 ? 'var(--warning)' : undefined }}>{pendingOrders.length}</span>
+                <div className={`stat-card ${pendingOrders.length > 0 ? 'stat-warning' : ''}`}>
+                    <span className="stat-label">Awaiting</span>
+                    <span className="stat-value">{pendingOrders.length}</span>
                 </div>
             </div>
 
@@ -304,37 +305,34 @@ const Billing = () => {
                                     onClick={() => setPrintingOrder(order)}
                                 >
                                     <div className="table-card-header">
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{
-                                                width: '40px',
-                                                height: '40px',
-                                                borderRadius: '10px',
-                                                background: 'var(--primary-glow)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}>
-                                                <Users size={18} color="var(--primary)" />
+                                        <div className="billing-card-left">
+                                            <div className="billing-card-icon">
+                                                <Users size={16} color="var(--primary)" />
                                             </div>
                                             <div>
                                                 <div className="table-num">{order.table ? `T-${order.table.number}` : 'Walk-in'}</div>
-                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>#{order.id.slice(-4).toUpperCase()}</div>
+                                                <div className="billing-card-id">#{order.id.slice(-4).toUpperCase()}</div>
                                             </div>
                                         </div>
                                         <div className="table-amount">{formatCurrency(order.totalAmount)}</div>
                                     </div>
 
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '8px' }}>
-                                        {order.items.length} items · <Clock size={10} style={{ verticalAlign: 'middle' }} /> {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {order.customer && (
+                                        <div className="billing-card-guest">
+                                            <Users size={10} /> {order.customer.name}
+                                        </div>
+                                    )}
+
+                                    <div className="billing-card-meta">
+                                        {order.items.length} items · <Clock size={10} /> {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>
 
-                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+                                    <div className="billing-card-actions">
                                         <button
                                             onClick={(e) => { e.stopPropagation(); processPayment(order.id); }}
-                                            className="nav-item active"
-                                            style={{ flex: 2, padding: '0.6rem', fontSize: '0.75rem', border: 'none', borderRadius: '8px' }}
+                                            className="billing-quick-pay"
                                         >
-                                            Quick Pay
+                                            <DollarSign size={13} /> Quick Pay
                                         </button>
                                         <button
                                             onClick={(e) => { 
@@ -342,25 +340,23 @@ const Billing = () => {
                                                 setPrintingOrder(order);
                                                 setShowCustomerSearch(true);
                                             }}
-                                            className="premium-glass"
-                                            style={{ padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', color: order.customer ? 'var(--primary)' : 'inherit' }}
+                                            className={`billing-icon-btn ${order.customer ? 'has-guest' : ''}`}
                                             title="Add/Edit Guest"
                                         >
-                                            <UserPlus size={16} />
+                                            <UserPlus size={14} />
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handlePrint(order); }}
-                                            className="premium-glass"
-                                            style={{ padding: '0.6rem', borderRadius: '8px', cursor: 'pointer' }}
+                                            className="billing-icon-btn"
                                         >
-                                            <Printer size={16} />
+                                            <Printer size={14} />
                                         </button>
                                     </div>
                                 </div>
                             ))}
                             {filteredPending.length === 0 && (
-                                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-                                    <DollarSign size={48} style={{ marginBottom: '1rem', opacity: 0.1 }} />
+                                <div className="billing-empty">
+                                    <DollarSign size={48} />
                                     <p>No active orders waiting for payment.</p>
                                 </div>
                             )}
@@ -422,101 +418,54 @@ const Billing = () => {
                 {/* Right Preview Pane (Desktop) / Overlay (Mobile) */}
                 <div className={`billing-preview-pane ${printingOrder ? 'mobile-show' : ''}`}>
                     <div className="preview-header">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <button 
-                                className="ot-mobile-only" 
-                                onClick={() => setPrintingOrder(null)}
-                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}
-                            >
+                        <div className="preview-header-left">
+                            <button className="ot-mobile-only" onClick={() => setPrintingOrder(null)}>
                                 <X size={20} />
                             </button>
-                            <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Live Receipt Preview</span>
+                            <span className="preview-header-title">Receipt Preview</span>
                         </div>
                         {printingOrder && (
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button onClick={() => handlePrintWithCapture(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px' }} title="Print Now">
-                                    <Printer size={14} />
-                                </button>
-                                <button onClick={() => setSplitOrder(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px' }} title="Split Bill">
-                                    <Users size={14} />
-                                </button>
-                                <button onClick={() => handleWhatsApp(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px', color: '#25D366' }} title="WhatsApp Receipt">
-                                    <MessageCircle size={14} />
-                                </button>
-                                <button onClick={() => handleDownloadWithCapture(printingOrder)} className="premium-glass" style={{ padding: '0.4rem', borderRadius: '6px' }} title="Download PDF">
-                                    <Download size={14} />
-                                </button>
+                            <div className="preview-header-actions">
+                                <button onClick={() => handlePrintWithCapture(printingOrder)} className="billing-icon-btn" title="Print"><Printer size={14} /></button>
+                                <button onClick={() => setSplitOrder(printingOrder)} className="billing-icon-btn" title="Split"><Users size={14} /></button>
+                                <button onClick={() => handleWhatsApp(printingOrder)} className="billing-icon-btn whatsapp" title="WhatsApp"><MessageCircle size={14} /></button>
+                                <button onClick={() => handleDownloadWithCapture(printingOrder)} className="billing-icon-btn" title="PDF"><Download size={14} /></button>
                             </div>
                         )}
                     </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', background: activeTab === 'pending' ? 'var(--bg-card)' : 'white' }}>
+                    <div className="preview-body">
                         {printingOrder ? (
-                            <div style={{ padding: '1.5rem' }}>
-                                <div style={{ border: activeTab === 'pending' ? '1px dashed var(--border)' : 'none', borderRadius: '8px', padding: activeTab === 'pending' ? '1rem' : 0 }}>
-                                    {/* Customer Selector */}
-                                    {activeTab === 'pending' && (
-                                        <div style={{ marginBottom: '1rem' }}>
-                                            {printingOrder.customer ? (
-                                                <div className="premium-glass" style={{
-                                                    padding: '0.75rem',
-                                                    borderRadius: '10px',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    border: '1px solid var(--primary-glow)',
-                                                    background: 'rgba(59, 130, 246, 0.05)'
-                                                }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <Users size={16} color="white" />
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>{printingOrder.customer.name}</div>
-                                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{printingOrder.customer.phone}</div>
-                                                        </div>
+                            <div className="preview-content">
+                                {/* Customer Selector */}
+                                {activeTab === 'pending' && (
+                                    <div className="preview-guest-section">
+                                        {printingOrder.customer ? (
+                                            <div className="checkout-guest-card">
+                                                <div className="checkout-guest-info">
+                                                    <div className="checkout-guest-avatar"><Users size={14} /></div>
+                                                    <div>
+                                                        <div className="checkout-guest-name">{printingOrder.customer.name}</div>
+                                                        <div className="checkout-guest-phone">{printingOrder.customer.phone}</div>
                                                     </div>
-                                                    <button
-                                                        onClick={() => linkCustomerToOrder(printingOrder.id, null)}
-                                                        className="btn-ghost"
-                                                        style={{ padding: '4px', minWidth: 'auto' }}
-                                                    >
-                                                        <X size={14} />
-                                                    </button>
                                                 </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => setShowCustomerSearch(true)}
-                                                    className="btn-ghost"
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '0.75rem',
-                                                        border: '1px dashed var(--border)',
-                                                        borderRadius: '10px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '8px',
-                                                        fontSize: '0.8rem',
-                                                        fontWeight: 700
-                                                    }}
-                                                >
-                                                    <UserPlus size={16} /> Add Guest Details (Optional)
+                                                <button className="checkout-guest-remove" onClick={() => linkCustomerToOrder(printingOrder.id, null)}>
+                                                    <X size={12} />
                                                 </button>
-                                            )}
-                                        </div>
-                                    )}
+                                            </div>
+                                        ) : (
+                                            <button onClick={() => setShowCustomerSearch(true)} className="checkout-add-guest">
+                                                <UserPlus size={15} /> <span>Link Guest (Optional)</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
 
-                                    <Receipt
-                                        ref={receiptRef}
-                                        order={printingOrder}
-                                        client={user?.client}
-                                    />
-                                </div>
+                                <Receipt ref={receiptRef} order={printingOrder} client={user?.client} />
 
                                 {activeTab === 'pending' && (
-                                    <div style={{ marginTop: '2rem' }}>
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '1rem', fontWeight: 700, textTransform: 'uppercase' }}>Select Payment Method</span>
+                                    <div className="preview-payment-section">
+                                        <span className="preview-section-label">Payment Method</span>
                                         <div className="payment-methods-grid">
                                             {[
                                                 { id: 'Cash', label: 'Cash', icon: DollarSign },
@@ -528,57 +477,41 @@ const Billing = () => {
                                                     className={`payment-method-btn ${(selectedMethods[printingOrder.id] || 'Cash') === method.id ? 'active' : ''}`}
                                                     onClick={() => setSelectedMethods({ ...selectedMethods, [printingOrder.id]: method.id })}
                                                 >
-                                                    <method.icon size={20} />
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{method.label}</span>
+                                                    <method.icon size={18} />
+                                                    <span>{method.label}</span>
                                                 </button>
                                             ))}
                                         </div>
 
-                                        {/* QR Code Display for Online (UPI) */}
                                         {(selectedMethods[printingOrder.id] || 'Cash') === 'UPI' && (
-                                            <div className="premium-glass animate-fade" style={{
-                                                padding: '1rem',
-                                                marginBottom: '1.5rem',
-                                                textAlign: 'center',
-                                                border: '1px solid var(--primary)',
-                                                background: 'rgba(59, 130, 246, 0.05)'
-                                            }}>
-                                                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.75rem', textTransform: 'uppercase' }}>
-                                                    Scan to Pay Online
-                                                </div>
+                                            <div className="billing-qr-section animate-fade">
+                                                <div className="billing-qr-label">SCAN TO PAY</div>
                                                 {user?.client?.qrCode ? (
-                                                    <div style={{ background: 'white', padding: '10px', borderRadius: '12px', display: 'inline-block', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }}>
-                                                        <img src={user.client.qrCode} alt="Online Payment QR" style={{ width: '150px', height: '150px', objectFit: 'contain' }} />
+                                                    <div className="billing-qr-wrap">
+                                                        <img src={user.client.qrCode} alt="QR" className="billing-qr-img" />
                                                     </div>
                                                 ) : (
-                                                    <div style={{ padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                                        <QrCode size={40} style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
-                                                        <p>QR Code not configured in settings.</p>
+                                                    <div className="billing-qr-empty">
+                                                        <QrCode size={32} />
+                                                        <p>QR not configured</p>
                                                     </div>
                                                 )}
                                             </div>
                                         )}
 
-                                        {showPhonePrompt ? (
-                                            <div style={{ marginBottom: '1.5rem' }} className="animate-fade">
-                                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Enter Customer Phone for WhatsApp</label>
+                                        {showPhonePrompt && (
+                                            <div className="billing-phone-prompt animate-fade">
+                                                <label>CUSTOMER PHONE FOR WHATSAPP</label>
                                                 <input
-                                                    type="tel"
-                                                    placeholder="98XXXXXXXX"
-                                                    className="form-input"
-                                                    style={{ padding: '1rem', background: 'var(--bg-input)', border: '1px solid var(--primary)', boxShadow: '0 0 10px var(--primary-glow)' }}
-                                                    autoFocus
+                                                    type="tel" placeholder="98XXXXXXXX" autoFocus
                                                     value={customerPhone}
                                                     onChange={(e) => setCustomerPhone(e.target.value)}
                                                 />
                                             </div>
-                                        ) : null}
+                                        )}
 
-                                        <button
-                                            onClick={() => processPayment(printingOrder.id)}
-                                            className="nav-item active"
-                                            style={{ width: '100%', padding: '1rem', fontSize: '1rem', border: 'none', borderRadius: '12px' }}
-                                        >
+                                        <button onClick={() => processPayment(printingOrder.id)} className="billing-process-btn">
+                                            <DollarSign size={18} />
                                             Process {formatCurrency(printingOrder.totalAmount)}
                                         </button>
                                     </div>
@@ -587,7 +520,7 @@ const Billing = () => {
                         ) : (
                             <div className="preview-placeholder">
                                 <FileText size={48} />
-                                <p>Select an order from the left to view receipt and process payments.</p>
+                                <p>Select an order to preview receipt and process payment.</p>
                             </div>
                         )}
                     </div>

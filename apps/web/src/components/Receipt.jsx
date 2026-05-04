@@ -11,12 +11,12 @@ const Receipt = React.forwardRef(({ order, client }, ref) => {
                     padding: '10mm 5mm',
                     background: 'white',
                     color: 'black',
-                    fontFamily: "'Courier New', Courier, monospace",
+                    fontFamily: "'Inter', 'Segoe UI', Roboto, sans-serif",
                     fontSize: '12px',
                     textAlign: 'center',
                 }}
             >
-                <p style={{ color: 'red', fontWeight: 'bold' }}>
+                <p style={{ color: 'var(--danger)', fontWeight: 'bold' }}>
                     [DEBUG] No order data received
                 </p>
             </div>
@@ -29,11 +29,10 @@ const Receipt = React.forwardRef(({ order, client }, ref) => {
     const hasPAN = taxMode === 'PAN_ONLY' || taxMode === 'VAT_REGISTERED';
     const invoiceNumber = order.taxInvoice?.invoiceNumber;
 
-    // Determine document title (Honest Labeling - Pre-Certification)
     const getDocTitle = () => {
-        if (isVAT) return 'PROFORMA INVOICE (VAT)';
-        if (hasPAN) return 'INTERNAL BILL (PAN)';
-        return 'ESTIMATE / ORDER SLIP';
+        if (isVAT) return 'TAX INVOICE (VAT)';
+        if (hasPAN) return 'SALES RECEIPT (PAN)';
+        return 'ORDER SLIP / ESTIMATE';
     };
 
     return (
@@ -41,119 +40,111 @@ const Receipt = React.forwardRef(({ order, client }, ref) => {
             ref={ref}
             className="receipt-print-wrapper"
             style={{
-                padding: '4mm',
+                width: '100%',
+                maxWidth: '80mm',
+                padding: '6mm 4mm',
                 background: 'white',
-                color: 'black',
-                fontFamily: "'Courier New', Courier, monospace",
-                fontSize: '12px',
-                lineHeight: '1.2',
+                color: '#1a1a1a',
+                fontFamily: "'Inter', 'Segoe UI', Roboto, sans-serif",
+                fontSize: '11px',
+                lineHeight: '1.4',
                 boxSizing: 'border-box',
-                margin: '0 auto', /* Center in preview */
+                margin: '0 auto',
             }}
         >
-
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                <h2
-                    style={{
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        margin: '0 0 4px 0',
-                    }}
-                >
+            {/* Header / Logo Section */}
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <h1 style={{
+                    fontSize: '20px',
+                    fontWeight: '900',
+                    margin: '0 0 4px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '-0.5px'
+                }}>
                     {client?.name || 'RESTROBABA'}
-                </h2>
-                {client?.businessAddress && (
-                    <p style={{ margin: '2px 0', fontSize: '11px' }}>{client.businessAddress}</p>
-                )}
-                {client?.address && !client?.businessAddress && (
-                    <p style={{ margin: '2px 0', fontSize: '11px' }}>{client.address}</p>
-                )}
-                {(client?.businessPhone || client?.phone) && (
-                    <p style={{ margin: '2px 0', fontSize: '11px' }}>
-                        Tel: {client.businessPhone || client.phone}
-                    </p>
-                )}
-                {/* PAN Number - Required for PAN_ONLY and VAT_REGISTERED */}
-                {hasPAN && client?.panNumber && (
-                    <p style={{ margin: '4px 0 2px', fontSize: '11px', fontWeight: 'bold' }}>
-                        PAN No: {client.panNumber}
-                    </p>
-                )}
-                <p style={{ 
-                    margin: '6px 0 2px', 
-                    fontSize: isVAT ? '13px' : '11px', 
-                    fontWeight: isVAT ? 'bold' : 'normal',
-                    letterSpacing: isVAT ? '1px' : '0'
+                </h1>
+                
+                <div style={{ fontSize: '10px', color: '#444', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {client?.businessAddress || client?.address ? (
+                        <p style={{ margin: 0 }}>{client.businessAddress || client.address}</p>
+                    ) : null}
+                    {(client?.businessPhone || client?.phone) && (
+                        <p style={{ margin: 0, fontWeight: '600' }}>Tel: {client.businessPhone || client.phone}</p>
+                    )}
+                    {hasPAN && client?.panNumber && (
+                        <p style={{ margin: '4px 0 0', fontWeight: '800', color: '#000' }}>
+                            PAN: {client.panNumber}
+                        </p>
+                    )}
+                </div>
+
+                <div style={{ 
+                    margin: '12px auto 0',
+                    padding: '4px 8px',
+                    border: '1px solid #000',
+                    display: 'inline-block',
+                    fontSize: '10px',
+                    fontWeight: '900',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
                 }}>
                     {getDocTitle()}
-                </p>
+                </div>
             </div>
 
-            <div style={{ borderBottom: '1px dashed #000', margin: '8px 0' }} />
-
-            {/* Order & Invoice Info */}
-            <div style={{ fontSize: '11px', marginBottom: '8px' }}>
-                {/* Invoice Number - Still useful for internal tracking */}
-                {isVAT && invoiceNumber && (
-                    <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        fontWeight: 'bold',
-                        marginBottom: '4px'
-                    }}>
-                        <span>Document No:</span>
-                        <span>{invoiceNumber}</span>
+            {/* Transaction Metadata */}
+            <div style={{ 
+                borderTop: '1px solid #eee',
+                borderBottom: '1px solid #eee',
+                padding: '8px 0',
+                marginBottom: '12px',
+                fontSize: '10px'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ color: '#666' }}>Order ID:</span>
+                    <span style={{ fontWeight: '700' }}>#{order.id?.slice(-6).toUpperCase()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ color: '#666' }}>Table/Type:</span>
+                    <span style={{ fontWeight: '700' }}>
+                        {order.type === 'TAKEAWAY' ? 'PARCEL' : `Table ${order.table?.number || 'Walk-in'}`}
+                    </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ color: '#666' }}>Date:</span>
+                    <span>{new Date(order.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                </div>
+                {order.customer?.name && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed #eee' }}>
+                        <span style={{ color: '#666' }}>Guest:</span>
+                        <span style={{ fontWeight: '700' }}>{order.customer.name}</span>
                     </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Order #{order.id?.slice(-6).toUpperCase()}</span>
-                    <span>{order.type === 'TAKEAWAY' ? 'Type: PARCEL' : `Table: ${order.table?.number || 'Walk-in'}`}</span>
-                </div>
-                {order.type === 'TAKEAWAY' && (
-                    <div style={{ fontWeight: 'bold', textAlign: 'center', margin: '6px 0', border: '1px solid black', padding: '4px', fontSize: '13px' }}>PARCEL / TAKEAWAY</div>
-                )}
-                <div>Date: {new Date(order.createdAt).toLocaleString()}</div>
-                {/* Customer info if available */}
-                {order.customer?.name && (
-                    <div>Customer: {order.customer.name}</div>
-                )}
             </div>
 
-            <div style={{ borderBottom: '1px dashed #000', margin: '8px 0' }} />
-
-            {/* Items table */}
-            <table
-                style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: '12px',
-                    marginBottom: '10px',
-                }}
-            >
+            {/* Items Table */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
                 <thead>
-                    <tr>
-                        <th style={{ textAlign: 'left', paddingBottom: '4px' }}>Item</th>
-                        <th style={{ textAlign: 'center', paddingBottom: '4px', width: '18%' }}>Qty</th>
-                        <th style={{ textAlign: 'right', paddingBottom: '4px', width: '30%' }}>Amount</th>
+                    <tr style={{ borderBottom: '1.5px solid #000' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 0', fontSize: '10px', textTransform: 'uppercase' }}>Description</th>
+                        <th style={{ textAlign: 'center', padding: '6px 0', width: '15%', fontSize: '10px', textTransform: 'uppercase' }}>Qty</th>
+                        <th style={{ textAlign: 'right', padding: '6px 0', width: '25%', fontSize: '10px', textTransform: 'uppercase' }}>Price</th>
                     </tr>
                 </thead>
                 <tbody>
                     {items.length === 0 ? (
-                        <tr>
-                            <td colSpan={3} style={{ textAlign: 'center', padding: '8px 0' }}>
-                                No items
-                            </td>
-                        </tr>
+                        <tr><td colSpan={3} style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>No items found</td></tr>
                     ) : (
                         items.map((item, idx) => (
-                            <tr key={idx}>
-                                <td style={{ padding: '3px 0' }}>
-                                    {item.menuItem?.name || 'Unknown Item'}
-                                    {item.variant?.name && <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>({item.variant.name})</div>}
+                            <tr key={idx} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                                <td style={{ padding: '8px 0', verticalAlign: 'top' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '11px' }}>{item.menuItem?.name || 'Item'}</div>
+                                    {item.variant?.name && (
+                                        <div style={{ fontSize: '9px', color: '#666', fontWeight: '500' }}>{item.variant.name}</div>
+                                    )}
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '3px 0' }}>{item.quantity}</td>
-                                <td style={{ textAlign: 'right', padding: '3px 0' }}>
+                                <td style={{ textAlign: 'center', padding: '8px 0', verticalAlign: 'top', fontWeight: '600' }}>{item.quantity}</td>
+                                <td style={{ textAlign: 'right', padding: '8px 0', verticalAlign: 'top', fontWeight: '700' }}>
                                     {formatCurrency((item.price || 0) * (item.quantity || 0))}
                                 </td>
                             </tr>
@@ -162,77 +153,74 @@ const Receipt = React.forwardRef(({ order, client }, ref) => {
                 </tbody>
             </table>
 
-            <div style={{ borderBottom: '1px dashed #000', margin: '8px 0' }} />
-
-            {/* Totals */}
-            <div style={{ fontSize: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(order.subtotal || 0)}</span>
+            {/* Summary / Totals */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                    <span style={{ color: '#666' }}>Subtotal</span>
+                    <span style={{ fontWeight: '600' }}>{formatCurrency(order.subtotal || 0)}</span>
                 </div>
 
-                {/* Service Charge */}
                 {order.serviceChargeAmount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Service Charge ({client?.serviceChargeRate || 0}%)</span>
-                        <span>{formatCurrency(order.serviceChargeAmount)}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                        <span style={{ color: '#666' }}>Service Charge ({client?.serviceChargeRate || 0}%)</span>
+                        <span style={{ fontWeight: '600' }}>{formatCurrency(order.serviceChargeAmount)}</span>
                     </div>
                 )}
 
-                {/* VAT Section - Only for VAT_REGISTERED mode */}
                 {isVAT && order.taxAmount > 0 && (
-                    <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dotted #999', paddingTop: '4px', marginTop: '4px' }}>
-                            <span>Taxable Amount</span>
-                            <span>{formatCurrency((order.subtotal || 0) + (order.serviceChargeAmount || 0))}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                            <span>VAT (13%)</span>
-                            <span>{formatCurrency(order.taxAmount)}</span>
-                        </div>
-                    </>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '4px 0', borderTop: '1px dashed #eee', marginTop: '2px' }}>
+                        <span style={{ color: '#666' }}>VAT (13%)</span>
+                        <span style={{ fontWeight: '600' }}>{formatCurrency(order.taxAmount)}</span>
+                    </div>
                 )}
 
-                {/* Grand Total */}
-                <div
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        marginTop: '8px',
-                        paddingTop: '6px',
-                        borderTop: '2px solid #000',
-                    }}
-                >
-                    <span>GRAND TOTAL</span>
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    fontSize: '16px', 
+                    fontWeight: '900', 
+                    marginTop: '8px',
+                    paddingTop: '8px',
+                    borderTop: '2px solid #000'
+                }}>
+                    <span>TOTAL</span>
                     <span>{formatCurrency(order.totalAmount || 0)}</span>
                 </div>
             </div>
 
-            <div style={{ borderBottom: '1px dashed #000', margin: '12px 0' }} />
-
-            {/* Footer */}
-            <div style={{ textAlign: 'center', fontSize: '11px' }}>
-                <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
-                    Payment: {order.paymentMethod || 'Cash'}
-                </p>
-
-                {/* Pre-Certification Disclosure */}
+            {/* Footer / Disclosures */}
+            <div style={{ textAlign: 'center' }}>
                 <div style={{ 
-                    marginTop: '10px', 
-                    padding: '6px', 
-                    border: '1px solid #ddd', 
-                    fontSize: '9px', 
-                    lineHeight: '1.4',
-                    color: '#444'
+                    background: '#f9f9f9',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    marginBottom: '16px',
+                    fontSize: '10px',
+                    fontWeight: '700'
                 }}>
-                    <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', textTransform: 'uppercase' }}>Non-Fiscal Document</p>
-                    <p style={{ margin: 0 }}>This is a computer-generated internal estimate and not a legal tax invoice. RestroBaba (Pre-Certification Version).</p>
+                    Paid via: {order.paymentMethod || 'Cash'}
                 </div>
 
-                <p style={{ margin: '12px 0 4px' }}>Thank you for visiting {client?.name || 'us'}!</p>
-                <p style={{ margin: '2px 0', fontSize: '10px' }}>Software by RestroBaBa</p>
+                {/* Non-Fiscal Disclosure - Required */}
+                <div style={{ 
+                    border: '1px solid #eee',
+                    padding: '8px',
+                    fontSize: '8.5px',
+                    lineHeight: '1.4',
+                    color: '#666',
+                    textAlign: 'left',
+                    borderRadius: '4px'
+                }}>
+                    <div style={{ fontWeight: '900', color: '#000', marginBottom: '2px', textTransform: 'uppercase', textAlign: 'center', fontSize: '9px' }}>
+                        Non-Fiscal Document
+                    </div>
+                    This is an internal estimate generated by **RestroBaba POS**. This document is for operational use only and does not serve as a legal tax invoice under prevailing regulations.
+                </div>
+
+                <div style={{ marginTop: '20px', fontSize: '10px' }}>
+                    <p style={{ margin: '0 0 4px 0', fontWeight: '700' }}>Thank you for visiting!</p>
+                    <p style={{ margin: 0, opacity: 0.5 }}>RestroBaba Cloud POS • v2.4.0</p>
+                </div>
             </div>
         </div>
     );
