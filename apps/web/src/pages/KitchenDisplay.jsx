@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     ChefHat,
     Timer,
     CheckCircle2,
-    PlayCircle,
     AlertCircle,
     Loader2,
     Utensils,
@@ -12,19 +11,50 @@ import {
     WifiOff,
     Flame,
     UtensilsCrossed,
-    Clock
+    Clock,
+    Zap,
+    Volume2,
+    VolumeX
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { initSocket, disconnectSocket } from '../services/socket';
-import toast from 'react-hot-toast';
 
-// ── Helper: Elapsed time (defined at module scope so OrderCard can use it) ──
+
+// ── Helper: Elapsed time ──
 const getElapsedTime = (createdAt) => {
     if (!createdAt) return '0m';
     const diff = Math.floor((new Date() - new Date(createdAt)) / 1000 / 60);
     if (diff >= 60) return `${Math.floor(diff / 60)}h ${diff % 60}m`;
     return `${diff}m`;
+};
+
+// ── Inline flash notification (replaces blocking toasts for KDS actions) ──
+const KDSFlash = ({ message, variant, onDone }) => {
+    useEffect(() => {
+        const t = setTimeout(onDone, 1800);
+        return () => clearTimeout(t);
+    }, [onDone]);
+
+    const colors = {
+        cooking: { bg: 'rgba(212,175,55,0.15)', border: '#d4af37', text: '#d4af37', icon: '🔥' },
+        ready: { bg: 'rgba(16,185,129,0.15)', border: '#10b981', text: '#10b981', icon: '✅' },
+        served: { bg: 'rgba(99,102,241,0.15)', border: '#6366f1', text: '#6366f1', icon: '🍽️' },
+        error: { bg: 'rgba(239,68,68,0.15)', border: '#ef4444', text: '#ef4444', icon: '⚠️' },
+        item: { bg: 'rgba(16,185,129,0.15)', border: '#10b981', text: '#10b981', icon: '✓' }
+    };
+    const c = colors[variant] || colors.ready;
+
+    return (
+        <div className="kds-flash animate-flash-in" style={{
+            background: c.bg,
+            border: `1px solid ${c.border}`,
+            color: c.text,
+        }}>
+            <span>{c.icon}</span>
+            <span>{message}</span>
+        </div>
+    );
 };
 
 const KitchenDisplay = () => {
@@ -36,6 +66,20 @@ const KitchenDisplay = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [activeTab, setActiveTab] = useState('Pending');
     const [togglingItems, setTogglingItems] = useState({});
+    const [dismissingOrders, setDismissingOrders] = useState({});
+    const [flashMessages, setFlashMessages] = useState([]);
+    const [soundEnabled, setSoundEnabled] = useState(localStorage.getItem('kdsSoundEnabled') !== 'false');
+    const flashIdRef = useRef(0);
+
+    // ── Flash message system (non-blocking) ──
+    const showFlash = useCallback((message, variant = 'ready') => {
+        const id = ++flashIdRef.current;
+        setFlashMessages(prev => [...prev.slice(-2), { id, message, variant }]);
+    }, []);
+
+    const removeFlash = useCallback((id) => {
+        setFlashMessages(prev => prev.filter(f => f.id !== id));
+    }, []);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 10000);
@@ -52,9 +96,12 @@ const KitchenDisplay = () => {
             socket.on('disconnect', () => setIsLive(false));
 
             socket.on('ORDER_NEW', (newOrder) => {
-                const tableNum = newOrder.table?.number || 'Walk-in';
-                const msg = new SpeechSynthesisUtterance(`New order for Table ${tableNum}`);
-                window.speechSynthesis.speak(msg);
+                if (soundEnabled) {
+                    const tableNum = newOrder.table?.number || 'Walk-in';
+                    const msg = new SpeechSynthesisUtterance(`New order for Table ${tableNum}`);
+                    window.speechSynthesis.speak(msg);
+                }
+                showFlash(`New order incoming!`, 'cooking');
                 fetchOrders(true);
             });
 
@@ -63,18 +110,20 @@ const KitchenDisplay = () => {
             socket.on('ORDER_ITEMS_ADDED', (data) => {
                 const tableNum = data.tableNumber || 'Walk-in';
                 const itemCount = data.newItems?.length || 0;
-                const msg = new SpeechSynthesisUtterance(
-                    `Attention: ${itemCount} new item${itemCount > 1 ? 's' : ''} added to Table ${tableNum}`
-                );
-                msg.rate = 1.1;
-                window.speechSynthesis.speak(msg);
-                toast(`${itemCount} new item${itemCount > 1 ? 's' : ''} added to Table ${tableNum}`, { icon: '➕', duration: 4000 });
+                if (soundEnabled) {
+                    const msg = new SpeechSynthesisUtterance(
+                        `Attention: ${itemCount} new item${itemCount > 1 ? 's' : ''} added to Table ${tableNum}`
+                    );
+                    msg.rate = 1.1;
+                    window.speechSynthesis.speak(msg);
+                }
+                showFlash(`+${itemCount} items → Table ${tableNum}`, 'cooking');
                 fetchOrders(true);
             });
         }
 
         return () => disconnectSocket();
-    }, [user?.clientId]);
+    }, [user?.clientId, soundEnabled]);
 
     const fetchOrders = async (silent = false) => {
         if (!silent) setLoading(true);
@@ -99,7 +148,41 @@ const KitchenDisplay = () => {
         }
     };
 
-    const updateStatus = async (orderId, newStatus) => {
+    // ── OPTIMISTIC status update ──
+    const updateStatus = useCallback(async (orderId, newStatus) => {
+        // 1. Immediately animate the card out
+        setDismissingOrders(prev => ({ ...prev, [orderId]: newStatus }));
+
+        // 2. Show instant flash feedback
+        const labels = { 'Cooking': '🔥 Firing!', 'Ready': '✅ Ready for pickup!', 'Served': '🍽️ Served!' };
+        showFlash(labels[newStatus] || `→ ${newStatus}`, newStatus.toLowerCase());
+
+        // 3. Remove from local state after animation (300ms)
+        setTimeout(() => {
+            setOrders(prev => {
+                if (newStatus === 'Served') {
+                    return prev.filter(o => o.id !== orderId);
+                }
+                return prev.map(o => {
+                    if (o.id !== orderId) return o;
+                    const updated = { ...o, status: newStatus };
+                    if (newStatus === 'Cooking') {
+                        updated.items = o.items.map(i => ({
+                            ...i,
+                            status: 'Cooking',
+                            cookingStartedAt: new Date().toISOString()
+                        }));
+                    }
+                    if (newStatus === 'Ready') {
+                        updated.items = o.items.map(i => ({ ...i, status: 'Ready' }));
+                    }
+                    return updated;
+                });
+            });
+            setDismissingOrders(prev => { const n = { ...prev }; delete n[orderId]; return n; });
+        }, 320);
+
+        // 4. Fire API in background (non-blocking)
         const token = localStorage.getItem('restroToken');
         try {
             const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
@@ -107,14 +190,15 @@ const KitchenDisplay = () => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ status: newStatus })
             });
-            if (response.ok) {
-                toast.success(`Order marked as ${newStatus}`);
+            if (!response.ok) {
+                showFlash('Update failed — reverting', 'error');
                 fetchOrders(true);
             }
         } catch (err) {
-            toast.error('Failed to update status');
+            showFlash('Network error — reverting', 'error');
+            fetchOrders(true);
         }
-    };
+    }, [showFlash]);
 
     if (loading) return (
         <div className="page-container flex-center" style={{ flexDirection: 'column', gap: '1rem', background: '#0a0a0b', minHeight: '100vh' }}>
@@ -164,6 +248,18 @@ const KitchenDisplay = () => {
 
     return (
         <div className="page-container animate-fade kds-pro-theme">
+            {/* ── FLASH NOTIFICATIONS ── */}
+            <div className="kds-flash-container">
+                {flashMessages.map(f => (
+                    <KDSFlash
+                        key={f.id}
+                        message={f.message}
+                        variant={f.variant}
+                        onDone={() => removeFlash(f.id)}
+                    />
+                ))}
+            </div>
+
             {/* ── KDS HEADER ── */}
             <div className="kds-header">
                 <div className="kds-header-left">
@@ -181,7 +277,21 @@ const KitchenDisplay = () => {
                                 <Timer size={12} />
                                 {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            <span className="kds-order-count">{totalActive} Active</span>
+                            <span className="kds-order-count">
+                                <Zap size={10} style={{ marginRight: '3px' }} />
+                                {totalActive} Active
+                            </span>
+                            <button
+                                className="kds-sound-toggle"
+                                onClick={() => {
+                                    const next = !soundEnabled;
+                                    setSoundEnabled(next);
+                                    localStorage.setItem('kdsSoundEnabled', next);
+                                }}
+                                title={soundEnabled ? 'Mute voice alerts' : 'Enable voice alerts'}
+                            >
+                                {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -247,14 +357,16 @@ const KitchenDisplay = () => {
                                     key={order.id}
                                     order={order}
                                     onAction={() => updateStatus(order.id, 'Cooking')}
-                                    actionLabel="Start Prep"
-                                    actionIcon={<PlayCircle size={18} />}
+                                    actionLabel="FIRE"
+                                    actionIcon={<Flame size={18} />}
                                     time={getElapsedTime(order.displayTime)}
                                     variant="warning"
                                     currentTime={currentTime}
                                     onRefresh={() => fetchOrders(true)}
                                     togglingItems={togglingItems}
                                     setTogglingItems={setTogglingItems}
+                                    isDismissing={dismissingOrders[order.id]}
+                                    showFlash={showFlash}
                                 />
                             ))}
                         </div>
@@ -278,7 +390,7 @@ const KitchenDisplay = () => {
                                     key={order.id}
                                     order={order}
                                     onAction={() => updateStatus(order.id, 'Ready')}
-                                    actionLabel="Finish All"
+                                    actionLabel="DONE"
                                     actionIcon={<CheckCircle2 size={18} />}
                                     time={getElapsedTime(order.displayTime)}
                                     variant="primary"
@@ -286,6 +398,8 @@ const KitchenDisplay = () => {
                                     onRefresh={() => fetchOrders(true)}
                                     togglingItems={togglingItems}
                                     setTogglingItems={setTogglingItems}
+                                    isDismissing={dismissingOrders[order.id]}
+                                    showFlash={showFlash}
                                 />
                             ))}
                         </div>
@@ -309,7 +423,7 @@ const KitchenDisplay = () => {
                                     key={order.id}
                                     order={order}
                                     onAction={() => updateStatus(order.id, 'Served')}
-                                    actionLabel="Served"
+                                    actionLabel="SERVED"
                                     actionIcon={<History size={18} />}
                                     time={getElapsedTime(order.displayTime)}
                                     variant="success"
@@ -317,6 +431,8 @@ const KitchenDisplay = () => {
                                     onRefresh={() => fetchOrders(true)}
                                     togglingItems={togglingItems}
                                     setTogglingItems={setTogglingItems}
+                                    isDismissing={dismissingOrders[order.id]}
+                                    showFlash={showFlash}
                                 />
                             ))}
                         </div>
@@ -328,7 +444,8 @@ const KitchenDisplay = () => {
 };
 
 // ── ORDER CARD COMPONENT ──
-const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, currentTime, onRefresh, togglingItems = {}, setTogglingItems = () => { } }) => {
+const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, currentTime, onRefresh, togglingItems = {}, setTogglingItems = () => { }, isDismissing, showFlash }) => {
+    const [pressing, setPressing] = useState(false);
     const ageInMins = Math.floor((currentTime - new Date(order.displayTime)) / 1000 / 60);
 
     let urgencyClass = '';
@@ -341,17 +458,22 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
     const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0);
     const readyItems = order.items.filter(i => i.status === 'Ready').reduce((sum, i) => sum + i.quantity, 0);
 
+    const handleAction = () => {
+        setPressing(true);
+        onAction();
+    };
+
     return (
-        <div className={`kds-card ${variant} ${urgencyClass}`}>
+        <div className={`kds-card ${variant} ${urgencyClass} ${isDismissing ? 'kds-card-dismiss' : ''}`}>
             {/* Card Header */}
             <div className="kds-card-header">
                 <div className="order-info">
                     <div className="order-num">#{order.id.slice(-4).toUpperCase()}</div>
                     <div className="table-info">
                         <Utensils size={12} />
-                        {order.type === 'TAKEAWAY' ? 'Parcel / Takeaway' : `Table ${order.table?.number || 'Walk-in'}`}
+                        {order.type === 'TAKEAWAY' ? 'Parcel' : `T${order.table?.number || '?'}`}
                         {order.type === 'TAKEAWAY' && (
-                            <span className="parcel-badge" style={{ marginLeft: '0.5rem', background: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>PARCEL</span>
+                            <span className="parcel-badge">PKG</span>
                         )}
                     </div>
                 </div>
@@ -376,7 +498,7 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
                     .map((item) => {
                         const isToggling = togglingItems[item.id];
                         const displayReady = isToggling
-                            ? (item.status !== 'Ready') // Optimistic: flip the status visually
+                            ? (item.status !== 'Ready')
                             : (item.status === 'Ready');
                         return (
                             <div key={item.id} className={`kds-item-row ${displayReady ? 'ready' : ''}`}>
@@ -404,8 +526,8 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
                                         onClick={async (e) => {
                                             e.stopPropagation();
                                             const newStatus = item.status === 'Ready' ? 'Pending' : 'Ready';
-                                            // Optimistic update — show checkmark immediately
                                             setTogglingItems(prev => ({ ...prev, [item.id]: true }));
+                                            showFlash(newStatus === 'Ready' ? `${item.menuItem?.name} ✓` : `${item.menuItem?.name} reset`, 'item');
                                             const token = localStorage.getItem('restroToken');
                                             try {
                                                 const res = await fetch(`${API_BASE_URL}/api/orders/item/${item.id}/status`, {
@@ -413,9 +535,7 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
                                                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                                                     body: JSON.stringify({ status: newStatus })
                                                 });
-                                                if (res.ok) {
-                                                    toast.success(newStatus === 'Ready' ? 'Item Prepared ✓' : 'Item Reset');
-                                                }
+                                                if (!res.ok) showFlash('Item update failed', 'error');
                                             } finally {
                                                 setTogglingItems(prev => { const n = { ...prev }; delete n[item.id]; return n; });
                                                 if (onRefresh) onRefresh();
@@ -431,7 +551,10 @@ const OrderCard = ({ order, onAction, actionLabel, actionIcon, time, variant, cu
             </div>
 
             {/* Action Button */}
-            <button className={`kds-action-btn ${variant}`} onClick={onAction}>
+            <button
+                className={`kds-action-btn ${variant} ${pressing ? 'kds-btn-pressed' : ''}`}
+                onClick={handleAction}
+            >
                 {actionIcon}
                 <span>{actionLabel}</span>
             </button>
