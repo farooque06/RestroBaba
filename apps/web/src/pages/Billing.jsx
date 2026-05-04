@@ -27,6 +27,7 @@ const Billing = () => {
     const [showPhonePrompt, setShowPhonePrompt] = useState(false);
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
     const receiptRef = React.useRef(null);
+    const printRef = React.useRef(null);
 
     useEffect(() => {
         fetchInvoices();
@@ -98,23 +99,28 @@ const Billing = () => {
         setPrintingOrder(order);
         // Wait for component to render
         setTimeout(async () => {
-            if (!receiptRef.current) return;
-            const canvas = await html2canvas(receiptRef.current, {
-                scale: 2, // Higher quality
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: [80, canvas.height * 80 / canvas.width] // Match receipt width
-            });
+            if (!printRef.current) return;
+            try {
+                const canvas = await html2canvas(printRef.current, {
+                    scale: 2, // Higher quality
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: [80, canvas.height * 80 / canvas.width] // Match receipt width
+                });
 
-            pdf.addImage(imgData, 'PNG', 0, 0, 80, canvas.height * 80 / canvas.width);
-            pdf.save(`Receipt-${order.id.slice(-6).toUpperCase()}.pdf`);
-            setPrintingOrder(null);
+                pdf.addImage(imgData, 'PNG', 0, 0, 80, canvas.height * 80 / canvas.width);
+                pdf.save(`Receipt-${order.id.slice(-6).toUpperCase()}.pdf`);
+            } catch (err) {
+                toast.error('Failed to generate PDF');
+            } finally {
+                setPrintingOrder(null);
+            }
         }, 500);
     };
 
@@ -461,7 +467,9 @@ const Billing = () => {
                                     </div>
                                 )}
 
-                                <Receipt ref={receiptRef} order={printingOrder} client={user?.client} />
+                                <div className="preview-receipt-wrapper">
+                                    <Receipt order={printingOrder} client={user?.client} />
+                                </div>
 
                                 {activeTab === 'pending' && (
                                     <div className="preview-payment-section">
@@ -565,7 +573,7 @@ const Billing = () => {
                 >
                     {printingOrder && (
                         <Receipt
-                            ref={receiptRef}
+                            ref={printRef}
                             order={printingOrder}
                             client={user?.client}
                         />

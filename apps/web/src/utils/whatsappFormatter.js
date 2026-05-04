@@ -70,7 +70,6 @@ export const formatWhatsAppReceipt = (order, client) => {
         message += `👤 *Guest:* ${order.customer.name}\n`;
     }
     message += `\n_Thank you for dining with ${client?.name || 'us'}!_\n`;
-    message += `\n--- _RestroBaba Cloud POS_ ---`;
 
     return encodeURIComponent(message);
 };

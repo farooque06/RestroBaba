@@ -438,3 +438,16 @@
     max-height: 85vh;
   }
 }
+
+.checkout-receipt-preview {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    margin: 0.5rem 0 1.5rem 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.checkout-receipt-preview .receipt-print-wrapper {
+    padding: 1.5rem !important;
+}

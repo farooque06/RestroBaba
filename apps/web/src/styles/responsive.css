@@ -497,6 +497,8 @@
   .header, 
   .sidebar-overlay,
   .modal-overlay,
+  .checkout-backdrop,
+  .checkout-sheet,
   .ol-payment-overlay,
   .ot-overlay,
   .page-container,
@@ -505,6 +507,7 @@
     height: 0 !important;
     overflow: hidden !important;
     visibility: hidden !important;
+    opacity: 0 !important;
   }
 
   /* Universal print container */

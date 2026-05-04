@@ -537,16 +537,31 @@ const TableManagement = () => {
                 document.body
             )}
 
-            {/* Hidden print area */}
+            {/* Hidden Receipt Area for Printing - Isolated from main UI */}
             {createPortal(
-                <div id="printable-receipt-container" style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '80mm', background: 'white' }}>
+                <div
+                    id="printable-receipt-container"
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '80mm',
+                        zIndex: -1,
+                        opacity: 0,
+                        pointerEvents: 'none',
+                        background: 'white'
+                    }}
+                >
                     {printingOrder && (
                         <Receipt
                             ref={receiptRef}
                             order={printingOrder}
                             client={{
                                 name: user?.clientName,
-                                email: user?.email,
+                                businessAddress: user?.client?.businessAddress,
+                                businessPhone: user?.client?.businessPhone,
+                                panNumber: user?.client?.panNumber,
+                                taxMode: user?.client?.taxMode,
                                 taxRate: user?.client?.taxRate,
                                 serviceChargeRate: user?.client?.serviceChargeRate,
                             }}
