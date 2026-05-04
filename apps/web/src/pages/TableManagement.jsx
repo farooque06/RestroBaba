@@ -331,11 +331,31 @@ const TableManagement = () => {
         }, 300);
     };
 
-    const performAutoCapture = async (orderId) => {
-        if (!customerPhone || customerPhone.length < 10) return;
+    const handleWhatsApp = async (order, customPhone) => {
+        const phoneToSend = customPhone || customerPhone;
+        
+        if (!phoneToSend || phoneToSend.length < 10) {
+            setShowPhonePrompt(true);
+            toast.error('Please enter a valid phone number');
+            return;
+        }
+
+        const message = formatWhatsAppReceipt(order, { name: user?.clientName });
+        let phone = phoneToSend.replace(/\D/g, '');
+        if (phone.length === 10) phone = '977' + phone;
+
+        // Silent background capture & link
+        performAutoCapture(order.id, phoneToSend);
+        
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+        toast.success('WhatsApp link opened');
+    };
+
+    const performAutoCapture = async (orderId, phoneInput) => {
+        if (!phoneInput || phoneInput.length < 10) return;
         try {
             const token = localStorage.getItem('restroToken');
-            let phone = customerPhone.replace(/\D/g, '');
+            let phone = phoneInput.replace(/\D/g, '');
             if (phone.length === 10) phone = '977' + phone;
 
             const custRes = await fetch(`${API_BASE_URL}/api/customers/upsert`, {
@@ -346,31 +366,17 @@ const TableManagement = () => {
             const customer = await custRes.json();
 
             if (custRes.ok && customer.id) {
+                // Silently link to order
                 await fetch(`${API_BASE_URL}/api/orders/${orderId}/customer`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ customerId: customer.id })
                 });
+                fetchTables(true); // Sync UI
             }
         } catch (err) {
             console.error('Auto-capture failed:', err);
         }
-    };
-
-    const handleWhatsApp = async (order) => {
-        if (!customerPhone || customerPhone.length < 10) {
-            setShowPhonePrompt(true);
-            toast.error('Please enter customer phone number');
-            return;
-        }
-
-        const message = formatWhatsAppReceipt(order, { name: user?.clientName });
-        let phone = customerPhone.replace(/\D/g, '');
-        if (phone.length === 10) phone = '977' + phone;
-
-        performAutoCapture(order.id);
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-        toast.success('WhatsApp receipt generated');
     };
 
     const filteredTables = tables.filter((t) => filter === 'All' || t.status === filter);

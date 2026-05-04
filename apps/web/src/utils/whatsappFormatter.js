@@ -71,5 +71,5 @@ export const formatWhatsAppReceipt = (order, client) => {
     }
     message += `\n_Thank you for dining with ${client?.name || 'us'}!_\n`;
 
-    return encodeURIComponent(message);
+    return message;
 };

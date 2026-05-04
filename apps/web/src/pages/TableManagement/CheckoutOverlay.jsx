@@ -130,18 +130,29 @@ const CheckoutOverlay = ({
                         </div>
                     )}
 
-                    {/* WhatsApp Phone Prompt */}
-                    {showPhonePrompt && (
-                        <div className="checkout-section animate-fade">
-                            <label className="checkout-phone-label">CUSTOMER PHONE FOR WHATSAPP</label>
-                            <input 
-                                type="tel"
-                                placeholder="98XXXXXXXX"
-                                className="checkout-phone-input"
-                                autoFocus
-                                value={customerPhone}
-                                onChange={(e) => setCustomerPhone(e.target.value)}
-                            />
+                    {/* WhatsApp Action Area */}
+                    {(showPhonePrompt || order.customer) && (
+                        <div className="checkout-whatsapp-area animate-slide-up">
+                            <div className="checkout-whatsapp-input-wrap">
+                                <div className="whatsapp-icon">
+                                    <MessageCircle size={18} />
+                                </div>
+                                <input 
+                                    type="tel"
+                                    placeholder="Customer WhatsApp Number"
+                                    className="checkout-whatsapp-input"
+                                    value={customerPhone || order.customer?.phone || ''}
+                                    onChange={(e) => setCustomerPhone(e.target.value)}
+                                    autoFocus={showPhonePrompt}
+                                />
+                                <button 
+                                    className="checkout-whatsapp-send-btn"
+                                    onClick={() => onWhatsApp(order, customerPhone || order.customer?.phone)}
+                                >
+                                    <span>Send Bill</span>
+                                    <ChevronDown size={16} className="rotate-270" />
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -164,9 +175,12 @@ const CheckoutOverlay = ({
                     </button>
 
                     <div className="checkout-secondary-actions">
-                        <button onClick={() => onWhatsApp(order)} className="checkout-action-btn whatsapp">
-                            <MessageCircle size={16} />
-                        </button>
+                        {!showPhonePrompt && !order.customer && (
+                            <button onClick={() => setShowPhonePrompt(true)} className="checkout-action-btn whatsapp">
+                                <MessageCircle size={16} />
+                                <span>WhatsApp Bill</span>
+                            </button>
+                        )}
                         <button onClick={() => onPrint(order)} className="checkout-action-btn">
                             <Printer size={16} />
                         </button>

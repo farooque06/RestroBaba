@@ -209,7 +209,7 @@ const Billing = () => {
             console.error('Auto-capture failed:', err);
         }
 
-        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
         toast.success('WhatsApp receipt generated');
     };
 
