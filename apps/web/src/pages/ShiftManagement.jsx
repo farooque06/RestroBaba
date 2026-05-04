@@ -125,7 +125,7 @@ const ShiftManagement = () => {
     return (
         <div className="page-container animate-fade">
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3.5rem' }}>
+            <div className="dashboard-header">
                 <div>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '0.5rem' }}>
                         Shift Management
@@ -148,9 +148,9 @@ const ShiftManagement = () => {
                 </div>
             </div>
 
-            <div className="dashboard-grid" style={{ marginBottom: '3.5rem', gap: '2rem' }}>
+            <div className="dashboard-grid" style={{ marginBottom: '3.5rem' }}>
                 {/* Active Action Card */}
-                <div className="premium-glass" style={{ gridColumn: 'span 2', padding: '0', display: 'flex', flexDirection: 'column' }}>
+                <div className="premium-glass grid-span-2" style={{ padding: '0', display: 'flex', flexDirection: 'column' }}>
                     {!currentShift ? (
                         <div style={{ padding: '4rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, justifyContent: 'center' }}>
                             <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: 'var(--primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', boxShadow: '0 8px 32px rgba(212, 175, 55, 0.2)' }}>
@@ -195,7 +195,7 @@ const ShiftManagement = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                            <div className="responsive-grid" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '20px', border: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <Clock size={14} /> Opened At
@@ -226,7 +226,7 @@ const ShiftManagement = () => {
 
                 {/* Quick Stats (Only if shift open) */}
                 {currentShift && (
-                    <div className="premium-glass" style={{ gridColumn: 'span 1', padding: '0', display: 'flex', flexDirection: 'column' }}>
+                    <div className="premium-glass" style={{ padding: '0', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)' }}>
                             <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-heading)' }}>Live Reconciliation</h3>
                         </div>

@@ -177,6 +177,35 @@
     .settings-content {
         max-width: 100%;
     }
+
+    .settings-header h2 {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .settings-tab-btn span {
+        display: inline;
+        font-size: 0.75rem;
+    }
+    
+    .settings-tabs {
+        padding: 0.5rem;
+        gap: 0.4rem;
+    }
+
+    .settings-tab-btn {
+        flex-direction: column;
+        padding: 0.6rem;
+        min-width: 80px;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .settings-tab-btn svg {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 @media (max-width: 480px) {

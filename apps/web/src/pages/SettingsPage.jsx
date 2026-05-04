@@ -253,7 +253,7 @@ const SettingsPage = () => {
                     </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+                <div className="responsive-grid" style={{ marginBottom: '2.5rem' }}>
 
                     {/* PAN / Business Details — Shown for PAN_ONLY and VAT_REGISTERED */}
                     {(settings.taxMode === 'PAN_ONLY' || settings.taxMode === 'VAT_REGISTERED') && (
@@ -264,7 +264,7 @@ const SettingsPage = () => {
                                 </div>
                                 <span style={{ fontWeight: 700 }}>Business Registration Details</span>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem' }}>
+                            <div className="responsive-grid" style={{ gap: '1.25rem' }}>
                                 <div>
                                     <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
                                         PAN Number <span style={{ color: '#ef4444' }}>*</span>
@@ -388,6 +388,7 @@ const SettingsPage = () => {
                             <div style={{ 
                                 width: '180px', 
                                 height: '180px', 
+                                flexShrink: 0,
                                 background: 'white', 
                                 borderRadius: '12px', 
                                 display: 'flex', 
@@ -524,7 +525,7 @@ const SettingsPage = () => {
 
         return (
             <div className="settings-section-card animate-fade">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
+                <div className="dashboard-header" style={{ marginBottom: '2.5rem' }}>
                     <div className="settings-header" style={{ margin: 0 }}>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Subscription Plans</h2>
                         <p style={{ color: 'var(--text-muted)' }}>Choose the best plan for your restaurant's growth.</p>
@@ -728,9 +729,11 @@ const SettingsPage = () => {
 
     return (
         <div className="page-container animate-fade">
-            <header style={{ marginBottom: '3rem' }}>
-                <h1 style={{ fontSize: '2.4rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>System Settings</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>Personalize your administrative workspace and operational rules.</p>
+            <header className="dashboard-header">
+                <div>
+                    <h1 style={{ fontSize: '2.4rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>System Settings</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>Personalize your administrative workspace and operational rules.</p>
+                </div>
             </header>
 
             <div className="settings-container">
@@ -795,7 +798,7 @@ const SettingsPage = () => {
                                 <h2>Profile Information</h2>
                                 <p>View your access level and linked restaurant organization.</p>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+                            <div className="responsive-grid">
                                 <div className="input-group">
                                     <label>User Name</label>
                                     <input className="auth-input" value={user?.name || ''} readOnly style={{ background: 'var(--bg-input)', cursor: 'default' }} />
