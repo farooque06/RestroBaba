@@ -916,3 +916,16 @@
         white-space: normal;
     }
 }
+
+@media (max-width: 760px) {
+    .customer-staff-toolbar .customer-search {
+        flex: 0 0 auto;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .customer-staff-toolbar .customer-toolbar-controls {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
