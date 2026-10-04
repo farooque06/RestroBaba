@@ -9,12 +9,14 @@ import {
     UserPlus, Search as SearchIcon, Award, RotateCcw, ChevronUp, ChevronDown, Heart
 } from 'lucide-react';
 import OptimizedImage from './common/OptimizedImage';
+import Dropdown from './common/Dropdown';
 import CustomerSelectionModal from './CustomerSelectionModal';
 
 const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     const { user } = useAuth();
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [comboDeals, setComboDeals] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [cart, setCart] = useState([]);
     const [originalQuantities, setOriginalQuantities] = useState({});
@@ -24,6 +26,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
     const [variantModalItem, setVariantModalItem] = useState(null); // Tracks which item is being selected for variants
+    const [comboDealSelection, setComboDealSelection] = useState(null);
     const [menuSearch, setMenuSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [visibleCount, setVisibleCount] = useState(12);
@@ -116,6 +119,8 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                             orderItemId: item.id,
                             name: item.menuItem?.name || 'Unknown Item',
                             variantName: item.variant?.name || null, // ADDED
+                            comboDealName: item.comboDealName || null,
+                            comboGroupName: item.comboGroupName || null,
                             price: item.price ?? item.menuItem?.price ?? 0,
                             quantity: item.quantity || 1,
                             image: item.menuItem?.image || '',
@@ -149,13 +154,22 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
             ]);
             const items = await itemsRes.json();
             const cats = await catsRes.json();
+            const combosRes = await fetch(`${API_BASE_URL}/api/combos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
             if (itemsRes.ok) {
                 setMenuItems(items.filter(item => item.available));
                 setCategories(['All', ...cats.map(c => c.name)]);
             }
+            if (combosRes.ok) {
+                setComboDeals(await combosRes.json());
+            } else {
+                toast.error('Combo deals could not be loaded');
+            }
         } catch (err) {
             console.error('Failed to fetch menu', err);
+            toast.error('Menu and combo deals could not be loaded');
         } finally {
             setLoading(false);
         }
@@ -192,6 +206,71 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
 
         setVariantModalItem(null);
         toast.success(`Added ${item.name}${variantName ? ` (${variantName})` : ''}`, { icon: '🍽️', position: 'bottom-center' });
+    };
+
+    const openComboChooser = deal => {
+        setComboDealSelection({ deal, selections: {} });
+    };
+
+    const addConfiguredCombo = () => {
+        if (!comboDealSelection) return;
+        const { deal, selections } = comboDealSelection;
+        const components = [];
+
+        for (const group of deal.groups) {
+            const optionId = selections[group.id];
+            if (!optionId) {
+                if (group.required) {
+                    toast.error(`Choose an option for ${group.name}`);
+                    return;
+                }
+                continue;
+            }
+            const option = group.options.find(candidate => candidate.id === optionId);
+            if (!option?.menuItem?.available) {
+                toast.error('That combo choice is currently unavailable');
+                return;
+            }
+            components.push({ groupId: group.id, optionId, groupName: group.name, option });
+        }
+
+        if (components.length === 0) {
+            toast.error('Choose at least one combo item');
+            return;
+        }
+
+        const totalPrice = Number(deal.price) + components.reduce((sum, component) => sum + Number(component.option.extraPrice), 0);
+        const comboKey = `combo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        setCart(current => [...current, {
+            id: comboKey,
+            cartKey: comboKey,
+            name: deal.name,
+            price: totalPrice,
+            quantity: 1,
+            isCombo: true,
+            isExisting: false,
+            comboDealId: deal.id,
+            comboSelections: components.map(component => ({
+                groupId: component.groupId,
+                optionId: component.optionId
+            })),
+            comboComponents: components.map(component => ({
+                groupName: component.groupName,
+                itemName: component.option.menuItem.name
+            }))
+        }]);
+        setComboDealSelection(null);
+        toast.success(`${deal.name} added`, { icon: '🍽️', position: 'bottom-center' });
+    };
+
+    const increaseCartItem = item => {
+        if (!item.isCombo) {
+            addToCart(item);
+            return;
+        }
+        setCart(current => current.map(entry =>
+            entry.cartKey === item.cartKey ? { ...entry, quantity: entry.quantity + 1 } : entry
+        ));
     };
 
     const removeFromCart = (cartKey) => {
@@ -254,11 +333,16 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                     type: table.type || 'DINE_IN',
                     totalAmount: finalTotal,
                     customerId: selectedCustomer?.id,
-                    items: newItems.map(item => ({
+                    items: newItems.filter(item => !item.isCombo).map(item => ({
                         menuItemId: item.id,
                         variantId: item.variantId, // NEW
                         quantity: item.quantity,
                         price: item.price
+                    })),
+                    combos: newItems.filter(item => item.isCombo).map(item => ({
+                        dealId: item.comboDealId,
+                        quantity: item.quantity,
+                        selections: item.comboSelections
                     }))
                 })
             });
@@ -332,6 +416,28 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                             </button>
                         ))}
                     </div>
+
+                    {comboDeals.length > 0 && (
+                        <section style={{ padding: '0 1rem 1rem' }}>
+                            <h3 style={{ margin: '0 0 0.65rem', fontSize: '0.9rem', color: 'var(--primary)' }}>COMBO DEALS</h3>
+                            <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.35rem' }}>
+                                {comboDeals.map(deal => (
+                                    <button key={deal.id} type="button" onClick={() => openComboChooser(deal)}
+                                        style={{
+                                            minWidth: '180px', maxWidth: '260px', textAlign: 'left', cursor: 'pointer',
+                                            padding: '0.9rem 1rem', borderRadius: '14px', border: '1px solid var(--glass-border)',
+                                            background: 'var(--glass-bg)', color: 'var(--text-main)'
+                                        }}>
+                                        <strong style={{ display: 'block' }}>{deal.name}</strong>
+                                        <span style={{ display: 'block', marginTop: '0.3rem', color: 'var(--primary)', fontWeight: 800 }}>
+                                            From {formatCurrency(deal.price)}
+                                        </span>
+                                        {deal.description && <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{deal.description}</span>}
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     {/* Scrollable Menu Area */}
                     <div className="ot-scroll-area">
@@ -439,6 +545,9 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                             <div style={{ flex: 1 }}>
                                                 <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px', color: 'var(--text-heading)' }}>
                                                     {item.name}
+                                                    {item.isCombo && (
+                                                        <span style={{ marginLeft: '0.5rem', color: 'var(--primary)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Combo</span>
+                                                    )}
                                                     {item.variantName && (
                                                         <span style={{
                                                             marginLeft: '0.5rem',
@@ -464,6 +573,16 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                                         </span>
                                                     )}
                                                 </p>
+                                                {item.comboDealName && (
+                                                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                        {item.comboDealName}{item.comboGroupName ? ` · ${item.comboGroupName}` : ''}
+                                                    </p>
+                                                )}
+                                                {item.comboComponents?.map(component => (
+                                                    <p key={`${component.groupName}-${component.itemName}`} style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                        {component.groupName}: {component.itemName}
+                                                    </p>
+                                                ))}
                                                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{formatCurrency(item.price)}</p>
                                             </div>
                                         </div>
@@ -473,7 +592,7 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                                     <button onClick={() => removeFromCart(item.cartKey)} className="ot-qty-btn">
                                                         <Minus size={14} />
                                                     </button>
-                                                    <button onClick={() => addToCart(item)} className="ot-qty-btn">
+                                                    <button onClick={() => increaseCartItem(item)} className="ot-qty-btn">
                                                         <Plus size={14} />
                                                     </button>
                                                 </>
@@ -544,6 +663,75 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                     onClose={() => setShowCustomerSearch(false)}
                     onSelect={(customer) => setSelectedCustomer(customer)}
                 />
+            )}
+
+            {comboDealSelection && (
+                <div className="ot-customer-overlay" onClick={() => setComboDealSelection(null)}>
+                    <div className="combo-order-modal premium-glass animate-pop"
+                        onClick={event => event.stopPropagation()}>
+                        <header className="combo-order-modal-header">
+                            <div className="combo-order-modal-icon"><Utensils size={19} /></div>
+                            <div className="combo-order-modal-title">
+                                <span className="combo-order-eyebrow">Customize your combo</span>
+                                <h2>{comboDealSelection.deal.name}</h2>
+                                {comboDealSelection.deal.description && <p>{comboDealSelection.deal.description}</p>}
+                            </div>
+                            <button type="button" className="combo-order-close" aria-label="Close combo selection"
+                                onClick={() => setComboDealSelection(null)}>
+                                <X size={18} />
+                            </button>
+                        </header>
+                        <div className="combo-order-groups">
+                            {comboDealSelection.deal.groups.map(group => (
+                                <section key={group.id} className="combo-order-group">
+                                    <div className="combo-order-group-heading">
+                                        <span className="combo-order-group-name">{group.name}</span>
+                                        <span className={`combo-order-group-badge ${group.required ? 'required' : 'optional'}`}>
+                                            {group.required ? 'Required' : 'Optional'}
+                                        </span>
+                                    </div>
+                                    <Dropdown
+                                        className="combo-order-picker"
+                                        options={[
+                                            { value: '', label: group.required ? 'Choose an item' : 'No upgrade' },
+                                            ...group.options.filter(option => option.menuItem?.available && !option.menuItem?.isDeleted).map(option => ({
+                                                value: option.id,
+                                                label: `${option.menuItem.name}${option.extraPrice > 0 ? ` · +${formatCurrency(option.extraPrice)}` : ''}`
+                                            }))
+                                        ]}
+                                        value={comboDealSelection.selections[group.id] || ''}
+                                        onChange={value => setComboDealSelection(current => ({
+                                            ...current,
+                                            selections: { ...current.selections, [group.id]: value }
+                                        }))}
+                                        placeholder={group.required ? 'Choose an item' : 'No upgrade'}
+                                        isSearchable={group.options.length > 5}
+                                    />
+                                </section>
+                            ))}
+                        </div>
+                        <div className="combo-order-total">
+                            <div>
+                                <span className="combo-order-total-label">Combo total</span>
+                                <small>Includes selected upgrades</small>
+                            </div>
+                            <strong>
+                                {formatCurrency(Number(comboDealSelection.deal.price) + comboDealSelection.deal.groups.reduce((sum, group) => {
+                                    const option = group.options.find(candidate => candidate.id === comboDealSelection.selections[group.id]);
+                                    return sum + Number(option?.extraPrice || 0);
+                                }, 0))}
+                            </strong>
+                        </div>
+                        <div className="combo-order-actions">
+                            <button type="button" className="combo-order-cancel" onClick={() => setComboDealSelection(null)}>
+                                Cancel
+                            </button>
+                            <button type="button" onClick={addConfiguredCombo} className="ot-confirm-btn">
+                                Add to order
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* VARIANT SELECTION MODAL */}

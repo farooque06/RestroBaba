@@ -34,3 +34,4 @@ RestroBaBa is a professional, multi-tenant restaurant management system designed
 - Billing & Invoicing
 - Inventory Management
 - Expense Tracking
+- Combo and meal deals with required choices, optional upgrades, scheduled availability, and staff POS ordering

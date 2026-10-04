@@ -3,6 +3,7 @@ import prisma from '../services/prisma.js';
 import { notifyClient } from '../services/socket.js';
 import { createOrderSchema, updateOrderStatusSchema, paymentSchema } from '../validations/orderSchema.js';
 import { generateTaxInvoice } from './taxInvoice.js';
+import { ComboOrderError, resolveComboOrderItems } from '../services/comboOrderItems.js';
 
 const router = express.Router();
 
@@ -22,10 +23,28 @@ router.post('/', async (req, res) => {
     if (!validation.success) {
         return res.status(400).json({ error: 'Validation Error', details: validation.error.issues });
     }
-    const { tableId, items, customerId, type } = validation.data;
+    const { tableId, items, combos, customerId, type } = validation.data;
 
     try {
         const order = await prisma.$transaction(async (tx) => {
+            const comboItems = await resolveComboOrderItems(tx, req.clientId!, combos);
+            const orderItems = [
+                ...items.map(item => ({
+                    menuItemId: item.menuItemId,
+                    variantId: item.variantId,
+                    quantity: Number(item.quantity),
+                    price: Number(item.price),
+                    notes: item.notes ?? null,
+                    comboDealName: null as string | null,
+                    comboGroupName: null as string | null
+                })),
+                ...comboItems.map(item => ({
+                    ...item,
+                    variantId: null,
+                    notes: null
+                }))
+            ];
+
             // 0. Get current open shift
             const currentShift = await tx.financialShift.findFirst({
                 where: { clientId: req.clientId!, status: 'OPEN' },
@@ -71,13 +90,15 @@ router.post('/', async (req, res) => {
                 action = 'ORDER_ITEMS_ADDED';
 
                 // Add NEW items to the existing order
-                const newItemsData = items.map((item: any) => ({
+                const newItemsData = orderItems.map((item) => ({
                     orderId,
                     menuItemId: item.menuItemId,
-                    variantId: item.variantId, // NEW
-                    quantity: parseInt(item.quantity),
-                    price: parseFloat(item.price),
+                    variantId: item.variantId,
+                    quantity: item.quantity,
+                    price: item.price,
                     notes: item.notes,
+                    comboDealName: item.comboDealName,
+                    comboGroupName: item.comboGroupName,
                     status: initialStatus
                 }));
                 await tx.orderItem.createMany({ data: newItemsData });
@@ -94,12 +115,14 @@ router.post('/', async (req, res) => {
                         clientId: req.clientId!,
                         status: initialStatus,
                         items: {
-                            create: items.map((item: any) => ({
+                            create: orderItems.map((item) => ({
                                 menuItemId: item.menuItemId,
-                                variantId: item.variantId, // NEW
-                                quantity: parseInt(item.quantity),
-                                price: parseFloat(item.price),
+                                variantId: item.variantId,
+                                quantity: item.quantity,
+                                price: item.price,
                                 notes: item.notes,
+                                comboDealName: item.comboDealName,
+                                comboGroupName: item.comboGroupName,
                                 status: initialStatus
                             }))
                         },
@@ -175,6 +198,9 @@ router.post('/', async (req, res) => {
         res.status(order.action === 'ORDER_NEW' ? 201 : 200).json(order.finalOrder);
     } catch (error) {
         console.error('Order processing error:', error);
+        if (error instanceof ComboOrderError) {
+            return res.status(400).json({ error: error.message });
+        }
         res.status(500).json({ error: 'Failed to process order' });
     }
 });

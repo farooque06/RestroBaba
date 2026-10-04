@@ -201,6 +201,10 @@ router.post('/', authorize(['SUPER_ADMIN']), async (req: Request, res: Response)
 });
 
 // ─── Update Client Status/Details ───────────────────────────────────────────
+router.patch('/my-shop/upgrade', (_req: Request, res: Response) => {
+    res.status(403).json({ error: 'Subscription plan changes must be made by a Super Admin' });
+});
+
 router.patch('/:id', authorize(['SUPER_ADMIN']), async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const { name, email, shopCode, isActive, plan, planDuration } = req.body;
@@ -377,90 +381,6 @@ router.patch('/settings/me', authorize(['ADMIN']), async (req: any, res: Respons
     } catch (error) {
         console.error('Update own settings error:', error);
         res.status(500).json({ error: 'Failed to update settings' });
-    }
-});
-
-// ─── Upgrade Own Plan (ADMIN) ────────────────────────────────────────────────
-router.patch('/my-shop/upgrade', authorize(['ADMIN']), async (req: any, res: Response) => {
-    const { plan, duration } = req.body;
-
-    if (!['SILVER', 'GOLD', 'DIAMOND'].includes(plan)) {
-        return res.status(400).json({ error: 'Invalid subscription plan level' });
-    }
-
-    if (duration && !['1m', '3m', '12m'].includes(duration)) {
-        return res.status(400).json({ error: 'Invalid subscription duration' });
-    }
-
-    try {
-        const subPlan = await prisma.subscriptionPlan.findFirst({
-            where: { tier: plan, isActive: true },
-            orderBy: { createdAt: 'desc' }
-        });
-
-        const currentClient = await prisma.client.findUnique({
-            where: { id: req.user.clientId },
-            select: { subscriptionEnd: true }
-        });
-
-        // ─── Expiry Logic ───────────────────────────────────────────────────────
-        let newEnd: Date;
-        const now = new Date();
-        const monthsToAdd = duration === '12m' ? 12 : duration === '3m' ? 3 : 1;
-
-        if (!currentClient?.subscriptionEnd || new Date(currentClient.subscriptionEnd) < now) {
-            // Expired or never set: Start from now
-            newEnd = new Date(now);
-            newEnd.setMonth(newEnd.getMonth() + monthsToAdd);
-        } else {
-            // Active: Extend from existing end date
-            newEnd = new Date(currentClient.subscriptionEnd);
-            newEnd.setMonth(newEnd.getMonth() + monthsToAdd);
-        }
-
-        const client = await prisma.client.update({
-            where: { id: req.user.clientId },
-            data: {
-                plan,
-                planId: subPlan?.id,
-                planDuration: duration || undefined,
-                subscriptionEnd: newEnd,
-                lastPaymentDate: now,
-                paymentStatus: 'PAID'
-            }
-        });
-
-        await prisma.activityLog.create({
-            data: {
-                action: 'PLAN_UPGRADED',
-                details: `Self-upgraded to ${plan} tier for ${duration || '1m'}`,
-                type: 'PLATFORM',
-                userId: req.user.userId,
-                role: req.user.role,
-                clientId: req.user.clientId
-            }
-        });
-
-        await prisma.activityLog.create({
-            data: {
-                action: 'PLAN_UPGRADED',
-                details: `Self-upgraded to ${plan} tier for ${duration || '1m'}`,
-                type: 'PLATFORM',
-                userId: req.user.userId,
-                role: req.user.role,
-                clientId: req.user.clientId
-            }
-        });
-
-        res.json({
-            message: `Successfully updated to ${plan}`,
-            plan: client.plan,
-            planDuration: client.planDuration,
-            subscriptionEnd: client.subscriptionEnd
-        });
-    } catch (error) {
-        console.error('Plan upgrade/renewal error:', error);
-        res.status(500).json({ error: 'Internal server error during upgrade/renewal' });
     }
 });
 

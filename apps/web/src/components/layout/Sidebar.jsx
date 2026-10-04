@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard,
     UtensilsCrossed,
+    Tag,
     ChefHat,
     TableProperties,
     ClipboardList,
@@ -52,6 +53,7 @@ const Sidebar = () => {
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
         { id: 'menu', label: 'Menu', icon: UtensilsCrossed, path: '/menu', roles: ['ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
+        { id: 'combos', label: 'Combo Deals', icon: Tag, path: '/combos', roles: ['ADMIN', 'MANAGER'], minPlan: 'SILVER' },
         { id: 'kitchen', label: 'Kitchen', icon: ChefHat, path: '/kitchen', roles: ['ADMIN', 'MANAGER', 'CHEF'], minPlan: 'GOLD' },
         { id: 'tables', label: 'Tables', icon: TableProperties, path: '/tables', roles: ['ADMIN', 'MANAGER', 'WAITER'], minPlan: 'SILVER' },
         { id: 'orders', label: 'Orders', icon: ClipboardList, path: '/orders', roles: ['ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },

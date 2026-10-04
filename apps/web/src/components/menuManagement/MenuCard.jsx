@@ -49,24 +49,46 @@ const MenuCard = ({ item, onEdit, onRecipe, onDelete, onToggleAvailability, user
 
                 {userRole !== 'WAITER' && (
                     <div className="mm-actions-overlay">
-                        <button onClick={() => onEdit(item)} className="mm-action-btn" title="Edit Item">
+                        <button
+                            type="button"
+                            onClick={() => onEdit(item)}
+                            className="mm-action-btn"
+                            title="Edit dish"
+                            aria-label={`Edit ${item.name}`}
+                        >
                             <Edit2 size={16} strokeWidth={2.5} />
                             <span>Edit</span>
                         </button>
-                        <button onClick={() => onRecipe(item)} className="mm-action-btn primary" title="Manage Recipe">
+                        <button
+                            type="button"
+                            onClick={() => onRecipe(item)}
+                            className="mm-action-btn primary"
+                            title="Manage recipe"
+                            aria-label={`Manage recipe for ${item.name}`}
+                        >
                             <Tag size={16} strokeWidth={2.5} />
                             <span>Recipe</span>
                         </button>
                         <button
+                            type="button"
                             onClick={() => onToggleAvailability(item)}
-                            className="mm-action-btn"
-                            style={{ flex: '0 0 44px', color: item.available ? 'var(--danger)' : 'var(--success)', border: item.available ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid rgba(16, 185, 129, 0.2)' }}
+                            className={`mm-action-btn mm-availability-btn ${item.available ? 'available' : 'unavailable'}`}
                             title={item.available ? 'Mark Out of Stock' : 'Mark In Stock'}
+                            aria-label={item.available ? `Mark ${item.name} out of stock` : `Mark ${item.name} in stock`}
+                            aria-pressed={!item.available}
                         >
                             {item.available ? <XCircle size={18} strokeWidth={2.5} /> : <CheckCircle2 size={18} strokeWidth={2.5} />}
+                            <span>{item.available ? 'Stock' : 'Sold out'}</span>
                         </button>
-                        <button onClick={() => onDelete(item.id)} className="mm-action-btn danger" style={{ flex: '0 0 44px' }} title="Delete Item">
+                        <button
+                            type="button"
+                            onClick={() => onDelete(item.id)}
+                            className="mm-action-btn danger mm-delete-btn"
+                            title="Delete dish"
+                            aria-label={`Delete ${item.name}`}
+                        >
                             <Trash2 size={16} strokeWidth={2.5} />
+                            <span>Delete</span>
                         </button>
                     </div>
                 )}

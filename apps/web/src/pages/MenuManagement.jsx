@@ -541,23 +541,26 @@ const MenuManagement = () => {
             </div>
 
             {isItemModalOpen && createPortal(
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(15px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }} className="animate-fade">
-                    <div className="premium-glass" style={{ width: '100%', maxWidth: '620px', padding: '3rem', borderRadius: '32px', position: 'relative', maxHeight: '92vh', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(15px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }} className="animate-fade mm-item-modal-overlay">
+                    <div className="premium-glass mm-item-modal" style={{ width: '100%', maxWidth: '620px', padding: '3rem', borderRadius: '32px', position: 'relative', maxHeight: '92vh', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <button
                             onClick={() => setIsItemModalOpen(false)}
+                            aria-label="Close dish form"
+                            type="button"
+                            className="mm-item-modal-close"
                             style={{ position: 'absolute', top: '2rem', right: '2rem', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s ease' }}
                         >
                             <XCircle size={24} strokeWidth={2.5} />
                         </button>
 
-                        <div style={{ marginBottom: '2.5rem' }}>
+                        <div className="mm-item-modal-heading" style={{ marginBottom: '2.5rem' }}>
                             <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-heading)', letterSpacing: '-0.02em' }}>
-                                {editingItem ? 'Refine Dish' : 'New Creation'}
+                                {editingItem ? 'Edit dish' : 'Add a dish'}
                             </h2>
                             <div style={{ height: '3px', width: '60px', background: 'var(--primary)', borderRadius: '10px' }}></div>
                         </div>
 
-                        <form onSubmit={handleAddItem} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+                        <form onSubmit={handleAddItem} className="mm-item-modal-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
                             {/* BASIC INFO */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                 <div className="input-group">
@@ -583,7 +586,7 @@ const MenuManagement = () => {
                                     />
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                                <div className="mm-item-price-category" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                                     <div className="input-group">
                                         <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.65rem', display: 'block', letterSpacing: '0.05em' }}>BASE PRICE</label>
                                         <div style={{ position: 'relative' }}>
@@ -613,7 +616,7 @@ const MenuManagement = () => {
                             </div>
 
                             {/* VARIANTS SECTION */}
-                            <div style={{
+                            <div className="mm-item-modal-section" style={{
                                 padding: '1.75rem',
                                 background: 'rgba(255,255,255,0.01)',
                                 borderRadius: '22px',
@@ -640,7 +643,7 @@ const MenuManagement = () => {
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                                     {(newItem.variants || []).map((variant, idx) => (
-                                        <div key={idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }} className="animate-fade">
+                                        <div key={idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }} className="animate-fade mm-item-variant-row">
                                             <div style={{ flex: 2, position: 'relative' }}>
                                                 <input
                                                     className="mm-search-input"
@@ -689,7 +692,7 @@ const MenuManagement = () => {
                             </div>
 
                             {/* ARTWORK / IMAGE UPLOAD */}
-                            <div style={{
+                            <div className="mm-item-modal-section" style={{
                                 padding: '1.5rem',
                                 background: 'rgba(255,255,255,0.01)',
                                 borderRadius: '22px',
@@ -732,7 +735,7 @@ const MenuManagement = () => {
                             </div>
 
                             {/* INVENTORY TRACKING */}
-                            <div style={{
+                            <div className="mm-item-modal-section" style={{
                                 padding: '1.75rem',
                                 background: 'rgba(255,255,255,0.01)',
                                 borderRadius: '22px',
@@ -773,7 +776,7 @@ const MenuManagement = () => {
                                             value={quickInventory.name}
                                             onChange={e => setQuickInventory({ ...quickInventory, name: e.target.value })}
                                         />
-                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <div className="mm-item-inventory-fields" style={{ display: 'flex', gap: '1rem' }}>
                                             <input
                                                 className="mm-search-input"
                                                 style={{ paddingLeft: '1.25rem', borderRadius: '12px', flex: 1.5, height: '48px', background: 'rgba(255,255,255,0.03)' }}
@@ -795,10 +798,10 @@ const MenuManagement = () => {
                             </div>
 
                             {/* SUBMIT ACTIONS */}
-                            <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', position: 'sticky', bottom: '-10px', background: 'var(--bg-main)', padding: '1rem 0', boxShadow: '0 -20px 30px var(--bg-main)' }}>
+                            <div className="mm-item-modal-actions" style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', position: 'sticky', bottom: '-10px', background: 'var(--bg-main)', padding: '1rem 0', boxShadow: '0 -20px 30px var(--bg-main)' }}>
                                 <button type="button" onClick={() => setIsItemModalOpen(false)} className="mm-action-btn" style={{ flex: 1, height: '54px', borderRadius: '16px', border: '1px solid var(--border)', fontWeight: 800 }}>Discard</button>
                                 <button type="submit" className="mm-category-pill active" style={{ flex: 2.2, height: '54px', border: 'none', borderRadius: '16px', fontSize: '1rem', letterSpacing: '0.05em', boxShadow: '0 10px 30px var(--primary-glow)' }}>
-                                    {editingItem ? 'SYNC UPDATES' : 'PUBLISH MASTERPIECE'}
+                                    {editingItem ? 'Save changes' : 'Add dish'}
                                 </button>
                             </div>
                         </form>

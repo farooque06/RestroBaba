@@ -780,6 +780,204 @@
   animation: sheetSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.combo-order-modal {
+  width: min(100%, 540px);
+  max-height: min(86vh, 760px);
+  overflow: visible;
+  padding: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 22px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.combo-order-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1.35rem 1.4rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.combo-order-modal-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--primary-glow);
+  border-radius: 13px;
+  background: var(--primary-glow);
+  color: var(--primary);
+}
+
+.combo-order-modal-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.combo-order-eyebrow {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--primary);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.combo-order-modal-title h2 {
+  margin: 0;
+  color: var(--text-heading);
+  font-size: 1.2rem;
+  line-height: 1.35;
+}
+
+.combo-order-modal-title p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.combo-order-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.combo-order-close:hover {
+  border-color: var(--primary);
+  color: var(--text-main);
+}
+
+.combo-order-groups {
+  display: grid;
+  max-height: calc(86vh - 245px);
+  gap: 0.75rem;
+  overflow-y: auto;
+  padding: 1.1rem 1.4rem;
+}
+
+.combo-order-group {
+  display: grid;
+  min-width: 0;
+  gap: 0.5rem;
+}
+
+.combo-order-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.combo-order-group-name {
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.combo-order-group-badge {
+  padding: 0.22rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  color: var(--text-muted);
+  font-size: 0.63rem;
+  font-weight: 700;
+}
+
+.combo-order-group-badge.required {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: var(--primary-glow);
+  color: var(--primary);
+}
+
+.combo-order-picker .dropdown-trigger {
+  min-height: 46px;
+  padding: 0.75rem 0.9rem !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  background: var(--bg-input) !important;
+}
+
+.combo-order-picker .dropdown-menu {
+  background: var(--bg-card) !important;
+  border-color: var(--border-light) !important;
+}
+
+.combo-order-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 1.4rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.combo-order-total-label {
+  display: block;
+  color: var(--text-main);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.combo-order-total small {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.combo-order-total strong {
+  color: var(--primary);
+  font-size: 1.2rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.combo-order-actions {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.85rem 1.4rem 1.3rem;
+  border-top: 1px solid var(--border);
+}
+
+.combo-order-cancel {
+  min-height: 46px;
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.combo-order-cancel:hover {
+  border-color: var(--border-light);
+  background: var(--glass-shine);
+}
+
+.combo-order-actions .ot-confirm-btn {
+  min-height: 46px;
+  flex: 1.4;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
 .mobile-close-btn {
   display: none;
   position: absolute;

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { comboOrderSchema } from './comboSchema.js';
 
 export const createOrderSchema = z.object({
     tableId: z.string().uuid().optional().nullable(),
@@ -10,7 +11,11 @@ export const createOrderSchema = z.object({
         quantity: z.number().int().positive().or(z.string().regex(/^\d+$/).transform(v => parseInt(v))),
         price: z.number().positive().or(z.string().regex(/^\d+(\.\d+)?$/).transform(v => parseFloat(v))),
         notes: z.string().optional().nullable(),
-    })).min(1),
+    })).default([]),
+    combos: z.array(comboOrderSchema).default([])
+}).refine(order => order.items.length + order.combos.length > 0, {
+    path: ['items'],
+    message: 'At least one menu item or combo deal is required'
 });
 
 export const updateOrderStatusSchema = z.object({

@@ -458,9 +458,8 @@ const SettingsPage = () => {
 
     const SubscriptionSettings = () => {
         const [plans, setPlans] = useState([]);
-        const [currentPlan, setCurrentPlan] = useState(user?.client?.plan || 'SILVER');
+        const currentPlan = user?.client?.plan || 'SILVER';
         const [duration, setDuration] = useState('1m'); // '1m', '3m', '12m'
-        const [loading, setLoading] = useState(false);
         const [fetchingPlans, setFetchingPlans] = useState(true);
 
         React.useEffect(() => {
@@ -484,37 +483,6 @@ const SettingsPage = () => {
             }
         };
 
-        const handleUpgrade = async (planTier) => {
-            if (planTier === currentPlan) return;
-
-            setLoading(true);
-            try {
-                const token = localStorage.getItem('restroToken');
-                const response = await fetch(`${API_BASE_URL}/api/clients/my-shop/upgrade`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ plan: planTier, duration })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setCurrentPlan(data.plan);
-                    toast.success(`Successfully upgraded to ${planTier}!`);
-                    setTimeout(() => window.location.reload(), 1500);
-                } else {
-                    const data = await response.json();
-                    toast.error(data.error || 'Upgrade failed');
-                }
-            } catch (err) {
-                toast.error('Connection error');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         if (fetchingPlans) {
             return (
                 <div className="settings-section-card animate-fade" style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
@@ -528,7 +496,7 @@ const SettingsPage = () => {
                 <div className="dashboard-header" style={{ marginBottom: '2.5rem' }}>
                     <div className="settings-header" style={{ margin: 0 }}>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Subscription Plans</h2>
-                        <p style={{ color: 'var(--text-muted)' }}>Choose the best plan for your restaurant's growth.</p>
+                        <p style={{ color: 'var(--text-muted)' }}>Review available plans. Plan changes are managed by your Super Admin.</p>
                     </div>
 
                     <div className="premium-glass" style={{ padding: '6px', borderRadius: '14px', display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.03)' }}>
@@ -580,16 +548,12 @@ const SettingsPage = () => {
 
                         // Dynamic Price Calculation
                         let price = 0;
-                        let isOffer = false;
                         if (duration === '1m') {
                             price = p.offerMonthly || p.monthlyPrice;
-                            isOffer = !!p.offerMonthly;
                         } else if (duration === '3m') {
                             price = p.offerQuarterly || p.quarterlyPrice;
-                            isOffer = !!p.offerQuarterly;
                         } else {
                             price = p.offerYearly || p.yearlyPrice;
-                            isOffer = !!p.offerYearly;
                         }
 
                         const durationLabel = duration === '1m' ? '/mo' : duration === '3m' ? '/3 mo' : '/yr';
@@ -638,12 +602,13 @@ const SettingsPage = () => {
                                 </ul>
 
                                 <button
-                                    onClick={() => handleUpgrade(p.tier)}
-                                    disabled={loading}
+                                    type="button"
+                                    disabled
                                     className="plan-button plan-button-primary"
+                                    title="Only a Super Admin can change subscription plans"
                                     style={{ background: isCurrent ? 'var(--primary-gradient)' : color }}
                                 >
-                                    {loading ? <Loader2 size={18} className="animate-spin" /> : isCurrent ? 'Renew / Extend Plan' : `Get Started`}
+                                    {isCurrent ? 'Current Plan' : 'Contact Super Admin'}
                                 </button>
                             </div>
                         );
@@ -698,9 +663,11 @@ const SettingsPage = () => {
                                     const info = themeInfo[key];
                                     const isActive = theme === themes[key];
                                     return (
-                                        <div
+                                        <button
                                             key={key}
                                             className={`theme-option ${isActive ? 'active' : ''}`}
+                                            type="button"
+                                            aria-pressed={isActive}
                                             onClick={() => switchTheme(key)}
                                         >
                                             <div
@@ -709,6 +676,7 @@ const SettingsPage = () => {
                                                     background: `linear-gradient(135deg, ${info.preview[0]} 60%, ${info.preview[1]} 100%)`
                                                 }}
                                             />
+                                            {info.recommended && <span className="theme-recommended">Recommended</span>}
                                             <div className="theme-name">{info.name}</div>
                                             <div className="theme-desc">{info.desc}</div>
                                             {isActive && (
@@ -716,7 +684,7 @@ const SettingsPage = () => {
                                                     Currently Active
                                                 </div>
                                             )}
-                                        </div>
+                                        </button>
                                     );
                                 })}
                             </div>

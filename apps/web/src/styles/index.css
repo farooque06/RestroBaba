@@ -17,6 +17,7 @@
 /* ── Feature Specific Styles ── */
 @import './components/login.css';
 @import './components/menu-management.css';
+@import './components/combo-deals.css';
 @import './components/order-taking.css';
 @import './components/table-management.css';
 @import './components/kitchen-display.css';

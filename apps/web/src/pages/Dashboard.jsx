@@ -10,6 +10,8 @@ import {
     Building2,
     ShieldCheck,
     Store,
+    BookOpen,
+    ChefHat,
     Clock,
     Zap,
     History,
@@ -19,7 +21,6 @@ import {
 import { Link } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
-import { formatCurrency } from '../utils/formatters';
 
 const PLAN_RANK = { 'SILVER': 1, 'GOLD': 2, 'DIAMOND': 3 };
 const hasPlan = (user, minPlan) => {
@@ -30,15 +31,9 @@ const hasPlan = (user, minPlan) => {
 
 const Dashboard = () => {
     const { user } = useAuth();
-    const [stats, setStats] = useState({ revenue: 0, expenses: 0, profit: 0, activeTables: 0, kitchenOrders: 0, lowStockCount: 0, lowStockItems: [] });
+    const [stats, setStats] = useState({ activeTables: 0, kitchenOrders: 0, lowStockCount: 0, lowStockItems: [] });
     const [superStats, setSuperStats] = useState(null);
     const [globalActivity, setGlobalActivity] = useState([]);
-    const [analytics, setAnalytics] = useState({
-        dailySales: {},
-        topItems: [],
-        staffPerformance: [],
-        profitReport: null
-    });
     const [currentShift, setCurrentShift] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -72,44 +67,26 @@ const Dashboard = () => {
                 return;
             }
 
-            // Parallel fetching for high performance (ADMIN)
+            // Only admins can access dashboard operations metrics; shift status is available to managers too.
             const canAccessShifts = ['ADMIN', 'MANAGER'].includes(user?.role) && hasPlan(user, 'GOLD');
-
-            const fetchPromises = [
-                fetch(`${API_BASE_URL}/api/stats`, { headers }),
-                fetch(`${API_BASE_URL}/api/stats/daily-sales`, { headers }),
-                fetch(`${API_BASE_URL}/api/stats/top-items`, { headers }),
-                fetch(`${API_BASE_URL}/api/stats/staff-performance`, { headers }),
-                fetch(`${API_BASE_URL}/api/reports/profit`, { headers }),
-            ];
-
-            if (canAccessShifts) {
-                fetchPromises.push(fetch(`${API_BASE_URL}/api/shifts/current`, { headers }));
-            }
-
-            const responses = await Promise.all(fetchPromises);
-            const [statsRes, salesRes, itemsRes, staffRes, profitRes] = responses;
-            const currentRes = canAccessShifts ? responses[5] : null;
-
-            const [statsData, salesData, itemsData, staffData, profitData] = await Promise.all([
-                statsRes.json(),
-                salesRes.json(),
-                itemsRes.json(),
-                staffRes.json(),
-                profitRes.json(),
+            const [statsRes, currentRes] = await Promise.all([
+                user?.role === 'ADMIN' ? fetch(`${API_BASE_URL}/api/stats`, { headers }) : Promise.resolve(null),
+                canAccessShifts ? fetch(`${API_BASE_URL}/api/shifts/current`, { headers }) : Promise.resolve(null)
             ]);
 
-            if (statsRes.ok) setStats(statsData);
+            if (statsRes?.ok) {
+                const statsData = await statsRes.json();
+                setStats({
+                    activeTables: statsData.activeTables,
+                    kitchenOrders: statsData.kitchenOrders,
+                    lowStockCount: statsData.lowStockCount,
+                    lowStockItems: statsData.lowStockItems || []
+                });
+            }
             if (currentRes && currentRes.ok) {
                 const shiftData = await currentRes.json();
                 setCurrentShift(shiftData);
             }
-            setAnalytics({
-                dailySales: salesData || {},
-                topItems: itemsData || [],
-                staffPerformance: staffData || [],
-                profitReport: profitData || null
-            });
 
         } catch (err) {
             console.error('Analytics fetch error', err);
@@ -317,7 +294,7 @@ const Dashboard = () => {
 
     // --- ADMIN / STAFF VIEW ---
     return (
-        <div className="page-container animate-fade">
+        <div className="page-container animate-fade dashboard-page">
             {user?.subscriptionWarning !== null && user?.subscriptionWarning <= 7 && user?.role !== 'SUPER_ADMIN' && (
                 <div className="premium-glass animate-slideDown" style={{ 
                     padding: '1rem 1.5rem', 
@@ -352,16 +329,20 @@ const Dashboard = () => {
                 </div>
             )}
 
-            <div className="dashboard-header">
+            <div className="dashboard-header dashboard-hero">
                 <div>
+                    <span className="dashboard-eyebrow">
+                        <LayoutDashboard size={14} />
+                        {user?.clientName || 'Restaurant overview'}
+                    </span>
                     <h1 className="dashboard-title">
-                        Welcome back, {user?.name?.split(' ')[0]}
+                        Welcome back, {user?.name?.split(' ')[0] || 'there'}
                     </h1>
-                    <p style={{ color: 'var(--text-muted)' }}>
-                        Here's what's happening at <strong style={{ color: 'var(--text-main)' }}>{user?.clientName}</strong> today.
+                    <p className="dashboard-subtitle">
+                        Your restaurant at a glance. Here’s what needs your attention today.
                     </p>
                 </div>
-                {user?.role === 'ADMIN' && (
+                {['ADMIN', 'MANAGER'].includes(user?.role) && hasPlan(user, 'GOLD') && (
                     <Link to="/shifts" className={`status-badge ${currentShift ? 'active' : 'warn'}`}>
                         <Clock size={16} />
                         {currentShift ? 'Shift Active' : 'Shift Not Opened'}
@@ -385,278 +366,112 @@ const Dashboard = () => {
             )}
 
             {/* QUICK OPERATIONS DASH */}
-            <div style={{ marginBottom: '2.5rem' }}>
+            <section className="dashboard-quick-section" aria-labelledby="quick-operations-heading">
                 <div className="dashboard-section-header">
                     <div className="dashboard-section-indicator" />
-                    <h3 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Quick Operations</h3>
+                    <div>
+                        <h3 id="quick-operations-heading">Quick operations</h3>
+                        <p>Jump straight into the tasks you use most.</p>
+                    </div>
                 </div>
 
                 <div className="dashboard-ops-grid">
                     {[
-                        { label: 'New Order', icon: UtensilsCrossed, path: '/tables', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER' },
-                        { label: 'Add Expense', icon: DollarSign, path: '/expenses', color: 'var(--danger)', variant: 'danger', minPlan: 'GOLD' },
-                        { label: 'Manage Stock', icon: Package, path: '/inventory', color: 'var(--text-main)', variant: 'default', minPlan: 'SILVER' },
-                        { label: 'Shift Console', icon: Clock, path: '/shifts', color: 'var(--warning)', variant: 'warning', minPlan: 'GOLD' },
-                        { label: 'Staff Ops', icon: Users, path: '/staff', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER' },
-                        { label: 'Analytics', icon: BarChart3, path: '/reports', color: 'var(--success)', variant: 'success', minPlan: 'SILVER' },
-                    ].filter(action => hasPlan(user, action.minPlan)).map((action, idx) => (
+                        { label: 'Browse Menu', icon: BookOpen, path: '/menu', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER', roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
+                        { label: 'New Order', icon: UtensilsCrossed, path: '/tables', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER', roles: ['ADMIN', 'MANAGER', 'WAITER'] },
+                        { label: 'Kitchen', icon: ChefHat, path: '/kitchen', color: 'var(--warning)', variant: 'warning', minPlan: 'GOLD', roles: ['ADMIN', 'MANAGER', 'CHEF'] },
+                        { label: 'Add Expense', icon: DollarSign, path: '/expenses', color: 'var(--danger)', variant: 'danger', minPlan: 'GOLD', roles: ['ADMIN', 'MANAGER'] },
+                        { label: 'Manage Stock', icon: Package, path: '/inventory', color: 'var(--text-main)', variant: 'default', minPlan: 'SILVER', roles: ['ADMIN', 'MANAGER', 'CHEF'] },
+                        { label: 'Shift Console', icon: Clock, path: '/shifts', color: 'var(--warning)', variant: 'warning', minPlan: 'GOLD', roles: ['ADMIN', 'MANAGER'] },
+                        { label: 'Staff Ops', icon: Users, path: '/staff', color: 'var(--primary)', variant: 'primary', minPlan: 'SILVER', roles: ['ADMIN', 'MANAGER'] },
+                        { label: 'Reports', icon: BarChart3, path: '/reports', color: 'var(--success)', variant: 'success', minPlan: 'SILVER', roles: ['ADMIN', 'MANAGER'] },
+                    ].filter(action => action.roles.includes(user?.role) && hasPlan(user, action.minPlan)).map((action, idx) => (
                         <Link
                             key={idx}
                             to={action.path}
-                            className="premium-glass dashboard-ops-card"
-                            style={{
-                                padding: '1.25rem',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                textDecoration: 'none',
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                cursor: 'pointer',
-                                border: '1px solid var(--border)',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-5px)';
-                                e.currentTarget.style.borderColor = action.color;
-                                e.currentTarget.style.boxShadow = `0 10px 20px -5px ${action.color}33`;
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.borderColor = 'var(--border)';
-                                e.currentTarget.style.boxShadow = 'none';
-                            }}
+                            className={`premium-glass dashboard-ops-card dashboard-ops-card-${action.variant}`}
+                            style={{ '--dashboard-action-color': action.color }}
                         >
-                            <div style={{
-                                padding: '10px',
-                                borderRadius: '12px',
-                                background: idx === 0 ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
-                                color: action.color,
-                                marginBottom: '0.25rem'
-                            }}>
-                                <action.icon size={22} />
+                            <div className="dashboard-ops-icon">
+                                <action.icon size={20} strokeWidth={2.2} />
                             </div>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', textAlign: 'center' }}>{action.label}</span>
-
-                            {/* Subtle background glow for first item (conversion focus) */}
-                            {idx === 0 && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '-20%',
-                                    right: '-20%',
-                                    width: '60%',
-                                    height: '60%',
-                                    background: 'var(--primary)',
-                                    filter: 'blur(30px)',
-                                    opacity: 0.1,
-                                    zIndex: -1
-                                }} />
-                            )}
+                            <span className="dashboard-ops-label">{action.label}</span>
+                            <ChevronRight className="dashboard-ops-arrow" size={18} />
                         </Link>
                     ))}
                 </div>
-            </div>
+            </section>
 
             {/* OPERATIONAL STATUS (Quick Glance) */}
-            <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
-                <div className="stat-card">
-                    <span className="stat-label">Kitchen Load</span>
-                    <span className="stat-value">{stats.kitchenOrders}</span>
-                    <span className="badge badge-warning">Active Orders</span>
-                </div>
-                <div className="stat-card" style={{ borderColor: stats.lowStockCount > 0 ? 'var(--danger)' : 'var(--border)' }}>
-                    <span className="stat-label">Stock Status</span>
-                    <span className="stat-value" style={{ color: stats.lowStockCount > 0 ? 'var(--danger)' : 'var(--success)' }}>
-                        {stats.lowStockCount > 0 ? `${stats.lowStockCount} LOW` : 'Healthy'}
-                    </span>
-                    <span className={`badge badge-${stats.lowStockCount > 0 ? 'danger' : 'success'}`}>
-                        Inventory Items
-                    </span>
-                </div>
-                <div className="stat-card">
-                    <span className="stat-label">Active Tables</span>
-                    <span className="stat-value">{stats.activeTables}</span>
-                    <span className="badge badge-primary">Current Service</span>
-                </div>
-            </div>
-
-            {/* FINANCIAL HEALTH (Detailed Analysis for admins) */}
-            {user?.role === 'ADMIN' && analytics.profitReport && (
-                <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
-                    <div className="stat-card analytics" style={{ background: 'var(--bg-main)' }}>
-                        <span className="stat-label">Total Revenue</span>
-                        <span className="stat-value" style={{ color: 'var(--success)' }}>
-                            {formatCurrency(analytics.profitReport.summary.totalRevenue)}
-                        </span>
-                        <span className="badge badge-success">Gross Sales</span>
-                    </div>
-
-                    <div className="stat-card analytics" style={{ background: 'var(--bg-main)' }}>
-                        <span className="stat-label">Inventory Loss (Waste)</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <span className="stat-value" style={{ color: 'var(--danger)' }}>
-                                {formatCurrency(analytics.profitReport.summary.totalWasteLoss)}
-                            </span>
-                            <span className="badge badge-danger">Leakage</span>
-                        </div>
-                    </div>
-
-                    <div className="stat-card analytics" style={{ background: 'rgba(16, 185, 129, 0.05)', borderColor: '#10b98133' }}>
-                        <span className="stat-label">True Net Profit</span>
-                        <span className="stat-value" style={{ color: '#10b981' }}>
-                            {formatCurrency(analytics.profitReport.summary.netProfit)}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem' }}>
-                            <span className="badge badge-primary" style={{ background: '#10b981', color: 'white' }}>
-                                Margin: {analytics.profitReport.summary.margin.toFixed(1)}%
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ADVANCED ANALYTICS SECTION */}
             {user?.role === 'ADMIN' && (
-                <div className="analytics-grid">
-                    {/* Revenue Trend Chart */}
-                    <div className="analytics-chart-container">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Revenue Trend (Net)</h3>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Last 7 Days</span>
-                        </div>
-                        <div className="ranking-list">
-                            {Object.entries(analytics.dailySales).map(([date, amount]) => {
-                                const maxVal = Math.max(...Object.values(analytics.dailySales), 1);
-                                const widthPercent = (amount / maxVal) * 100;
-                                return (
-                                    <div key={date} className="ranking-item">
-                                        <div className="ranking-info">
-                                            <span className="ranking-name">
-                                                {new Date(date).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
-                                            </span>
-                                            <span className="ranking-stats" style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                                                {formatCurrency(amount)}
-                                            </span>
-                                        </div>
-                                        <div className="ranking-progress-bg">
-                                            <div
-                                                className="ranking-progress-fill"
-                                                style={{
-                                                    width: `${widthPercent}%`,
-                                                    background: 'var(--primary-gradient)',
-                                                    boxShadow: '0 2px 10px var(--primary-glow)'
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                <section className="dashboard-data-section" aria-labelledby="operations-status-heading">
+                    <div className="dashboard-section-header">
+                        <div className="dashboard-section-indicator" />
+                        <div>
+                            <h3 id="operations-status-heading">Live operations</h3>
+                            <p>A quick pulse on today’s service.</p>
                         </div>
                     </div>
-
-                    {/* Top Items & Staff Leaderboard Container */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        {/* Top Selling Items */}
-                        <div className="analytics-chart-container">
-                            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem' }}>Top Selling Items</h3>
-                            <div className="ranking-list">
-                                {analytics.topItems.map((item, idx) => {
-                                    const maxQty = analytics.topItems[0]?.quantity || 1;
-                                    const widthPercent = (item.quantity / maxQty) * 100;
-                                    return (
-                                        <div key={idx} className="ranking-item">
-                                            <div className="ranking-info">
-                                                <span className="ranking-name">{item.name}</span>
-                                                <span className="ranking-stats">{item.quantity} units</span>
-                                            </div>
-                                            <div className="ranking-progress-bg">
-                                                <div className="ranking-progress-fill" style={{ width: `${widthPercent}%` }} />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                    <div className="dashboard-grid dashboard-operational-grid">
+                        <div className="stat-card dashboard-stat-card">
+                            <div className="dashboard-stat-heading">
+                                <span className="stat-label">Kitchen orders</span>
+                                <span className="dashboard-stat-icon warning"><UtensilsCrossed size={18} /></span>
                             </div>
+                            <span className="stat-value">{stats.kitchenOrders}</span>
+                            <span className="dashboard-stat-caption">Orders in progress</span>
                         </div>
-
-                        {/* Staff Efficiency */}
-                        <div className="analytics-chart-container">
-                            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem' }}>Staff Performance</h3>
-                            <div className="ranking-list">
-                                {analytics.staffPerformance.slice(0, 3).map((staff, idx) => {
-                                    const maxActions = analytics.staffPerformance[0]?.actions || 1;
-                                    const widthPercent = (staff.actions / maxActions) * 100;
-                                    return (
-                                        <div key={idx} className="ranking-item">
-                                            <div className="ranking-info">
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    <span className="ranking-name">{staff.name}</span>
-                                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{staff.role}</span>
-                                                </div>
-                                                <span className="ranking-stats">{staff.actions} actions</span>
-                                            </div>
-                                            <div className="ranking-progress-bg">
-                                                <div className="ranking-progress-fill" style={{ width: `${widthPercent}%`, background: 'var(--success-gradient)' }} />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                        <div className={`stat-card dashboard-stat-card ${stats.lowStockCount > 0 ? 'is-alert' : 'is-healthy'}`}>
+                            <div className="dashboard-stat-heading">
+                                <span className="stat-label">Stock status</span>
+                                <span className={`dashboard-stat-icon ${stats.lowStockCount > 0 ? 'danger' : 'success'}`}><Package size={18} /></span>
                             </div>
+                            <span className="stat-value" style={{ color: stats.lowStockCount > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                                {stats.lowStockCount > 0 ? `${stats.lowStockCount} low` : 'Healthy'}
+                            </span>
+                            <span className="dashboard-stat-caption">{stats.lowStockCount > 0 ? 'Items need restocking' : 'No low-stock items'}</span>
+                        </div>
+                        <div className="stat-card dashboard-stat-card">
+                            <div className="dashboard-stat-heading">
+                                <span className="stat-label">Active tables</span>
+                                <span className="dashboard-stat-icon primary"><Store size={18} /></span>
+                            </div>
+                            <span className="stat-value">{stats.activeTables}</span>
+                            <span className="dashboard-stat-caption">Tables in service</span>
                         </div>
                     </div>
-                </div>
+                    {stats.lowStockCount > 0 && (
+                        <div className="dashboard-stock-attention">
+                            <div className="dashboard-stock-attention-heading">
+                                <div>
+                                    <strong>Needs restocking</strong>
+                                    <span>{stats.lowStockCount} inventory {stats.lowStockCount === 1 ? 'item is' : 'items are'} below threshold.</span>
+                                </div>
+                                <Link to="/inventory">Open inventory <ChevronRight size={16} /></Link>
+                            </div>
+                            {stats.lowStockItems.length > 0 && (
+                                <ul>
+                                    {stats.lowStockItems.map((item, index) => (
+                                        <li key={`${item.name}-${index}`}>
+                                            <span>{item.name}</span>
+                                            <span>{item.quantity} {item.unit} left</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+                </section>
             )}
 
 
             {/* Premium Service Message Footer */}
-            <div className="premium-glass premium-footer" style={{
-                padding: '4rem 2rem',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: 'linear-gradient(180deg, var(--bg-card) 0%, rgba(212,175,55,0.03) 100%)',
-                marginTop: '1rem',
-                border: '1px solid var(--border)'
-            }}>
-                <div style={{
-                    padding: '1.25rem',
-                    background: 'var(--primary-glow)',
-                    borderRadius: '50%',
-                    marginBottom: '2rem',
-                    boxShadow: '0 10px 30px var(--primary-glow)'
-                }}>
+            <div className="premium-glass dashboard-footer">
+                <div className="dashboard-footer-icon">
                     <UtensilsCrossed size={40} color="var(--primary)" />
                 </div>
-                <h2 style={{
-                    marginBottom: '1rem',
-                    fontSize: '1.75rem',
-                    fontWeight: 800,
-                    letterSpacing: '-0.02em',
-                    background: 'var(--primary-gradient)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
-                }}>
-                    A Passion for Perfect Service
-                </h2>
-                <p style={{
-                    color: 'var(--text-muted)',
-                    maxWidth: '500px',
-                    fontSize: '1rem',
-                    lineHeight: 1.7,
-                    fontStyle: 'italic',
-                    margin: '0 auto 2rem'
-                }}>
-                    "Success is the sum of small efforts, repeated day-in and day-out. Your commitment to excellence is what makes {user?.clientName} extraordinary."
-                </p>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ height: '1px', width: '40px', background: 'var(--border)' }}></div>
-                    <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--text-muted)' }}>
-                        Ready for a Great Shift
-                    </span>
-                    <div style={{ height: '1px', width: '40px', background: 'var(--border)' }}></div>
-                </div>
+                <h2>Here’s to a great service.</h2>
+                <p>Thanks for taking care of every guest, every order, and every detail.</p>
             </div>
         </div>
     );

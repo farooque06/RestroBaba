@@ -14,6 +14,7 @@ import { Loader2 } from 'lucide-react';
 // Lazy loaded pages to optimize bundle size per tenant/user role
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const MenuManagement = React.lazy(() => import('./pages/MenuManagement'));
+const ComboDeals = React.lazy(() => import('./pages/ComboDeals'));
 const TableManagement = React.lazy(() => import('./pages/TableManagement'));
 const OrderList = React.lazy(() => import('./pages/OrderList'));
 const Billing = React.lazy(() => import('./pages/Billing'));
@@ -114,6 +115,11 @@ function AppContent() {
                                     <Route path="menu" element={
                                         <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CHEF', 'WAITER']}>
                                             <MenuManagement />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="combos" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                                            <ComboDeals />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="tables" element={

@@ -83,6 +83,7 @@
 }
 
 .theme-option {
+    width: 100%;
     background: var(--bg-input);
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
@@ -90,6 +91,8 @@
     cursor: pointer;
     transition: all 0.25s ease;
     text-align: center;
+    color: inherit;
+    font: inherit;
 }
 
 .theme-option:hover {
@@ -98,10 +101,28 @@
     box-shadow: var(--shadow-md);
 }
 
+.theme-option:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 3px;
+}
+
 .theme-option.active {
     border-color: var(--primary);
     background: var(--primary-glow);
     box-shadow: var(--shadow-glow);
+}
+
+.theme-recommended {
+    display: inline-flex;
+    margin: 0 0 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: var(--primary-glow);
+    color: var(--primary);
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .theme-preview {
@@ -271,7 +292,7 @@
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
-.plan-tag {
+.plan-card .plan-tag {
     position: absolute;
     top: 1.25rem;
     left: 1.25rem;
@@ -288,17 +309,17 @@
     gap: 4px;
 }
 
-.plan-tag.limited-time {
+.plan-card .plan-tag.limited-time {
     background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
     color: white;
 }
 
-.plan-tag.best-value {
+.plan-card .plan-tag.best-value {
     background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
     color: white;
 }
 
-.plan-tag.pro-choice {
+.plan-card .plan-tag.pro-choice {
     background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
     color: white;
 }
@@ -374,6 +395,16 @@
     background: var(--primary-hover);
     transform: scale(1.02);
     box-shadow: 0 10px 20px rgba(var(--primary-rgb), 0.2);
+}
+
+.plan-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.plan-button-primary:disabled:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 .duration-toggle {

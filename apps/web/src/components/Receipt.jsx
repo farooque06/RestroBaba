@@ -139,6 +139,11 @@ const Receipt = React.forwardRef(({ order, client }, ref) => {
                             <tr key={idx} style={{ borderBottom: '1px solid #f5f5f5' }}>
                                 <td style={{ padding: '8px 0', verticalAlign: 'top' }}>
                                     <div style={{ fontWeight: '700', fontSize: '11px' }}>{item.menuItem?.name || 'Item'}</div>
+                                    {item.comboDealName && (
+                                        <div style={{ fontSize: '9px', color: '#666', fontWeight: '500' }}>
+                                            {item.comboDealName}{item.comboGroupName ? ` · ${item.comboGroupName}` : ''}
+                                        </div>
+                                    )}
                                     {item.variant?.name && (
                                         <div style={{ fontSize: '9px', color: '#666', fontWeight: '500' }}>{item.variant.name}</div>
                                     )}

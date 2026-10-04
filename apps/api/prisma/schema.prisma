@@ -53,6 +53,7 @@ model Client {
   balance               Float                  @default(0) // Total outstanding debt
   qrCode                String?
   taxInvoices           TaxInvoice[]
+  comboDeals            ComboDeal[]
   subscriptionPayments  SubscriptionPayment[]
 }
 
@@ -180,6 +181,7 @@ model MenuItem {
   orderItems  OrderItem[]
   recipe      RecipeItem[]
   variants    MenuItemVariant[]
+  comboOptions ComboDealOption[]
 
   @@index([clientId])
   @@index([categoryId])
@@ -343,6 +345,8 @@ model OrderItem {
   quantity         Int
   price            Float
   notes            String?
+  comboDealName    String?
+  comboGroupName   String?
   status           String    @default("Pending") // Pending, Cooking, Ready, Served, Waste
   cookingStartedAt DateTime?
   readyAt          DateTime?
@@ -353,6 +357,49 @@ model OrderItem {
   @@index([menuItemId])
   @@index([variantId])
   @@index([status])
+}
+
+model ComboDeal {
+  id          String           @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  isAvailable Boolean          @default(true)
+  isDeleted   Boolean          @default(false)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  clientId    String
+  client      Client           @relation(fields: [clientId], references: [id])
+  groups      ComboDealGroup[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([clientId])
+  @@index([isAvailable, startsAt, endsAt])
+}
+
+model ComboDealGroup {
+  id          String            @id @default(uuid())
+  name        String
+  required    Boolean           @default(true)
+  position    Int               @default(0)
+  comboDealId String
+  comboDeal   ComboDeal         @relation(fields: [comboDealId], references: [id], onDelete: Cascade)
+  options     ComboDealOption[]
+
+  @@index([comboDealId])
+}
+
+model ComboDealOption {
+  id          String         @id @default(uuid())
+  extraPrice  Float          @default(0)
+  groupId     String
+  group       ComboDealGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  menuItemId  String
+  menuItem    MenuItem       @relation(fields: [menuItemId], references: [id])
+
+  @@index([groupId])
+  @@index([menuItemId])
 }
 
 model Payment {

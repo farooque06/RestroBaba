@@ -2,7 +2,8 @@
 
 /* =====================================================
    ARTISAN DESIGN SYSTEM v2
-   3 Themes: Gilded Slate (default), Soft Linen, Ethereal Blue
+   6 Themes: Gilded Slate (default), Soft Linen, Ethereal Blue,
+   Forest Calm, Velvet Plum, Arctic Mist
    ===================================================== */
 
 :root,
@@ -45,6 +46,105 @@
 
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'DM Serif Display', serif;
+}
+
+.theme-forest {
+  --primary: #61b68a;
+  --primary-hover: #50a77a;
+  --primary-glow: rgba(97, 182, 138, 0.2);
+  --primary-gradient: linear-gradient(135deg, #72c99a, #439b70);
+
+  --bg-main: #101a17;
+  --bg-side: #14211c;
+  --bg-card: #1a2922;
+  --bg-card-hover: #21352b;
+  --bg-input: #16231d;
+  --bg-modal-overlay: rgba(3, 10, 7, 0.76);
+
+  --text-main: #e0ebe4;
+  --text-muted: #91a99a;
+  --text-heading: #f2f8f4;
+
+  --accent: #77c99b;
+  --danger: #ed7373;
+  --warning: #e6b85c;
+  --success: #61b68a;
+
+  --border: #2a3d32;
+  --border-light: #354c3e;
+  --glass-border: rgba(168, 220, 188, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.025);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.38);
+  --shadow-glow: 0 0 20px var(--primary-glow);
+}
+
+.theme-plum {
+  --primary: #b68ae8;
+  --primary-hover: #a477d8;
+  --primary-glow: rgba(182, 138, 232, 0.2);
+  --primary-gradient: linear-gradient(135deg, #c49af0, #9b6bd1);
+
+  --bg-main: #191421;
+  --bg-side: #201a2b;
+  --bg-card: #282135;
+  --bg-card-hover: #332a43;
+  --bg-input: #221c2d;
+  --bg-modal-overlay: rgba(8, 5, 13, 0.76);
+
+  --text-main: #e9e3f0;
+  --text-muted: #a49aaf;
+  --text-heading: #f8f4fc;
+
+  --accent: #75c9a4;
+  --danger: #ee7888;
+  --warning: #edbd68;
+  --success: #75c9a4;
+
+  --border: #3a3048;
+  --border-light: #493b59;
+  --glass-border: rgba(211, 184, 241, 0.09);
+  --glass-shine: rgba(255, 255, 255, 0.025);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.42);
+  --shadow-glow: 0 0 22px var(--primary-glow);
+}
+
+.theme-mist {
+  --primary: #248a91;
+  --primary-hover: #1e747a;
+  --primary-glow: rgba(36, 138, 145, 0.14);
+  --primary-gradient: linear-gradient(135deg, #319da3, #217780);
+
+  --bg-main: #eff5f7;
+  --bg-side: #e5eef1;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f7fafb;
+  --bg-input: #eaf1f3;
+  --bg-modal-overlay: rgba(17, 35, 39, 0.42);
+
+  --text-main: #27383b;
+  --text-muted: #718488;
+  --text-heading: #172a2d;
+
+  --accent: #378d69;
+  --danger: #c84d57;
+  --warning: #b57b24;
+  --success: #378d69;
+
+  --border: #d3e0e3;
+  --border-light: #e0eaec;
+  --glass-border: rgba(31, 80, 84, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.65);
+
+  --shadow-sm: 0 1px 3px rgba(26, 58, 63, 0.06);
+  --shadow-md: 0 4px 12px rgba(26, 58, 63, 0.09);
+  --shadow-lg: 0 8px 30px rgba(26, 58, 63, 0.12);
+  --shadow-glow: 0 0 20px var(--primary-glow);
 }
 
 .theme-linen {

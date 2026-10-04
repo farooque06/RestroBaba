@@ -6,6 +6,7 @@ import clientsRouter from './routes/clients.js';
 import menuRoutes from './routes/menu.js';
 import tableRoutes from './routes/tables.js';
 import orderRoutes from './routes/orders.js';
+import comboRoutes from './routes/combos.js';
 import inventoryRoutes from './routes/inventory.js';
 import recipeRoutes from './routes/recipes.js';
 import expenseRoutes from './routes/expenses.js';
@@ -126,6 +127,7 @@ app.use('/api/menu', roleMiddleware(['ADMIN', 'MANAGER', 'CHEF', 'WAITER']), men
 app.use('/api/clients', clientsRouter);
 app.use('/api/tables', roleMiddleware(['ADMIN', 'MANAGER', 'WAITER']), tableRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/combos', comboRoutes);
 app.use('/api/inventory', roleMiddleware(['ADMIN', 'MANAGER', 'CHEF']), inventoryRoutes);
 app.use('/api/recipes', roleMiddleware(['ADMIN', 'MANAGER', 'CHEF']), recipeRoutes);
 app.use('/api/expenses', roleMiddleware(['ADMIN', 'MANAGER']), requirePlan('GOLD'), expenseRoutes);

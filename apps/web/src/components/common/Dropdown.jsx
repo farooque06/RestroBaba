@@ -157,31 +157,33 @@ const Dropdown = ({
                                     <div
                                         key={opt.value || idx}
                                         onClick={() => {
+                                            if (opt.disabled) return;
                                             onChange(opt.value);
                                             setIsOpen(false);
                                             setSearchTerm('');
                                         }}
-                                        className={`dropdown-option ${value === opt.value ? 'selected' : ''}`}
+                                        className={`dropdown-option ${value === opt.value ? 'selected' : ''} ${opt.disabled ? 'disabled' : ''}`}
                                         style={{
                                             padding: '0.75rem 1rem',
                                             borderRadius: '10px',
                                             fontSize: '0.9rem',
-                                            cursor: 'pointer',
+                                            cursor: opt.disabled ? 'not-allowed' : 'pointer',
                                             transition: 'all 0.2s',
                                             background: value === opt.value ? 'var(--primary-glow)' : 'transparent',
                                             color: value === opt.value ? 'var(--primary)' : 'var(--text-main)',
                                             fontWeight: value === opt.value ? 700 : 400,
+                                            opacity: opt.disabled ? 0.5 : 1,
                                             borderLeft: value === opt.value ? '3px solid var(--primary)' : '3px solid transparent',
                                             marginBottom: '2px'
                                         }}
                                         onMouseEnter={e => {
-                                            if (value !== opt.value) {
+                                            if (!opt.disabled && value !== opt.value) {
                                                 e.currentTarget.style.background = 'var(--bg-card-hover)';
                                                 e.currentTarget.style.color = 'var(--text-heading)';
                                             }
                                         }}
                                         onMouseLeave={e => {
-                                            if (value !== opt.value) {
+                                            if (!opt.disabled && value !== opt.value) {
                                                 e.currentTarget.style.background = 'transparent';
                                                 e.currentTarget.style.color = 'var(--text-main)';
                                             }
