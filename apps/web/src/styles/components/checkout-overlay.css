@@ -230,6 +230,88 @@
   color: var(--primary);
 }
 
+.checkout-discount-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-input);
+}
+
+.checkout-discount-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.checkout-discount-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.checkout-discount-panel select,
+.checkout-discount-panel input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+}
+
+.checkout-discount-error {
+  color: var(--danger);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.checkout-apply-discount {
+  min-height: 38px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.checkout-apply-discount:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkout-total-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.checkout-total-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.checkout-total-breakdown .checkout-discount-line {
+  color: var(--success);
+}
+
 /* Payment Methods */
 .checkout-payment-grid {
   display: grid;

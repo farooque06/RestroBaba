@@ -280,12 +280,24 @@ const OrderList = () => {
                                 <div className="ol-table-value">{order.table?.number || 'Walk-in'}</div>
                             </div>
                             <div>
-                                {(order.taxAmount > 0 || order.serviceChargeAmount > 0) && (
+                                {(order.discountAmount > 0 || order.manualDiscountAmount > 0 || order.taxAmount > 0 || order.serviceChargeAmount > 0) && (
                                     <div style={{ marginBottom: '0.35rem' }}>
                                         <div className="ol-tax-row">
                                             <span>Sub:</span>
                                             <span>{formatCurrency(order.subtotal || 0)}</span>
                                         </div>
+                                        {order.discountAmount > 0 && (
+                                            <div className="ol-tax-row">
+                                                <span>{order.promotion?.name || 'Promotion'}:</span>
+                                                <span>−{formatCurrency(order.discountAmount)}</span>
+                                            </div>
+                                        )}
+                                        {order.manualDiscountAmount > 0 && (
+                                            <div className="ol-tax-row">
+                                                <span>Manual discount:</span>
+                                                <span>−{formatCurrency(order.manualDiscountAmount)}</span>
+                                            </div>
+                                        )}
                                         {order.taxAmount > 0 && (
                                             <div className="ol-tax-row">
                                                 <span>VAT:</span>
@@ -400,6 +412,10 @@ const OrderList = () => {
                 onDownload={() => {}} // Simplified for now
                 onSplit={() => toast.error('Split bill is currently only available from Floor Plan view')}
                 onLinkCustomer={linkCustomerToOrder}
+                onOrderUpdated={(updatedOrder) => {
+                    setPaymentOrder(updatedOrder);
+                    fetchOrders(true);
+                }}
                 onClose={() => { setPaymentOrder(null); setShowPhonePrompt(false); }}
             />
 

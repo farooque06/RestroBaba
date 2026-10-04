@@ -458,6 +458,71 @@
     gap: 0.75rem;
 }
 
+.billing-discount-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    background: var(--glass-shine);
+}
+
+.billing-discount-panel .preview-section-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--primary);
+}
+
+.billing-discount-panel label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.billing-discount-hint {
+    color: var(--danger);
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.billing-discount-panel select,
+.billing-discount-panel input {
+    width: 100%;
+    min-height: 42px;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    background: var(--bg-input);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.billing-apply-discount-btn {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--primary);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.billing-apply-discount-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .preview-section-label {
     font-size: 0.7rem;
     color: var(--text-muted);
@@ -560,6 +625,12 @@
 
 .billing-process-btn:active {
     transform: scale(0.98);
+}
+
+.billing-process-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
 }
 
 @media (max-width: 768px) {

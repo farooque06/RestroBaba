@@ -614,6 +614,18 @@ const OrderTaking = ({ table, onClose, onOrderPlaced }) => {
                                     <span>Subtotal</span>
                                     <span>{formatCurrency(subtotal)}</span>
                                 </div>
+                                {serviceChargeAmount > 0 && (
+                                    <div className="ot-total-line">
+                                        <span>Service charge</span>
+                                        <span>{formatCurrency(serviceChargeAmount)}</span>
+                                    </div>
+                                )}
+                                {taxAmount > 0 && (
+                                    <div className="ot-total-line">
+                                        <span>Tax</span>
+                                        <span>{formatCurrency(taxAmount)}</span>
+                                    </div>
+                                )}
                                 <div className="ot-total-line grand">
                                     <span>Grand Total</span>
                                     <span>{formatCurrency(finalTotal)}</span>

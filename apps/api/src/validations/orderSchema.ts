@@ -18,6 +18,11 @@ export const createOrderSchema = z.object({
     message: 'At least one menu item or combo deal is required'
 });
 
+export const updateOrderDiscountSchema = z.object({
+    promotionId: z.string().uuid().nullable(),
+    manualDiscountAmount: z.number().finite().nonnegative()
+});
+
 export const updateOrderStatusSchema = z.object({
     status: z.enum(['Pending', 'Cooking', 'Ready', 'Served', 'Paid', 'Cancelled']),
     paymentMethod: z.enum(['Cash', 'Card', 'UPI', 'Split']).optional().nullable(),

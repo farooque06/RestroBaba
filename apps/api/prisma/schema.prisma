@@ -55,6 +55,7 @@ model Client {
   taxInvoices           TaxInvoice[]
   comboDeals            ComboDeal[]
   subscriptionPayments  SubscriptionPayment[]
+  promotions            Promotion[]
 }
 
 model SubscriptionPlan {
@@ -324,6 +325,10 @@ model Order {
   payments            Payment[]
   transactions        InventoryTransaction[]
   taxInvoice          TaxInvoice?
+  promotionId         String?
+  promotion           Promotion?             @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+  discountAmount      Float                  @default(0)
+  manualDiscountAmount Float                 @default(0)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
@@ -331,7 +336,27 @@ model Order {
   @@index([status])
   @@index([tableId])
   @@index([customerId])
+  @@index([promotionId])
   @@index([createdAt])
+}
+
+model Promotion {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String // PERCENTAGE, FIXED
+  value       Float
+  startsAt    DateTime
+  endsAt      DateTime
+  isActive    Boolean  @default(true)
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  orders      Order[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([clientId, isActive, startsAt, endsAt])
 }
 
 model OrderItem {
@@ -521,16 +546,16 @@ model SubscriptionPayment {
   id            String   @id @default(uuid())
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id])
-  
+
   planTier      String?  // Plan being paid for
   planDuration  String?  // 1m, 3m, 12m
-  
+
   baseAmount    Float    @default(0)
   discount      Float    @default(0)
   totalPayable  Float    @default(0)
   amountPaid    Float    @default(0) // The actual cash received
   balance       Float    @default(0) // Remaining amount if partial
-  
+
   method        String   // Cash, Bank Transfer, eSewa, Khalti, QR, etc.
   transactionId String?  // Reference ID from payment provider
   date          DateTime @default(now())

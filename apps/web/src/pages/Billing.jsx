@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
-import { Receipt as ReceiptIcon, CreditCard, DollarSign, Loader2, Printer, Search, FileText, Clock, AlertCircle, Users, UserPlus, X, Download, Layout, QrCode, MessageCircle } from 'lucide-react';
+import { Receipt as ReceiptIcon, CreditCard, DollarSign, Loader2, Printer, Search, FileText, Clock, AlertCircle, Users, UserPlus, X, Download, Layout, QrCode, MessageCircle, Tag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { initSocket, disconnectSocket } from '../services/socket';
@@ -23,6 +23,11 @@ const Billing = () => {
     const [splitOrder, setSplitOrder] = useState(null);
     const [selectedMethods, setSelectedMethods] = useState({}); // orderId -> method
     const [printingOrder, setPrintingOrder] = useState(null);
+    const [promotions, setPromotions] = useState([]);
+    const [selectedPromotionId, setSelectedPromotionId] = useState('');
+    const [manualDiscountInput, setManualDiscountInput] = useState('');
+    const [savingDiscount, setSavingDiscount] = useState(false);
+    const [processingPayment, setProcessingPayment] = useState(false);
     const [customerPhone, setCustomerPhone] = useState('');
     const [showPhonePrompt, setShowPhonePrompt] = useState(false);
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
@@ -31,6 +36,7 @@ const Billing = () => {
 
     useEffect(() => {
         fetchInvoices();
+        fetchActivePromotions();
 
         const clientId = user?.clientId || localStorage.getItem('restroClientId');
         if (clientId) {
@@ -59,8 +65,92 @@ const Billing = () => {
         }
     };
 
+    const fetchActivePromotions = async () => {
+        const token = localStorage.getItem('restroToken');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/promotions/active`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to load promotions');
+            if (!Array.isArray(data)) throw new Error('Unexpected promotions response');
+            setPromotions(data);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to load promotions');
+        }
+    };
+
+    const selectOrderForBilling = (order) => {
+        setPrintingOrder(order);
+        setSelectedPromotionId(order.promotionId || '');
+        setManualDiscountInput(String(order.manualDiscountAmount || 0));
+        if (order.promotion) {
+            setPromotions(current => current.some(promotion => promotion.id === order.promotion.id)
+                ? current
+                : [...current, order.promotion]);
+        }
+    };
+
+    const applyOrderDiscount = async () => {
+        if (!printingOrder) return;
+        const manualDiscountAmount = manualDiscountInput.trim() === '' ? 0 : Number(manualDiscountInput);
+        if (!Number.isFinite(manualDiscountAmount) || manualDiscountAmount < 0) {
+            toast.error('Enter a valid discount amount');
+            return;
+        }
+
+        setSavingDiscount(true);
+        const token = localStorage.getItem('restroToken');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/orders/${printingOrder.id}/discount`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    promotionId: selectedPromotionId || null,
+                    manualDiscountAmount
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to update bill discount');
+            setPrintingOrder(data);
+            setOrders(current => current.map(order => order.id === data.id ? data : order));
+            setManualDiscountInput(String(data.manualDiscountAmount || 0));
+            toast.success('Bill discounts applied');
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to update bill discount');
+        } finally {
+            setSavingDiscount(false);
+        }
+    };
+
+    const parsedManualDiscount = manualDiscountInput.trim() === '' ? 0 : Number(manualDiscountInput);
+    const selectedBillingPromotion = promotions.find(promotion => promotion.id === selectedPromotionId);
+    const selectedPromotionDiscount = printingOrder && selectedBillingPromotion
+        ? Math.round(Math.min(
+            printingOrder.subtotal,
+            selectedBillingPromotion.type === 'PERCENTAGE'
+                ? printingOrder.subtotal * selectedBillingPromotion.value / 100
+                : selectedBillingPromotion.value
+        ) * 100) / 100
+        : 0;
+    const maxManualDiscount = printingOrder
+        ? Math.max(0, printingOrder.subtotal - selectedPromotionDiscount)
+        : 0;
+    const validManualDiscount = Number.isFinite(parsedManualDiscount) &&
+        parsedManualDiscount >= 0 &&
+        parsedManualDiscount <= maxManualDiscount;
+    const discountHasChanged = printingOrder && (
+        selectedPromotionId !== (printingOrder.promotionId || '') ||
+        !validManualDiscount ||
+        parsedManualDiscount !== (printingOrder.manualDiscountAmount || 0)
+    );
+
     const processPayment = async (orderId) => {
         const token = localStorage.getItem('restroToken');
+        setProcessingPayment(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
                 method: 'PUT',
@@ -84,6 +174,8 @@ const Billing = () => {
             }
         } catch (err) {
             toast.error('Connection error');
+        } finally {
+            setProcessingPayment(false);
         }
     };
 
@@ -308,7 +400,7 @@ const Billing = () => {
                                 <div
                                     key={order.id}
                                     className={`billing-table-card ${printingOrder?.id === order.id ? 'selected' : ''}`}
-                                    onClick={() => setPrintingOrder(order)}
+                                    onClick={() => selectOrderForBilling(order)}
                                 >
                                     <div className="table-card-header">
                                         <div className="billing-card-left">
@@ -335,15 +427,15 @@ const Billing = () => {
 
                                     <div className="billing-card-actions">
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); processPayment(order.id); }}
+                                            onClick={(e) => { e.stopPropagation(); selectOrderForBilling(order); }}
                                             className="billing-quick-pay"
                                         >
-                                            <DollarSign size={13} /> Quick Pay
+                                            <DollarSign size={13} /> Bill & Pay
                                         </button>
                                         <button
                                             onClick={(e) => { 
                                                 e.stopPropagation(); 
-                                                setPrintingOrder(order);
+                                                selectOrderForBilling(order);
                                                 setShowCustomerSearch(true);
                                             }}
                                             className={`billing-icon-btn ${order.customer ? 'has-guest' : ''}`}
@@ -467,6 +559,55 @@ const Billing = () => {
                                     </div>
                                 )}
 
+                                {activeTab === 'pending' && (
+                                    <div className="billing-discount-panel">
+                                        <span className="preview-section-label"><Tag size={14} /> Discounts</span>
+                                        <label>
+                                            <span>Promotion</span>
+                                            <select
+                                                value={selectedPromotionId}
+                                                onChange={event => setSelectedPromotionId(event.target.value)}
+                                            >
+                                                <option value="">No promotion</option>
+                                                {promotions.map(promotion => (
+                                                    <option key={promotion.id} value={promotion.id}>
+                                                        {promotion.name} — {promotion.type === 'PERCENTAGE'
+                                                            ? `${promotion.value}% off`
+                                                            : `${formatCurrency(promotion.value)} off`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span>Additional manual discount</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max={maxManualDiscount}
+                                                step="0.01"
+                                                inputMode="decimal"
+                                                placeholder="0.00"
+                                                value={manualDiscountInput}
+                                                onChange={event => setManualDiscountInput(event.target.value)}
+                                            />
+                                            {!validManualDiscount && (
+                                                <span className="billing-discount-hint">
+                                                    Enter an amount between 0 and {formatCurrency(maxManualDiscount)}.
+                                                </span>
+                                            )}
+                                        </label>
+                                        <button
+                                            type="button"
+                                            className="billing-apply-discount-btn"
+                                            disabled={savingDiscount || !validManualDiscount || !discountHasChanged}
+                                            onClick={applyOrderDiscount}
+                                        >
+                                            {savingDiscount ? <Loader2 size={15} className="animate-spin" /> : <Tag size={15} />}
+                                            {savingDiscount ? 'Applying…' : 'Apply discounts to bill'}
+                                        </button>
+                                    </div>
+                                )}
+
                                 <div className="preview-receipt-wrapper">
                                     <Receipt order={printingOrder} client={user?.client} />
                                 </div>
@@ -518,9 +659,13 @@ const Billing = () => {
                                             </div>
                                         )}
 
-                                        <button onClick={() => processPayment(printingOrder.id)} className="billing-process-btn">
-                                            <DollarSign size={18} />
-                                            Process {formatCurrency(printingOrder.totalAmount)}
+                                        <button
+                                            onClick={() => processPayment(printingOrder.id)}
+                                            className="billing-process-btn"
+                                            disabled={processingPayment || savingDiscount || !validManualDiscount || discountHasChanged}
+                                        >
+                                            {processingPayment ? <Loader2 size={18} className="animate-spin" /> : <DollarSign size={18} />}
+                                            {processingPayment ? 'Processing…' : `Process ${formatCurrency(printingOrder.totalAmount)}`}
                                         </button>
                                     </div>
                                 )}

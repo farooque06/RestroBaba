@@ -486,6 +486,10 @@ const TableManagement = () => {
                 onDownload={(order) => { performAutoCapture(order.id); handleDownload(order); }}
                 onSplit={setSplitOrder}
                 onLinkCustomer={linkCustomerToOrder}
+                onOrderUpdated={(updatedOrder) => setCheckoutOrder({
+                    ...updatedOrder,
+                    tableNumber: checkoutOrder?.tableNumber || updatedOrder.table?.number
+                })}
                 onClose={() => { setCheckoutOrder(null); setShowPhonePrompt(false); }}
             />
 

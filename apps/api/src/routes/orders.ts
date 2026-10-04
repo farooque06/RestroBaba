@@ -1,7 +1,7 @@
 import express from 'express';
 import prisma from '../services/prisma.js';
 import { notifyClient } from '../services/socket.js';
-import { createOrderSchema, updateOrderStatusSchema, paymentSchema } from '../validations/orderSchema.js';
+import { createOrderSchema, updateOrderDiscountSchema, updateOrderStatusSchema, paymentSchema } from '../validations/orderSchema.js';
 import { generateTaxInvoice } from './taxInvoice.js';
 import { ComboOrderError, resolveComboOrderItems } from '../services/comboOrderItems.js';
 
@@ -64,6 +64,22 @@ router.post('/', async (req, res) => {
                 });
             }
 
+            const selectedPromotionId = existingOrder?.promotionId ?? null;
+            let promotion = null;
+            if (selectedPromotionId) {
+                promotion = await tx.promotion.findFirst({
+                    where: { id: selectedPromotionId, clientId: req.clientId! }
+                });
+                if (!promotion) throw new Error('Selected promotion is not available for this restaurant');
+                const promotionWasAlreadyApplied = existingOrder?.promotionId === selectedPromotionId;
+                const now = new Date();
+                if (!promotionWasAlreadyApplied && (
+                    !promotion.isActive || promotion.startsAt > now || promotion.endsAt <= now
+                )) {
+                    throw new Error('Selected promotion is not currently active');
+                }
+            }
+
             // 2. Fetch client settings
             const client = await tx.client.findUnique({
                 where: { id: req.clientId! },
@@ -112,6 +128,7 @@ router.post('/', async (req, res) => {
                         type: type || 'DINE_IN',
                         subtotal: 0,
                         totalAmount: 0,
+                        promotionId: selectedPromotionId,
                         clientId: req.clientId!,
                         status: initialStatus,
                         items: {
@@ -143,25 +160,41 @@ router.post('/', async (req, res) => {
             // 3. Recalculate Totals
             const allItems = await tx.orderItem.findMany({ where: { orderId } });
             const subtotal = allItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            const discountAmount = promotion
+                ? Math.round(Math.min(
+                    subtotal,
+                    promotion.type === 'PERCENTAGE'
+                        ? subtotal * promotion.value / 100
+                        : promotion.value
+                ) * 100) / 100
+                : 0;
+            const manualDiscountAmount = Math.min(
+                existingOrder?.manualDiscountAmount ?? 0,
+                Math.max(0, subtotal - discountAmount)
+            );
+            const discountedSubtotal = subtotal - discountAmount - manualDiscountAmount;
 
             let taxAmount = 0;
-            if (client.useTax) taxAmount = subtotal * (client.taxRate / 100);
+            if (client.useTax) taxAmount = discountedSubtotal * (client.taxRate / 100);
 
             let serviceChargeAmount = 0;
-            if (client.useServiceCharge) serviceChargeAmount = subtotal * (client.serviceChargeRate / 100);
+            if (client.useServiceCharge) serviceChargeAmount = discountedSubtotal * (client.serviceChargeRate / 100);
 
-            const totalAmount = subtotal + taxAmount + serviceChargeAmount;
+            const totalAmount = discountedSubtotal + taxAmount + serviceChargeAmount;
 
             const finalOrder = await tx.order.update({
                 where: { id: orderId },
                 data: {
                     subtotal,
+                    promotionId: selectedPromotionId,
+                    discountAmount,
+                    manualDiscountAmount,
                     taxAmount,
                     serviceChargeAmount,
                     totalAmount,
                     status: initialStatus
                 },
-                include: { items: { include: { variant: true, menuItem: { include: { category: true } } } }, table: true, customer: true }
+                include: { items: { include: { variant: true, menuItem: { include: { category: true } } } }, table: true, customer: true, promotion: true }
             });
 
             // 4. Activity Log
@@ -199,6 +232,9 @@ router.post('/', async (req, res) => {
     } catch (error) {
         console.error('Order processing error:', error);
         if (error instanceof ComboOrderError) {
+            return res.status(400).json({ error: error.message });
+        }
+        if (error instanceof Error && error.message.startsWith('Selected promotion')) {
             return res.status(400).json({ error: error.message });
         }
         res.status(500).json({ error: 'Failed to process order' });
@@ -261,6 +297,7 @@ router.get('/', async (req, res) => {
                 },
                 table: true,
                 customer: true,
+                promotion: true,
                 taxInvoice: true
             },
             orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -287,6 +324,117 @@ router.get('/', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch orders' });
+    }
+});
+
+router.put('/:id/discount', async (req, res) => {
+    if (!req.clientId) return res.status(400).json({ error: 'Client ID missing' });
+
+    const validation = updateOrderDiscountSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ error: 'Validation Error', details: validation.error.issues });
+    }
+
+    const { id } = req.params;
+    const { promotionId, manualDiscountAmount } = validation.data;
+    const user = (req as any).user;
+
+    try {
+        const order = await prisma.$transaction(async tx => {
+            const currentOrder = await tx.order.findUnique({
+                where: { id },
+                include: { promotion: true }
+            });
+            if (!currentOrder || currentOrder.clientId !== req.clientId) {
+                throw new Error('Order not found');
+            }
+            if (!['Ready', 'Served'].includes(currentOrder.status)) {
+                throw new Error('Discounts can only be changed while billing a ready or served order');
+            }
+
+            let promotion = null;
+            if (promotionId) {
+                promotion = await tx.promotion.findFirst({
+                    where: { id: promotionId, clientId: req.clientId }
+                });
+                if (!promotion) throw new Error('Selected promotion is not available for this restaurant');
+                const isAlreadyApplied = currentOrder.promotionId === promotionId;
+                const now = new Date();
+                if (!isAlreadyApplied && (
+                    !promotion.isActive || promotion.startsAt > now || promotion.endsAt <= now
+                )) {
+                    throw new Error('Selected promotion is not currently active');
+                }
+            }
+
+            const promotionDiscount = promotion
+                ? Math.round(Math.min(
+                    currentOrder.subtotal,
+                    promotion.type === 'PERCENTAGE'
+                        ? currentOrder.subtotal * promotion.value / 100
+                        : promotion.value
+                ) * 100) / 100
+                : 0;
+            const remainingSubtotal = Math.max(0, currentOrder.subtotal - promotionDiscount);
+            if (manualDiscountAmount > remainingSubtotal) {
+                throw new Error(`Manual discount cannot exceed ${remainingSubtotal.toFixed(2)}`);
+            }
+
+            const client = await tx.client.findUnique({
+                where: { id: req.clientId },
+                select: { useTax: true, taxRate: true, useServiceCharge: true, serviceChargeRate: true }
+            });
+            if (!client) throw new Error('Client not found');
+
+            const discountedSubtotal = remainingSubtotal - manualDiscountAmount;
+            const taxAmount = client.useTax ? discountedSubtotal * (client.taxRate / 100) : 0;
+            const serviceChargeAmount = client.useServiceCharge
+                ? discountedSubtotal * (client.serviceChargeRate / 100)
+                : 0;
+            const totalAmount = discountedSubtotal + taxAmount + serviceChargeAmount;
+
+            const updatedOrder = await tx.order.update({
+                where: { id },
+                data: {
+                    promotionId,
+                    discountAmount: promotionDiscount,
+                    manualDiscountAmount,
+                    taxAmount,
+                    serviceChargeAmount,
+                    totalAmount
+                },
+                include: {
+                    items: { include: { menuItem: { include: { category: true } }, variant: true } },
+                    table: true,
+                    customer: true,
+                    promotion: true
+                }
+            });
+
+            await tx.activityLog.create({
+                data: {
+                    action: 'BILL_DISCOUNT_UPDATE',
+                    details: `Updated discounts for Order #${id.slice(-4).toUpperCase()} - Promotion: ${promotionDiscount.toFixed(2)}, Manual: ${manualDiscountAmount.toFixed(2)}`,
+                    userId: user.userId,
+                    role: user.role,
+                    clientId: req.clientId
+                }
+            });
+
+            return updatedOrder;
+        });
+
+        notifyClient(req.clientId, 'ORDER_UPDATE', order);
+        res.json(order);
+    } catch (error: any) {
+        if (error.message === 'Order not found') return res.status(404).json({ error: error.message });
+        if (error.message?.startsWith('Discounts can only') ||
+            error.message?.startsWith('Selected promotion') ||
+            error.message?.startsWith('Manual discount')) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error('Order discount update error:', error);
+        res.status(500).json({ error: 'Failed to update order discounts' });
     }
 });
 
@@ -564,7 +712,8 @@ router.get('/table/:tableId', async (req, res) => {
             include: {
                 items: { include: { variant: true, menuItem: { include: { category: true } } } },
                 taxInvoice: true,
-                customer: true
+                customer: true,
+                promotion: true
             }
         });
         res.json(order || null);
@@ -683,9 +832,13 @@ router.post('/item/:itemId/remake', async (req, res) => {
             const client = await tx.client.findUnique({ where: { id: req.clientId! } });
             let taxAmount = 0;
             let serviceChargeAmount = 0;
-            if (client?.useTax) taxAmount = subtotal * (client.taxRate / 100);
-            if (client?.useServiceCharge) serviceChargeAmount = subtotal * (client.serviceChargeRate / 100);
-            const totalAmount = subtotal + taxAmount + serviceChargeAmount;
+            const discountedSubtotal = Math.max(
+                0,
+                subtotal - (item.order.discountAmount || 0) - (item.order.manualDiscountAmount || 0)
+            );
+            if (client?.useTax) taxAmount = discountedSubtotal * (client.taxRate / 100);
+            if (client?.useServiceCharge) serviceChargeAmount = discountedSubtotal * (client.serviceChargeRate / 100);
+            const totalAmount = discountedSubtotal + taxAmount + serviceChargeAmount;
 
             await tx.order.update({
                 where: { id: item.orderId },

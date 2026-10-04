@@ -1,0 +1,329 @@
+.promotions-page {
+    width: 100%;
+    max-width: none;
+}
+
+.promotions-page > .page-header p {
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+}
+
+.promotion-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.promotion-summary-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-card);
+}
+
+.promotion-summary-card span {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.promotion-summary-card span svg {
+    color: var(--primary);
+}
+
+.promotion-summary-card strong {
+    overflow: hidden;
+    color: var(--text-heading);
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.promotion-form,
+.promotion-list-section {
+    margin-bottom: 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--bg-card);
+}
+
+.promotion-form-heading h2,
+.promotion-list-heading h2 {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: 1.1rem;
+}
+
+.promotion-form-heading p,
+.promotion-list-heading p {
+    margin: 0.3rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.promotion-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.promotion-form-grid label {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 650;
+}
+
+.promotion-form-grid input,
+.promotion-form-grid select {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    outline: 0;
+    background: var(--bg-input);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.8rem;
+}
+
+.promotion-form-grid input:focus,
+.promotion-form-grid select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.promotion-description-field {
+    grid-column: span 2;
+}
+
+.promotion-form-actions,
+.promotion-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.6rem;
+}
+
+.promotion-form-actions {
+    margin-top: 1rem;
+}
+
+.promotion-secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--bg-side);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.promotion-secondary-button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.promotion-list-heading {
+    margin-bottom: 0.9rem;
+}
+
+.promotion-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.promotion-card {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(280px, 1.4fr) auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-side);
+}
+
+.promotion-card-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+}
+
+.promotion-card-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.promotion-card-title h3 {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: 0.9rem;
+}
+
+.promotion-status {
+    padding: 0.18rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-size: 0.63rem;
+    font-weight: 700;
+}
+
+.promotion-status.active {
+    border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+    background: color-mix(in srgb, var(--success) 12%, var(--bg-card));
+    color: var(--success);
+}
+
+.promotion-status.scheduled {
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    background: var(--primary-glow);
+    color: var(--primary);
+}
+
+.promotion-description,
+.promotion-dates {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+}
+
+.promotion-value {
+    color: var(--primary);
+    font-size: 0.78rem;
+}
+
+.promotion-dates {
+    line-height: 1.4;
+}
+
+.promotion-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(78px, 1fr));
+    gap: 0.55rem;
+}
+
+.promotion-metrics div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.promotion-metrics strong {
+    overflow: hidden;
+    color: var(--text-heading);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.promotion-metrics span {
+    color: var(--text-muted);
+    font-size: 0.63rem;
+}
+
+.promotion-card-actions {
+    justify-content: flex-end;
+}
+
+.promotion-loading,
+.promotion-empty {
+    display: flex;
+    min-height: 150px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.promotion-empty svg {
+    color: var(--primary);
+}
+
+.promotion-empty h3,
+.promotion-empty p {
+    margin: 0;
+}
+
+.promotion-empty h3 {
+    color: var(--text-heading);
+    font-size: 0.95rem;
+}
+
+.promotion-empty p {
+    font-size: 0.75rem;
+}
+
+@media (max-width: 1000px) {
+    .promotion-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .promotion-card {
+        grid-template-columns: 1fr;
+    }
+
+    .promotion-card-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .promotion-summary-grid {
+        gap: 0.6rem;
+    }
+
+    .promotion-summary-card,
+    .promotion-form,
+    .promotion-list-section {
+        padding: 0.85rem;
+    }
+
+    .promotion-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .promotion-description-field {
+        grid-column: auto;
+    }
+
+    .promotion-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .promotion-form-actions {
+        flex-wrap: wrap;
+    }
+
+    .promotion-form-actions > button {
+        flex: 1;
+    }
+}

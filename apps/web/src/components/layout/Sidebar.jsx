@@ -28,7 +28,8 @@ import {
     HelpCircle,
     Phone,
     MessageCircle,
-    X
+    X,
+    Percent
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -54,6 +55,7 @@ const Sidebar = () => {
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
         { id: 'menu', label: 'Menu', icon: UtensilsCrossed, path: '/menu', roles: ['ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },
         { id: 'combos', label: 'Combo Deals', icon: Tag, path: '/combos', roles: ['ADMIN', 'MANAGER'], minPlan: 'SILVER' },
+        { id: 'promotions', label: 'Promotions', icon: Percent, path: '/promotions', roles: ['ADMIN', 'MANAGER'], minPlan: 'SILVER' },
         { id: 'kitchen', label: 'Kitchen', icon: ChefHat, path: '/kitchen', roles: ['ADMIN', 'MANAGER', 'CHEF'], minPlan: 'GOLD' },
         { id: 'tables', label: 'Tables', icon: TableProperties, path: '/tables', roles: ['ADMIN', 'MANAGER', 'WAITER'], minPlan: 'SILVER' },
         { id: 'orders', label: 'Orders', icon: ClipboardList, path: '/orders', roles: ['ADMIN', 'MANAGER', 'WAITER', 'CHEF'], minPlan: 'SILVER' },

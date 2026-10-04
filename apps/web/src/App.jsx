@@ -15,6 +15,7 @@ import { Loader2 } from 'lucide-react';
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const MenuManagement = React.lazy(() => import('./pages/MenuManagement'));
 const ComboDeals = React.lazy(() => import('./pages/ComboDeals'));
+const Promotions = React.lazy(() => import('./pages/Promotions'));
 const TableManagement = React.lazy(() => import('./pages/TableManagement'));
 const OrderList = React.lazy(() => import('./pages/OrderList'));
 const Billing = React.lazy(() => import('./pages/Billing'));
@@ -120,6 +121,11 @@ function AppContent() {
                                     <Route path="combos" element={
                                         <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
                                             <ComboDeals />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="promotions" element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                                            <Promotions />
                                         </ProtectedRoute>
                                     } />
                                     <Route path="tables" element={

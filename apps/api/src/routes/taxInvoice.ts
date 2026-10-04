@@ -53,6 +53,8 @@ export const generateTaxInvoice = async (
         where: { id: orderId },
         select: {
             subtotal: true,
+            discountAmount: true,
+            manualDiscountAmount: true,
             taxAmount: true,
             serviceChargeAmount: true,
             totalAmount: true,
@@ -76,7 +78,7 @@ export const generateTaxInvoice = async (
             fiscalYear,
             orderId,
             subtotal: order.subtotal,
-            taxableAmount: order.subtotal + (order.serviceChargeAmount || 0),
+            taxableAmount: Math.max(0, order.subtotal - (order.discountAmount || 0) - (order.manualDiscountAmount || 0)) + (order.serviceChargeAmount || 0),
             taxRate: client.taxRate,
             taxAmount: order.taxAmount,
             serviceCharge: order.serviceChargeAmount || 0,

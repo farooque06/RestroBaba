@@ -22,6 +22,7 @@ import plansRoutes from './routes/plans.js';
 import shiftsRoutes from './routes/shifts.js';
 import leadsRoutes from './routes/leads.js';
 import taxInvoiceRoutes from './routes/taxInvoice.js';
+import promotionsRoutes from './routes/promotions.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import { roleMiddleware } from './middleware/roleMiddleware.js';
 import { requirePlan } from './middleware/planMiddleware.js';
@@ -127,6 +128,7 @@ app.use('/api/menu', roleMiddleware(['ADMIN', 'MANAGER', 'CHEF', 'WAITER']), men
 app.use('/api/clients', clientsRouter);
 app.use('/api/tables', roleMiddleware(['ADMIN', 'MANAGER', 'WAITER']), tableRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/promotions', roleMiddleware(['ADMIN', 'MANAGER', 'WAITER']), promotionsRoutes);
 app.use('/api/combos', comboRoutes);
 app.use('/api/inventory', roleMiddleware(['ADMIN', 'MANAGER', 'CHEF']), inventoryRoutes);
 app.use('/api/recipes', roleMiddleware(['ADMIN', 'MANAGER', 'CHEF']), recipeRoutes);

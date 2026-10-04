@@ -165,6 +165,20 @@ const Receipt = React.forwardRef(({ order, client }, ref) => {
                     <span style={{ fontWeight: '600' }}>{formatCurrency(order.subtotal || 0)}</span>
                 </div>
 
+                {order.discountAmount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                        <span style={{ color: '#16803c' }}>{order.promotion?.name || 'Promotion discount'}</span>
+                        <span style={{ fontWeight: '600', color: '#16803c' }}>−{formatCurrency(order.discountAmount)}</span>
+                    </div>
+                )}
+
+                {order.manualDiscountAmount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                        <span style={{ color: '#16803c' }}>Manual discount</span>
+                        <span style={{ fontWeight: '600', color: '#16803c' }}>−{formatCurrency(order.manualDiscountAmount)}</span>
+                    </div>
+                )}
+
                 {order.serviceChargeAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
                         <span style={{ color: '#666' }}>Service Charge ({client?.serviceChargeRate || 0}%)</span>
