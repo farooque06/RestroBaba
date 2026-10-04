@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config';
-import { ClipboardList, Clock, CheckCircle, ChefHat, Loader2, Search, XCircle, DollarSign } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle, ChefHat, Loader2, Search, XCircle, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { initSocket, disconnectSocket } from '../services/socket';
@@ -13,8 +13,12 @@ const OrderList = () => {
     const { user } = useAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState('');
     const [filter, setFilter] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ title: '', message: '', onConfirm: () => { } });
     const [paymentOrder, setPaymentOrder] = useState(null);
@@ -22,43 +26,70 @@ const OrderList = () => {
     const [showPhonePrompt, setShowPhonePrompt] = useState(false);
     const [customerPhone, setCustomerPhone] = useState('');
     const [processingPayment, setProcessingPayment] = useState(false);
+    const fetchRequestId = useRef(0);
+    const fetchOrdersRef = useRef(null);
 
     useEffect(() => {
-        fetchOrders();
-
-        // Issue #11: Socket integration
         const clientId = user?.clientId || localStorage.getItem('restroClientId');
         if (clientId) {
             const socket = initSocket(clientId);
 
-            socket.on('ORDER_NEW', () => fetchOrders(true));
-            socket.on('ORDER_UPDATE', () => fetchOrders(true));
+            socket.on('ORDER_NEW', () => fetchOrdersRef.current?.(true));
+            socket.on('ORDER_UPDATE', () => fetchOrdersRef.current?.(true));
         }
 
-        const interval = setInterval(() => fetchOrders(true), 30000);
+        const interval = setInterval(() => fetchOrdersRef.current?.(true), 30000);
         return () => {
             clearInterval(interval);
             disconnectSocket();
         };
     }, [user?.clientId]);
 
+    useEffect(() => {
+        const timeout = setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 300);
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        fetchOrdersRef.current?.();
+    }, [page, filter, debouncedSearchQuery]);
+
     const fetchOrders = async (silent = false) => {
         if (!silent) setLoading(true);
+        const requestId = ++fetchRequestId.current;
         const token = localStorage.getItem('restroToken');
+        setFetchError('');
         try {
-            const response = await fetch(`${API_BASE_URL}/api/orders`, {
+            const params = new URLSearchParams({ page: String(page), limit: '20' });
+            if (filter !== 'All') params.set('status', filter);
+            if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+
+            const response = await fetch(`${API_BASE_URL}/api/orders?${params}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
-            if (response.ok) {
-                setOrders(data);
+            if (!response.ok) throw new Error(data.error || 'Failed to fetch orders');
+            if (requestId !== fetchRequestId.current) return;
+            if (!data || Array.isArray(data) || !Array.isArray(data.orders) || !data.pagination) {
+                throw new Error('The orders API does not support pagination yet. Deploy the updated API and try again.');
             }
+
+            if (page > data.pagination.totalPages) {
+                setPage(data.pagination.totalPages);
+                return;
+            }
+            setOrders(data.orders);
+            setPagination(data.pagination);
         } catch (err) {
             console.error('Failed to fetch orders', err);
+            if (requestId === fetchRequestId.current) {
+                setFetchError(err instanceof Error ? err.message : 'Failed to fetch orders. Please try again.');
+            }
         } finally {
-            setLoading(false);
+            if (requestId === fetchRequestId.current) setLoading(false);
         }
     };
+    fetchOrdersRef.current = fetchOrders;
 
     const updateStatus = async (orderId, status, method = 'Cash') => {
         const token = localStorage.getItem('restroToken');
@@ -138,18 +169,11 @@ const OrderList = () => {
             case 'Cooking': return 'var(--warning)';
             case 'Ready': return 'var(--accent)';
             case 'Served': return 'var(--primary)';
-            case 'Paid': return '#10b981';
-            case 'Cancelled': return '#6b7280';
+            case 'Paid': return 'var(--success)';
+            case 'Cancelled': return 'var(--text-muted)';
             default: return 'var(--text-muted)';
         }
     };
-
-    const filteredOrders = orders.filter(o => {
-        const matchesFilter = filter === 'All' || o.status === filter;
-        const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            o.table?.number?.toString().includes(searchQuery);
-        return matchesFilter && matchesSearch;
-    });
 
     if (loading) return (
         <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -166,7 +190,7 @@ const OrderList = () => {
                     <div>
                         <h1>
                             Orders & KOT
-                            <span className="ol-count-badge">{filteredOrders.length}</span>
+                            <span className="ol-count-badge">{pagination.total}</span>
                         </h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px' }}>
                             Track kitchen preparation for <strong style={{ color: 'var(--text-heading)' }}>{user?.clientName}</strong>
@@ -180,7 +204,10 @@ const OrderList = () => {
                 {['All', 'Pending', 'Cooking', 'Ready', 'Served', 'Paid', 'Cancelled'].map(s => (
                     <button
                         key={s}
-                        onClick={() => setFilter(s)}
+                        onClick={() => {
+                            setFilter(s);
+                            setPage(1);
+                        }}
                         className={`ol-chip${filter === s ? ' active' : ''}`}
                     >
                         {s}
@@ -196,14 +223,23 @@ const OrderList = () => {
                         type="text"
                         placeholder="Search by Order ID or Table..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setPage(1);
+                        }}
                     />
                 </div>
             </div>
 
             {/* ── Order Cards Grid ── */}
             <div className="ol-grid">
-                {filteredOrders.map((order, idx) => (
+                {fetchError && (
+                    <div className="ol-empty" role="alert">
+                        <p>{fetchError}</p>
+                    </div>
+                )}
+
+                {orders.map((order, idx) => (
                     <div key={order.id} className="ol-card" style={{ animationDelay: `${idx * 0.05}s` }}>
                         {/* Header */}
                         <div className="ol-card-header">
@@ -216,11 +252,7 @@ const OrderList = () => {
                             </div>
                             <div
                                 className="ol-status-badge"
-                                style={{
-                                    background: `${getStatusColor(order.status)}18`,
-                                    color: getStatusColor(order.status),
-                                    border: `1px solid ${getStatusColor(order.status)}35`,
-                                }}
+                                style={{ color: getStatusColor(order.status) }}
                             >
                                 {['Pending', 'Cooking'].includes(order.status) && <span className="pulse" />}
                                 {order.status}
@@ -313,13 +345,43 @@ const OrderList = () => {
                     </div>
                 ))}
 
-                {filteredOrders.length === 0 && (
+                {!fetchError && orders.length === 0 && (
                     <div className="ol-empty">
                         <ClipboardList size={48} style={{ opacity: 0.2 }} />
-                        <p>{filter === 'All' ? 'No orders found.' : `No ${filter.toLowerCase()} orders found.`}</p>
+                        <p>
+                            {debouncedSearchQuery
+                                ? 'No matching orders found.'
+                                : filter === 'All'
+                                    ? 'No orders found.'
+                                    : `No ${filter.toLowerCase()} orders found.`}
+                        </p>
                     </div>
                 )}
             </div>
+
+            {pagination.totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button
+                        type="button"
+                        className="ol-chip"
+                        onClick={() => setPage(currentPage => Math.max(1, currentPage - 1))}
+                        disabled={page === 1}
+                    >
+                        <ChevronLeft size={16} /> Previous
+                    </button>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                        Page {page} of {pagination.totalPages} ({pagination.total} orders)
+                    </span>
+                    <button
+                        type="button"
+                        className="ol-chip"
+                        onClick={() => setPage(currentPage => Math.min(pagination.totalPages, currentPage + 1))}
+                        disabled={page === pagination.totalPages}
+                    >
+                        Next <ChevronRight size={16} />
+                    </button>
+                </div>
+            )}
 
             {/* ── Payment Overlay ── */}
             <CheckoutOverlay 

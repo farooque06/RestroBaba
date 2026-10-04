@@ -42,7 +42,7 @@ const TransferModal = ({ isOpen, onClose, tables, tableToTransfer, onTransfer })
                                     justifyContent: 'center',
                                     alignItems: 'center',
                                     gap: '0.25rem',
-                                    background: table.status === 'Reserved' ? 'rgba(245, 158, 11, 0.05)' : 'var(--bg-input)',
+                                    background: table.status === 'Reserved' ? 'var(--primary-glow)' : 'var(--bg-input)',
                                     border: `1px solid ${table.status === 'Reserved' ? 'var(--warning)' : 'var(--border)'}`,
                                     borderRadius: 'var(--radius-md)',
                                     cursor: 'pointer',

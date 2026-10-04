@@ -1,300 +1,397 @@
 import React, { useState } from 'react';
 import {
-    HelpCircle,
-    Book,
-    MessageCircle,
-    ChevronDown,
-    ChevronUp,
-    Search,
-    Layout,
-    Utensils,
-    DollarSign,
-    Settings,
-    Users,
-    Package,
-    LifeBuoy,
-    ShieldCheck,
-    Smartphone,
     AlertCircle,
+    ArrowRight,
+    BookOpen,
+    CheckCircle2,
+    ChevronDown,
+    DollarSign,
+    HelpCircle,
+    Layout,
+    LifeBuoy,
+    Mail,
+    MessageCircle,
+    Package,
     Phone,
+    Search,
+    Smartphone,
+    Utensils,
     X
 } from 'lucide-react';
 
+const faqs = [
+    {
+        id: 'payment-qr',
+        category: 'Payments',
+        question: "How do I set up my restaurant's QR code for payments?",
+        answer: "Open Settings and go to the Business & Finance tab. Upload your payment QR code there. It will be available during checkout when you choose Online payment."
+    },
+    {
+        id: 'install-app',
+        category: 'Getting started',
+        question: 'Can I use RestroBaba on my phone or tablet?',
+        answer: "Yes. Open RestroBaba in your browser and use its Install App or Add to Home Screen option. The install guide on this page has steps for Android, iPhone/iPad, and desktop."
+    },
+    {
+        id: 'staff-roles',
+        category: 'Account & security',
+        question: 'How do I manage staff roles and access?',
+        answer: 'Open Staff Management to add team members and assign a role such as Admin, Manager, Chef, or Waiter. Access to pages and actions is based on each role.'
+    },
+    {
+        id: 'out-of-stock',
+        category: 'Menu & inventory',
+        question: 'What should I do if a menu item is out of stock?',
+        answer: 'You can change item availability from Menu Management. If you use Inventory, update the stock level there as well so your team can keep track of what is available.'
+    },
+    {
+        id: 'split-bill',
+        category: 'Payments',
+        question: 'How do I split a bill?',
+        answer: "Open checkout for an occupied table and choose Split Bill. Split options depend on the checkout screen you're using; if you don't see the option, try opening the bill from the Floor Plan."
+    },
+    {
+        id: 'order-status',
+        category: 'Orders & tables',
+        question: 'Where can I track an order after sending it to the kitchen?',
+        answer: 'Use the Orders page to follow order status and the Kitchen Display to monitor preparation. Orders are shown newest first, and the Orders page lets you move through results with pagination.'
+    },
+    {
+        id: 'data-security',
+        category: 'Account & security',
+        question: 'How can I keep my account secure?',
+        answer: 'Use a strong, unique password and give each staff member their own account with only the role access they need. Never share sign-in credentials.'
+    },
+    {
+        id: 'printer-help',
+        category: 'Getting started',
+        question: 'Why is my receipt or printer not working?',
+        answer: 'Check that the printer is connected and selected by your device, then confirm the browser can open the print dialog. If the dialog is blocked, allow pop-ups for the RestroBaba site and try again.'
+    }
+];
+
+const guides = [
+    {
+        id: 'table-service',
+        title: 'Table service',
+        category: 'Orders & tables',
+        description: 'From seating guests to sending their order to the kitchen.',
+        icon: Utensils,
+        steps: ['Choose an available table', 'Add items to the order', 'Review the order', 'Send it to the kitchen']
+    },
+    {
+        id: 'billing-payment',
+        title: 'Billing & payment',
+        category: 'Payments',
+        description: 'Close a table bill and give guests their receipt.',
+        icon: DollarSign,
+        steps: ['Open the bill for an occupied table', 'Choose a payment method', 'Confirm the payment', 'Print or download the receipt']
+    },
+    {
+        id: 'menu-setup',
+        title: 'Set up your menu',
+        category: 'Menu & inventory',
+        description: 'Organize categories and add items your guests can order.',
+        icon: Layout,
+        steps: ['Create menu categories', 'Add item names and prices', 'Include descriptions', 'Add photos when available']
+    },
+    {
+        id: 'stock-control',
+        title: 'Stock control',
+        category: 'Menu & inventory',
+        description: 'Keep a closer eye on stock and low-inventory items.',
+        icon: Package,
+        steps: ['Add inventory items', 'Set low-stock thresholds', 'Keep quantities up to date', 'Review stock as items are used']
+    }
+];
+
+const topics = [
+    'All topics',
+    'Getting started',
+    'Orders & tables',
+    'Payments',
+    'Menu & inventory',
+    'Account & security'
+];
+
+const installSteps = [
+    {
+        title: 'Android · Chrome',
+        steps: [
+            'Open RestroBaba in Chrome.',
+            'Choose Install App or Add to Home Screen from the browser menu.',
+            'Confirm to add RestroBaba to your device.'
+        ]
+    },
+    {
+        title: 'iPhone or iPad · Safari',
+        steps: [
+            'Open RestroBaba in Safari.',
+            'Tap Share, then choose Add to Home Screen.',
+            'Tap Add to finish.'
+        ]
+    },
+    {
+        title: 'Desktop · Chrome or Edge',
+        steps: [
+            'Open RestroBaba in your browser.',
+            'Select the install icon in the address bar, or choose Install from the browser menu.',
+            'Confirm to open RestroBaba in its own app window.'
+        ]
+    }
+];
+
 const HelpPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [activeTopic, setActiveTopic] = useState('All topics');
     const [openFaq, setOpenFaq] = useState(null);
-
-    const faqs = [
-        {
-            question: "How do I set up my restaurant's QR code for payments?",
-            answer: "Go to the Settings page, specifically the 'Business & Finance' tab. There you can upload your payment QR code image (like UPI or WhatsApp Pay). Once saved, this QR code will automatically appear on the checkout screen when 'Online' payment is selected."
-        },
-        {
-            question: "Can I use RestroBaba on my phone or tablet?",
-            answer: "Yes! RestroBaba is a Progressive Web App (PWA). You can 'Add to Home Screen' from your browser's menu on any device. This gives you a standalone app experience that works perfectly on tablets (for waiters) and phones (for owners)."
-        },
-        {
-            question: "How do I manage multi-role staff?",
-            answer: "In the Staff Management section, you can add members and assign roles like Admin, Manager, Chef, or Waiter. Each role has specific permissions (e.g., Chefs only see the Kitchen Display, Waiters cannot access financial reports)."
-        },
-        {
-            question: "What should I do if an item is out of stock?",
-            answer: "You can quickly toggle item availability in the Menu Management screen. Alternatively, if you use the Inventory module, you can set stock levels, and the system can warn you when items run low."
-        },
-        {
-            question: "How do I process a split bill?",
-            answer: "During checkout in Table Management or Billing, click the 'Split Bill' button. You can then split the total evenly or by specific items between your guests."
-        },
-        {
-            question: "Is my data secure?",
-            answer: "RestroBaba uses enterprise-grade encryption for all data transmissions. We also support Two-Factor Authentication (2FA/TOTP) for Admin accounts to ensure the highest level of security."
-        }
-    ];
-
-    const guides = [
-        {
-            title: "Table Service",
-            icon: <Utensils size={24} />,
-            steps: ["Select an available table", "Add guest count and seat them", "Add items to the order", "Send to kitchen"]
-        },
-        {
-            title: "Billing & Payment",
-            icon: <DollarSign size={24} />,
-            steps: ["Click 'Bill' on an occupied table", "Select payment method (Cash/Card/Online)", "Confirm payment", "Print or Download receipt"]
-        },
-        {
-            title: "Menu Setup",
-            icon: <Layout size={24} />,
-            steps: ["Create Menu Categories (e.g., Pizzas, Drinks)", "Add Items with prices and descriptions", "Upload images for a premium look"]
-        },
-        {
-            title: "Stock Control",
-            icon: <Package size={24} />,
-            steps: ["Add inventory items", "Set minimum thresholds", "Track stock usage automatically via recipes"]
-        }
-    ];
-
-    const toggleFaq = (index) => {
-        setOpenFaq(openFaq === index ? null : index);
-    };
-
-    const filteredFaqs = faqs.filter(faq =>
-        faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
     const [showInstallGuide, setShowInstallGuide] = useState(false);
+    const query = searchQuery.trim().toLowerCase();
 
-    const InstallGuideModal = () => (
-        <div className="modal-overlay" onClick={() => setShowInstallGuide(false)}>
-            <div className="modal-card" style={{ maxWidth: '600px', width: '90%' }} onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.5rem', margin: 0 }}>How to Install RestroBaba</h2>
-                    <button className="btn-ghost" onClick={() => setShowInstallGuide(false)}>
-                        <X size={20} />
-                    </button>
-                </div>
+    const filteredFaqs = faqs.filter((faq) => {
+        const matchesTopic = activeTopic === 'All topics' || faq.category === activeTopic;
+        const matchesSearch = !query || `${faq.question} ${faq.answer} ${faq.category}`.toLowerCase().includes(query);
+        return matchesTopic && matchesSearch;
+    });
 
-                <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr', gap: '1.5rem' }}>
-                    <div className="premium-glass" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: 'var(--primary)' }}>
-                            <Smartphone size={20} /> Android (Chrome)
-                        </h3>
-                        <ol style={{ paddingLeft: '1.25rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.8' }}>
-                            <li>Open RestroBaba in your <strong>Chrome browser</strong>.</li>
-                            <li>Wait for the <strong>"Add to Home Screen"</strong> banner at the bottom.</li>
-                            <li>If no banner appears, tap the <strong>three dots (⋮)</strong> in the top right.</li>
-                            <li>Select <strong>"Install App"</strong> or <strong>"Add to Home screen"</strong>.</li>
-                        </ol>
-                    </div>
+    const filteredGuides = guides.filter((guide) => {
+        const matchesTopic = activeTopic === 'All topics' || guide.category === activeTopic;
+        const matchesSearch = !query || `${guide.title} ${guide.description} ${guide.steps.join(' ')} ${guide.category}`.toLowerCase().includes(query);
+        return matchesTopic && matchesSearch;
+    });
 
-                    <div className="premium-glass" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: 'var(--primary)' }}>
-                            <Smartphone size={20} /> iPhone / iPad (Safari)
-                        </h3>
-                        <ol style={{ paddingLeft: '1.25rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.8' }}>
-                            <li>Open RestroBaba in <strong>Safari</strong>.</li>
-                            <li>Tap the <strong>Share button</strong> (square icon with upward arrow) at the bottom.</li>
-                            <li>Scroll down and tap <strong>"Add to Home Screen"</strong>.</li>
-                            <li>Tap <strong>"Add"</strong> in the top right corner.</li>
-                        </ol>
-                    </div>
-
-                    <div className="premium-glass" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: 'var(--primary)' }}>
-                            <Layout size={20} /> Desktop (Chrome/Edge)
-                        </h3>
-                        <ol style={{ paddingLeft: '1.25rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.8' }}>
-                            <li>Open the site in your browser.</li>
-                            <li>Look at the right side of your <strong>Address Bar</strong>.</li>
-                            <li>Click the <strong>Install icon</strong> (monitor with plus sign).</li>
-                            <li>Confirm the installation to get a standalone app window.</li>
-                        </ol>
-                    </div>
-                </div>
-
-                <button
-                    className="btn-primary"
-                    style={{ width: '100%', marginTop: '2rem', padding: '1rem' }}
-                    onClick={() => setShowInstallGuide(false)}
-                >
-                    Got it!
-                </button>
-            </div>
-        </div>
-    );
+    const toggleFaq = (id) => setOpenFaq((current) => current === id ? null : id);
 
     return (
-        <div className="page-container animate-fade">
-            {showInstallGuide && <InstallGuideModal />}
-            <header style={{ marginBottom: '3rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                    <div className="icon-box-premium primary">
-                        <HelpCircle size={32} />
-                    </div>
-                    <div>
-                        <h1 style={{ fontSize: '2.5rem', margin: 0 }}>Help & Support Center</h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Everything you need to master your RestroBaba system.</p>
-                    </div>
+        <div className="page-container animate-fade help-page">
+            {showInstallGuide && (
+                <div
+                    className="modal-overlay"
+                    onClick={() => setShowInstallGuide(false)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Escape') setShowInstallGuide(false);
+                    }}
+                >
+                    <section
+                        className="modal-card help-install-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="help-install-title"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="help-modal-header">
+                            <div>
+                                <span className="help-eyebrow">Take RestroBaba with you</span>
+                                <h2 id="help-install-title">Install the app</h2>
+                            </div>
+                            <button
+                                type="button"
+                                className="help-icon-button"
+                                onClick={() => setShowInstallGuide(false)}
+                                aria-label="Close install guide"
+                            >
+                                <X size={19} />
+                            </button>
+                        </div>
+                        <p className="help-modal-intro">Install RestroBaba on a phone, tablet, or computer for quick access from your home screen or desktop.</p>
+                        <div className="help-install-options">
+                            {installSteps.map((platform) => (
+                                <article className="help-install-option" key={platform.title}>
+                                    <h3><Smartphone size={18} />{platform.title}</h3>
+                                    <ol>
+                                        {platform.steps.map((step) => <li key={step}>{step}</li>)}
+                                    </ol>
+                                </article>
+                            ))}
+                        </div>
+                        <button type="button" className="help-primary-button" onClick={() => setShowInstallGuide(false)}>
+                            <CheckCircle2 size={17} /> Got it
+                        </button>
+                    </section>
                 </div>
+            )}
 
-                <div className="search-bar" style={{ maxWidth: '600px', margin: '2rem 0' }}>
-                    <Search size={20} />
-                    <input
-                        type="text"
-                        placeholder="Search for guides, FAQs, or troubleshooting tips..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+            <header className="help-hero">
+                <div className="help-hero-copy">
+                    <div className="help-eyebrow"><HelpCircle size={15} /> RESTROBABA HELP CENTER</div>
+                    <h1>How can we help?</h1>
+                    <p>Find quick answers, learn the essentials, and get your restaurant running smoothly.</p>
+                    <label className="help-search">
+                        <Search size={20} aria-hidden="true" />
+                        <input
+                            type="search"
+                            value={searchQuery}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            placeholder="Search guides and frequently asked questions"
+                            aria-label="Search help guides and frequently asked questions"
+                        />
+                        {searchQuery && (
+                            <button type="button" onClick={() => setSearchQuery('')} aria-label="Clear search">
+                                <X size={17} />
+                            </button>
+                        )}
+                    </label>
+                </div>
+                <div className="help-hero-art" aria-hidden="true">
+                    <div className="help-hero-orbit"><LifeBuoy size={74} strokeWidth={1.2} /></div>
+                    <span className="help-art-dot help-art-dot-one" />
+                    <span className="help-art-dot help-art-dot-two" />
+                </div>
+                <div className="help-hero-footer">
+                    <span><BookOpen size={15} /> {guides.length} quick-start guides</span>
+                    <span><MessageCircle size={15} /> {faqs.length} answers</span>
                 </div>
             </header>
 
-            <section style={{ marginBottom: '4rem' }}>
-                <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-                    <Book className="primary" /> Quick Start Guides
-                </h2>
-                <div className="dashboard-grid">
-                    {guides.map((guide, idx) => (
-                        <div key={idx} className="premium-glass card-hover" style={{ padding: '2rem' }}>
-                            <div style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>{guide.icon}</div>
-                            <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>{guide.title}</h3>
-                            <ul style={{ paddingLeft: '1.25rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {guide.steps.map((step, sIdx) => (
-                                    <li key={sIdx} style={{ fontSize: '0.9rem' }}>{step}</li>
-                                ))}
-                            </ul>
-                        </div>
+            <nav className="help-topics" aria-label="Help topics">
+                <span className="help-topics-label">Browse topics</span>
+                <div className="help-topic-list">
+                    {topics.map((topic) => (
+                        <button
+                            type="button"
+                            key={topic}
+                            className={`help-topic${activeTopic === topic ? ' active' : ''}`}
+                            onClick={() => {
+                                setActiveTopic(topic);
+                                setOpenFaq(null);
+                            }}
+                            aria-pressed={activeTopic === topic}
+                        >
+                            {topic}
+                        </button>
                     ))}
                 </div>
-            </section>
+            </nav>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem' }}>
-                <section>
-                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-                        <MessageCircle className="primary" /> Frequently Asked Questions
-                    </h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {filteredFaqs.map((faq, idx) => (
-                            <div
-                                key={idx}
-                                className="premium-glass"
-                                style={{
-                                    overflow: 'hidden',
-                                    transition: 'all 0.3s ease',
-                                    border: openFaq === idx ? '1px solid var(--primary)' : '1px solid var(--glass-border)'
-                                }}
-                            >
-                                <button
-                                    onClick={() => toggleFaq(idx)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '1.5rem',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        color: 'inherit',
-                                        textAlign: 'left'
-                                    }}
-                                >
-                                    <span style={{ fontWeight: 600, fontSize: '1rem' }}>{faq.question}</span>
-                                    {openFaq === idx ? <ChevronUp size={20} className="primary" /> : <ChevronDown size={20} />}
-                                </button>
-                                {openFaq === idx && (
-                                    <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', color: 'var(--text-muted)', lineHeight: 1.6, fontSize: '0.95rem' }}>
-                                        {faq.answer}
+            {filteredGuides.length > 0 && (
+                <section className="help-section">
+                    <div className="help-section-heading">
+                        <div className="help-section-icon"><BookOpen size={19} /></div>
+                        <div>
+                            <h2>Quick-start guides</h2>
+                            <p>Simple steps for everyday restaurant tasks.</p>
+                        </div>
+                    </div>
+                    <div className="help-guide-grid">
+                        {filteredGuides.map((guide, index) => {
+                            const Icon = guide.icon;
+                            return (
+                                <article className="help-guide-card" key={guide.id} style={{ animationDelay: `${index * 45}ms` }}>
+                                    <div className="help-guide-card-top">
+                                        <span className="help-guide-icon"><Icon size={20} /></span>
+                                        <span className="help-guide-step-count">{guide.steps.length} steps</span>
                                     </div>
-                                )}
-                            </div>
-                        ))}
+                                    <h3>{guide.title}</h3>
+                                    <p className="help-guide-description">{guide.description}</p>
+                                    <ol>
+                                        {guide.steps.map((step) => <li key={step}>{step}</li>)}
+                                    </ol>
+                                </article>
+                            );
+                        })}
                     </div>
                 </section>
+            )}
 
-                <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    <div className="premium-glass" style={{ padding: '2rem', borderLeft: '4px solid var(--primary)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                            <Smartphone className="primary" size={20} />
-                            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>PWA Install</h3>
+            <div className="help-content-grid">
+                <section className="help-section help-faq-section">
+                    <div className="help-section-heading">
+                        <div className="help-section-icon"><MessageCircle size={19} /></div>
+                        <div>
+                            <h2>Frequently asked questions</h2>
+                            <p>Practical answers to common questions.</p>
                         </div>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                            Install RestroBaba as an app on your iOS or Android device for better performance.
-                        </p>
-                        <button
-                            className="nav-item active"
-                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem' }}
-                            onClick={() => setShowInstallGuide(true)}
-                        >
-                            View Install Guide
+                        <span className="help-result-count">{filteredFaqs.length}</span>
+                    </div>
+
+                    {filteredFaqs.length > 0 ? (
+                        <div className="help-faq-list">
+                            {filteredFaqs.map((faq) => {
+                                const isOpen = openFaq === faq.id;
+                                const answerId = `help-answer-${faq.id}`;
+                                return (
+                                    <article className={`help-faq-item${isOpen ? ' open' : ''}`} key={faq.id}>
+                                        <button
+                                            type="button"
+                                            className="help-faq-question"
+                                            onClick={() => toggleFaq(faq.id)}
+                                            aria-expanded={isOpen}
+                                            aria-controls={answerId}
+                                        >
+                                            <span className="help-faq-question-copy">
+                                                <span className="help-faq-category">{faq.category}</span>
+                                                <span className="help-faq-title">{faq.question}</span>
+                                            </span>
+                                            <span className="help-faq-chevron"><ChevronDown size={18} /></span>
+                                        </button>
+                                        {isOpen && (
+                                            <div className="help-faq-answer" id={answerId}>
+                                                {faq.answer}
+                                            </div>
+                                        )}
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="help-empty-state">
+                            <Search size={25} />
+                            <h3>No matching questions</h3>
+                            <p>Try another search or browse the guides above.</p>
+                            <button type="button" className="help-text-button" onClick={() => { setSearchQuery(''); setActiveTopic('All topics'); }}>
+                                Clear filters <ArrowRight size={15} />
+                            </button>
+                        </div>
+                    )}
+                </section>
+
+                <aside className="help-sidebar">
+                    <section className="help-support-card">
+                        <div className="help-support-icon"><LifeBuoy size={22} /></div>
+                        <span className="help-eyebrow">HERE FOR YOU</span>
+                        <h2>Need a hand?</h2>
+                        <p>Talk to our support team and get help with your setup or daily workflow.</p>
+                        <div className="help-support-actions">
+                            <a className="help-contact-button whatsapp" href="https://wa.me/9779765231402" target="_blank" rel="noopener noreferrer">
+                                <MessageCircle size={17} /> Chat on WhatsApp <ArrowRight size={15} />
+                            </a>
+                            <a className="help-contact-button" href="tel:9765231402">
+                                <Phone size={17} /> Call support
+                            </a>
+                            <a className="help-contact-link" href="mailto:farooque12.alam@gmail.com">
+                                <Mail size={16} /> Email support
+                            </a>
+                        </div>
+                    </section>
+
+                    <section className="help-install-card">
+                        <div className="help-aside-heading">
+                            <span className="help-aside-icon"><Smartphone size={18} /></span>
+                            <h3>Install RestroBaba</h3>
+                        </div>
+                        <p>Add it to your device for faster access during a busy shift.</p>
+                        <button type="button" className="help-secondary-button" onClick={() => setShowInstallGuide(true)}>
+                            View install guide <ArrowRight size={16} />
                         </button>
-                    </div>
+                    </section>
 
-                    <div className="premium-glass" style={{ padding: '2rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                            <AlertCircle style={{ color: '#f59e0b' }} size={20} />
-                            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Troubleshooting</h3>
+                    <section className="help-tip-card">
+                        <div className="help-aside-heading">
+                            <span className="help-aside-icon"><AlertCircle size={18} /></span>
+                            <h3>Quick troubleshooting</h3>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div style={{ fontSize: '0.8rem' }}>
-                                <strong style={{ display: 'block', color: 'var(--text-main)' }}>Page not loading?</strong>
-                                <span style={{ color: 'var(--text-muted)' }}>Try refreshing the page or clearing browser cache.</span>
-                            </div>
-                            <div style={{ fontSize: '0.8rem' }}>
-                                <strong style={{ display: 'block', color: 'var(--text-main)' }}>Printers not working?</strong>
-                                <span style={{ color: 'var(--text-muted)' }}>Check if your browser allows pop-ups and has printer access.</span>
-                            </div>
+                        <div className="help-tip">
+                            <strong>Page not loading?</strong>
+                            <span>Refresh the page and check that your internet connection is stable.</span>
                         </div>
-                    </div>
-
-                    <div className="premium-glass" style={{ padding: '2rem', textAlign: 'center' }}>
-                        <LifeBuoy size={32} className="primary" style={{ marginBottom: '1rem' }} />
-                        <h3 style={{ marginBottom: '0.5rem' }}>Need More Help?</h3>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                            Our premium support team is available to assist you via WhatsApp or Email.
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <a href="https://wa.me/9779765231402" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                                <button className="nav-item active" style={{ width: '100%', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#25D366', borderColor: '#25D366' }}>
-                                    <MessageCircle size={18} />
-                                    WhatsApp Support
-                                </button>
-                            </a>
-                            <a href="tel:9765231402" style={{ textDecoration: 'none' }}>
-                                <button className="nav-item active" style={{ width: '100%', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                    <Phone size={18} />
-                                    Direct Call
-                                </button>
-                            </a>
-                            <a href="mailto:farooque12.alam@gmail.com" style={{ textDecoration: 'none' }}>
-                                <button className="btn-ghost" style={{ width: '100%', padding: '0.75rem', fontSize: '0.85rem' }}>
-                                    Email Support
-                                </button>
-                            </a>
+                        <div className="help-tip">
+                            <strong>Print dialog not opening?</strong>
+                            <span>Allow pop-ups for this site, then try printing again.</span>
                         </div>
-                    </div>
+                    </section>
                 </aside>
             </div>
+
         </div>
     );
 };

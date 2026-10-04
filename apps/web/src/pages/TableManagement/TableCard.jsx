@@ -100,7 +100,7 @@ const TableCard = ({
                         <button
                             onClick={() => onToggleReservation(table)}
                             className="tm-action-btn view"
-                            style={{ flex: 1, color: '#ef4444' }}
+                            style={{ flex: 1, color: 'var(--danger)' }}
                         >
                             <CalendarX size={16} strokeWidth={2.5} />
                         </button>

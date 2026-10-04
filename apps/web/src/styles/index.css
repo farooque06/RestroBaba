@@ -27,6 +27,7 @@
 @import './components/billing.css';
 @import './components/sa-management.css';
 @import './components/admin-pages.css';
+@import './components/help.css';
 
 /* ── Responsive & Print Rules ── */
 @import './responsive.css';

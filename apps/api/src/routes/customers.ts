@@ -3,6 +3,43 @@ import prisma from '../services/prisma.js';
 
 const router = express.Router();
 
+async function withCustomerInsights<T extends { id: string }>(customers: T[], clientId: string) {
+    if (customers.length === 0) return customers;
+
+    const orderInsights = await prisma.order.groupBy({
+        by: ['customerId'],
+        where: {
+            clientId,
+            customerId: { in: customers.map(customer => customer.id) },
+            status: 'Paid'
+        },
+        _count: { _all: true },
+        _sum: { totalAmount: true },
+        _max: { createdAt: true }
+    });
+    const insightsByCustomer = new Map<string, {
+        visitCount: number;
+        lifetimeSpend: number;
+        lastVisit: Date | null;
+    }>();
+    for (const insight of orderInsights) {
+        if (insight.customerId) {
+            insightsByCustomer.set(insight.customerId, {
+                visitCount: insight._count._all,
+                lifetimeSpend: insight._sum.totalAmount ?? 0,
+                lastVisit: insight._max.createdAt
+            });
+        }
+    }
+
+    return customers.map(customer => ({
+        ...customer,
+        visitCount: insightsByCustomer.get(customer.id)?.visitCount ?? 0,
+        lifetimeSpend: insightsByCustomer.get(customer.id)?.lifetimeSpend ?? 0,
+        lastVisit: insightsByCustomer.get(customer.id)?.lastVisit ?? null
+    }));
+}
+
 // Get all customers for the client
 router.get('/', async (req, res) => {
     try {
@@ -10,7 +47,7 @@ router.get('/', async (req, res) => {
             where: { clientId: req.clientId },
             orderBy: { createdAt: 'desc' }
         });
-        res.json(customers);
+        res.json(await withCustomerInsights(customers, req.clientId!));
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch customers' });
     }
@@ -30,7 +67,7 @@ router.get('/search', async (req, res) => {
             },
             take: 10
         });
-        res.json(customers);
+        res.json(await withCustomerInsights(customers, req.clientId!));
     } catch (error) {
         res.status(500).json({ error: 'Search failed' });
     }

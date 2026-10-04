@@ -29,7 +29,7 @@
   font-weight: 700;
   color: var(--primary);
   background: var(--primary-glow);
-  border: 1px solid rgba(212, 168, 83, 0.25);
+  border: 1px solid var(--primary-glow);
   padding: 0.15rem 0.55rem;
   border-radius: 100px;
 }
@@ -129,6 +129,8 @@
 }
 
 .ol-status-badge {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
   padding: 0.35rem 0.7rem;
   border-radius: 100px;
   font-size: 0.68rem;
@@ -283,9 +285,9 @@
 }
 
 .ol-action-btn.pay {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  background: var(--success);
+  color: var(--bg-main);
+  box-shadow: var(--shadow-sm);
 }
 
 .ol-action-btn.cancel {
@@ -322,7 +324,7 @@
 .ol-payment-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--bg-modal-overlay);
   backdrop-filter: blur(10px);
   display: flex;
   justify-content: center;

@@ -212,6 +212,28 @@ router.get('/', async (req, res) => {
     try {
         const statusFilter = req.query.status as string | undefined;
         const whereClause: any = { clientId: req.clientId! };
+        const paginationRequested = req.query.page !== undefined || req.query.limit !== undefined;
+        let pagination: { page: number; limit: number } | undefined;
+
+        if (paginationRequested) {
+            const parsePositiveInteger = (value: unknown, fallback: number) => {
+                if (value === undefined) return fallback;
+                if (typeof value !== 'string' || !/^\d+$/.test(value)) return null;
+                const parsed = Number(value);
+                return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+            };
+            const page = parsePositiveInteger(req.query.page, 1);
+            const requestedLimit = parsePositiveInteger(req.query.limit, 20);
+
+            if (page === null || requestedLimit === null) {
+                return res.status(400).json({ error: 'Page and limit must be positive integers' });
+            }
+
+            pagination = { page, limit: Math.min(requestedLimit, 100) };
+            if (!Number.isSafeInteger((page - 1) * pagination.limit)) {
+                return res.status(400).json({ error: 'Page is too large' });
+            }
+        }
 
         if (statusFilter) {
             // Support comma-separated statuses: ?status=Pending,Cooking
@@ -219,7 +241,16 @@ router.get('/', async (req, res) => {
             whereClause.status = { in: statuses };
         }
 
-        const orders = await prisma.order.findMany({
+        const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+        if (pagination && search) {
+            const searchConditions: any[] = [{ id: { contains: search, mode: 'insensitive' } }];
+            if (/^\d+$/.test(search)) {
+                searchConditions.push({ table: { is: { number: { contains: search } } } });
+            }
+            whereClause.OR = searchConditions;
+        }
+
+        const findOrders = prisma.order.findMany({
             where: whereClause,
             include: {
                 items: { 
@@ -232,9 +263,28 @@ router.get('/', async (req, res) => {
                 customer: true,
                 taxInvoice: true
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            skip: pagination ? (pagination.page - 1) * pagination.limit : undefined,
+            take: pagination?.limit
         });
-        res.json(orders);
+
+        if (!pagination) {
+            return res.json(await findOrders);
+        }
+
+        const [orders, total] = await Promise.all([
+            findOrders,
+            prisma.order.count({ where: whereClause })
+        ]);
+        res.json({
+            orders,
+            pagination: {
+                page: pagination.page,
+                limit: pagination.limit,
+                total,
+                totalPages: Math.max(1, Math.ceil(total / pagination.limit))
+            }
+        });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch orders' });
     }
@@ -849,7 +899,7 @@ router.post('/sync-points/:customerId', async (req, res) => {
             const points = orders.reduce((sum, o) => sum + Math.floor(o.totalAmount / 100), 0);
 
             await tx.customer.update({
-                where: { id: customerId },
+                where: { id: customerId, clientId: req.clientId! },
                 data: { points }
             });
 

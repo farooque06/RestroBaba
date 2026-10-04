@@ -1,4 +1,4 @@
-const CACHE_NAME = 'restrobaba-v3';
+const CACHE_NAME = 'restrobaba-v4';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -10,65 +10,65 @@ const STATIC_ASSETS = [
 // Install: cache only static shell assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting(); // Activate new SW immediately
+  self.skipWaiting();
 });
 
-// Activate: clear old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+        keys.filter((key) => key.startsWith('restrobaba-') && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
       );
     })
   );
-  self.clients.claim(); // Take control of all pages immediately
+  self.clients.claim();
 });
 
-// Fetch: Network-first for navigation & API, cache-first for static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
   if (request.method !== 'GET') return;
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
-  // Skip API calls — always go to network
-  if (url.pathname.startsWith('/api/')) return;
-
-  // For navigation requests (HTML pages) — network first, fallback to cached index
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/'))
+      fetch(request).then((response) => {
+        if (response.ok) {
+          const responseToCache = response.clone();
+          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put('/', responseToCache)));
+        }
+        return response;
+      }).catch(async () => {
+        const cachedPage = await caches.match('/');
+        return cachedPage || new Response('You are offline. Reconnect and try again.', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+      })
     );
     return;
   }
 
-  // For JS/CSS/assets — network first with cache fallback
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
-      fetch(request).then((response) => {
-        // Cache the new version
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+        if (response.ok) {
+          const responseToCache = response.clone();
+          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache)));
+        }
         return response;
-      }).catch(() => caches.match(request))
+      }))
     );
     return;
   }
 
-  // For everything else (images, fonts, etc.) — cache first
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      return cached || fetch(request).then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-        return response;
-      });
-    })
-  );
+  // Do not cache development modules or arbitrary runtime requests. Cache only
+  // the explicit static shell assets listed above.
+  if (STATIC_ASSETS.includes(url.pathname)) {
+    event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));
+  }
 });

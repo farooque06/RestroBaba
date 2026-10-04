@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config';
 import {
     Users,
@@ -9,26 +9,39 @@ import {
     Award,
     History,
     Loader2,
-    ChevronRight,
     Edit2,
     Calendar,
     ShoppingBag,
-    RotateCcw
+    CircleDollarSign,
+    RotateCcw,
+    AlertCircle,
+    UserRound,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../utils/formatters';
 import '../styles/components/customers.css';
 import '../styles/components/common.css';
 
+const getCustomerTier = (lifetimeSpend) => {
+    if (lifetimeSpend >= 15000) return 'vip';
+    if (lifetimeSpend >= 5000) return 'gold';
+    return 'silver';
+};
+
 const CustomerManagement = () => {
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [tierFilter, setTierFilter] = useState('all');
+    const [customerSort, setCustomerSort] = useState('spend');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [historyModal, setHistoryModal] = useState(null);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [orderHistory, setOrderHistory] = useState([]);
+    const [customersError, setCustomersError] = useState('');
+    const [syncingCustomerId, setSyncingCustomerId] = useState(null);
+    const customerRequestId = useRef(0);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -37,44 +50,74 @@ const CustomerManagement = () => {
     });
 
     useEffect(() => {
-        fetchCustomers();
+        fetchCustomers(searchQuery);
     }, []);
 
-    const fetchCustomers = async () => {
-        setLoading(true);
+    const fetchCustomers = async (query = '') => {
+        const requestId = ++customerRequestId.current;
+        if (customers.length === 0) setLoading(true);
+        setCustomersError('');
         const token = localStorage.getItem('restroToken');
         try {
-            const response = await fetch(`${API_BASE_URL}/api/customers`, {
+            const endpoint = query.trim()
+                ? `${API_BASE_URL}/api/customers/search?${new URLSearchParams({ query: query.trim() })}`
+                : `${API_BASE_URL}/api/customers`;
+            const response = await fetch(endpoint, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (response.ok) {
-                setCustomers(await response.json());
-            }
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to load customers');
+            if (!Array.isArray(data)) throw new Error('Unexpected customer list response');
+            if (requestId !== customerRequestId.current) return;
+            setCustomers(data.map(customer => ({
+                ...customer,
+                points: Number(customer.points ?? 0),
+                visitCount: Number(customer.visitCount ?? 0),
+                lifetimeSpend: Number(customer.lifetimeSpend ?? 0)
+            })));
         } catch (err) {
-            toast.error('Failed to load customers');
+            if (requestId === customerRequestId.current) {
+                const message = err instanceof Error ? err.message : 'Failed to load customers';
+                setCustomersError(message);
+                toast.error(message);
+            }
         } finally {
-            setLoading(false);
+            if (requestId === customerRequestId.current) setLoading(false);
         }
     };
 
     const handleSearch = async (e) => {
         const query = e.target.value;
         setSearchQuery(query);
-        if (query.length < 2) {
-            if (query === '') fetchCustomers();
+        const requestId = ++customerRequestId.current;
+        if (!query.trim()) {
+            fetchCustomers();
             return;
         }
 
         const token = localStorage.getItem('restroToken');
         try {
-            const response = await fetch(`${API_BASE_URL}/api/customers/search?query=${query}`, {
+            const response = await fetch(`${API_BASE_URL}/api/customers/search?${new URLSearchParams({ query })}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (response.ok) {
-                setCustomers(await response.json());
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Customer search failed');
+            if (!Array.isArray(data)) throw new Error('Unexpected customer search response');
+            if (requestId === customerRequestId.current) {
+                setCustomers(data.map(customer => ({
+                    ...customer,
+                    points: Number(customer.points ?? 0),
+                    visitCount: Number(customer.visitCount ?? 0),
+                    lifetimeSpend: Number(customer.lifetimeSpend ?? 0)
+                })));
+                setCustomersError('');
             }
         } catch (err) {
-            console.error('Search error', err);
+            if (requestId === customerRequestId.current) {
+                const message = err instanceof Error ? err.message : 'Customer search failed';
+                setCustomersError(message);
+                toast.error(message);
+            }
         }
     };
 
@@ -97,7 +140,7 @@ const CustomerManagement = () => {
             const data = await response.json();
             if (response.ok) {
                 toast.success(selectedCustomer ? 'Customer updated' : 'Customer created');
-                fetchCustomers();
+                fetchCustomers(searchQuery);
                 setIsModalOpen(false);
                 setSelectedCustomer(null);
                 setFormData({ name: '', phone: '', email: '' });
@@ -129,26 +172,51 @@ const CustomerManagement = () => {
 
     const syncPoints = async (customerId) => {
         const token = localStorage.getItem('restroToken');
+        setSyncingCustomerId(customerId);
         try {
             const response = await fetch(`${API_BASE_URL}/api/orders/sync-points/${customerId}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (response.ok) {
-                toast.success('Points recalculated!');
-                fetchCustomers();
-            }
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to recalculate points');
+            setCustomers(current => current.map(customer =>
+                customer.id === customerId ? { ...customer, points: Number(data.points ?? 0) } : customer
+            ));
+            toast.success(`Points updated: ${Number(data.points ?? 0).toLocaleString()} points`);
         } catch (err) {
-            toast.error('Sync failed');
+            toast.error(err instanceof Error ? err.message : 'Failed to recalculate points');
+        } finally {
+            setSyncingCustomerId(null);
         }
     };
 
+    const visibleCustomers = customers
+        .filter(customer => tierFilter === 'all' || getCustomerTier(customer.lifetimeSpend) === tierFilter)
+        .sort((left, right) => {
+            let difference = 0;
+            if (customerSort === 'visits') {
+                difference = right.visitCount - left.visitCount;
+            } else if (customerSort === 'lastVisit') {
+                difference = new Date(right.lastVisit || 0).getTime() - new Date(left.lastVisit || 0).getTime();
+            } else {
+                difference = right.lifetimeSpend - left.lifetimeSpend;
+            }
+            return difference || left.name.localeCompare(right.name);
+        });
+
     return (
-        <div className="page-container animate-fade">
-            <div className="dashboard-header" style={{ marginBottom: '2rem' }}>
-                <div className="settings-header" style={{ margin: 0 }}>
-                    <h1 style={{ fontSize: '2.4rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Customer Loyalty</h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>Track guest visits and award loyalty points.</p>
+        <div className="page-container animate-fade customer-page">
+            <div className="page-header">
+                <div className="page-header-info">
+                    <div className="customer-staff-title">
+                        <h1>Customer Loyalty</h1>
+                        <div className="status-badge active">
+                            <Users size={13} />
+                            {customers.length} Customers
+                        </div>
+                    </div>
+                    <p className="customer-staff-subtitle">Track guest visits and award loyalty points on paid orders.</p>
                 </div>
                 <button
                     onClick={() => {
@@ -156,84 +224,113 @@ const CustomerManagement = () => {
                         setFormData({ name: '', phone: '', email: '' });
                         setIsModalOpen(true);
                     }}
-                    className="plan-button plan-button-primary"
-                    style={{ padding: '0.85rem 2rem', width: 'auto' }}
+                    className="btn-primary"
                 >
                     <Plus size={20} />
                     <span>New Customer</span>
                 </button>
             </div>
 
-            {/* Search Bar */}
-            <div className="ot-search-container" style={{ padding: 0, marginBottom: '2rem' }}>
-                <div className="ot-search-wrapper" style={{ height: '56px' }}>
-                    <Search className="ot-search-icon" size={20} />
+            <div className="customer-toolbar customer-staff-toolbar">
+                <div className="customer-search">
+                    <Search size={18} />
                     <input
                         type="text"
                         placeholder="Search customers by name or phone..."
-                        className="ot-search-input"
                         value={searchQuery}
                         onChange={handleSearch}
                     />
                 </div>
+                <div className="customer-toolbar-controls">
+                    <label className="customer-filter-control">
+                        <span>Tier</span>
+                        <select value={tierFilter} onChange={e => setTierFilter(e.target.value)}>
+                            <option value="all">All tiers</option>
+                            <option value="silver">Silver</option>
+                            <option value="gold">Gold</option>
+                            <option value="vip">VIP</option>
+                        </select>
+                    </label>
+                    <label className="customer-filter-control">
+                        <span>Sort by</span>
+                        <select value={customerSort} onChange={e => setCustomerSort(e.target.value)}>
+                            <option value="spend">Highest spend</option>
+                            <option value="visits">Most visits</option>
+                            <option value="lastVisit">Recent visit</option>
+                        </select>
+                    </label>
+                </div>
+                <span className="customer-toolbar-hint">
+                    {searchQuery ? `${visibleCustomers.length} of ${customers.length} matches` : `${visibleCustomers.length} customers`}
+                </span>
             </div>
 
-            {/* Customer List */}
             <div className="customer-grid">
                 {loading ? (
                     Array(6).fill(0).map((_, i) => (
-                        <div key={i} className="customer-card animate-pulse" style={{ height: '220px', background: 'var(--bg-side)' }}></div>
+                        <div key={i} className="customer-card customer-skeleton" />
                     ))
                 ) : (
-                    customers.map(customer => (
-                        <div key={customer.id} className="customer-card animate-fade">
-                            <div className="customer-header">
-                                <div className="customer-info">
-                                    <h3>{customer.name}</h3>
-                                    <div className="customer-meta">
-                                        <Calendar size={12} />
-                                        <span>Joined {new Date(customer.createdAt).toLocaleDateString()}</span>
+                    visibleCustomers.map((customer, index) => (
+                        <article key={customer.id} className="stat-card customer-staff-card animate-fade" style={{ animationDelay: `${index * 35}ms` }}>
+                            <div className="customer-staff-card-header">
+                                <div className="customer-staff-identity">
+                                    <div className="customer-avatar">
+                                        {(customer.name || 'G').trim().split(/\s+/).map(part => part[0]).join('').toUpperCase().slice(0, 2)}
+                                    </div>
+                                    <div className="customer-staff-name">
+                                        <div className="customer-staff-name-row">
+                                            <h3>{customer.name}</h3>
+                                            <span className={`customer-tier-badge ${getCustomerTier(customer.lifetimeSpend)}`}>
+                                                {getCustomerTier(customer.lifetimeSpend)}
+                                            </span>
+                                        </div>
+                                        <span className="customer-staff-joined"><Calendar size={12} /> Joined {new Date(customer.createdAt).toLocaleDateString()}</span>
                                     </div>
                                 </div>
-                                <div className="points-badge" style={{ position: 'relative' }}>
-                                    <Award size={16} />
-                                    <span>{customer.points} Pts</span>
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            syncPoints(customer.id);
-                                        }}
-                                        style={{ 
-                                            background: 'none', 
-                                            border: 'none', 
-                                            color: 'var(--primary)', 
-                                            marginLeft: '6px', 
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            opacity: 0.6
-                                        }}
-                                        title="Recalculate Points"
+                                <div className="customer-points-panel">
+                                    <span className="customer-points-label"><Award size={13} /> Loyalty points</span>
+                                    <strong>{Number(customer.points || 0).toLocaleString()}</strong>
+                                    <button
+                                        type="button"
+                                        className="points-sync-button"
+                                        disabled={syncingCustomerId === customer.id}
+                                        onClick={() => syncPoints(customer.id)}
+                                        title="Recalculate points from paid orders"
+                                        aria-label={`Recalculate points for ${customer.name}`}
                                     >
-                                        <RotateCcw size={12} />
+                                        <RotateCcw size={13} className={syncingCustomerId === customer.id ? 'customer-spin' : ''} />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="customer-contact">
-                                <div className="contact-item">
+                            <div className="customer-staff-details">
+                                <div className="customer-staff-detail">
                                     <Phone size={14} />
                                     <span>{customer.phone}</span>
                                 </div>
-                                {customer.email && (
-                                    <div className="contact-item">
-                                        <Mail size={14} />
-                                        <span>{customer.email}</span>
-                                    </div>
-                                )}
+                                <div className="customer-staff-detail">
+                                    <Mail size={14} />
+                                    <span>{customer.email || 'No email address'}</span>
+                                </div>
                             </div>
 
-                            <div className="customer-actions">
+                            <div className="customer-insights" aria-label="Customer insights">
+                                <div className="customer-insight">
+                                    <ShoppingBag size={14} />
+                                    <span><strong>{customer.visitCount}</strong> visits</span>
+                                </div>
+                                <div className="customer-insight">
+                                    <CircleDollarSign size={14} />
+                                    <span><strong>{formatCurrency(customer.lifetimeSpend)}</strong> spent</span>
+                                </div>
+                                <div className="customer-insight">
+                                    <Calendar size={14} />
+                                    <span><strong>{customer.lastVisit ? new Date(customer.lastVisit).toLocaleDateString() : '—'}</strong> last visit</span>
+                                </div>
+                            </div>
+
+                            <div className="customer-actions customer-staff-actions">
                                 <button
                                     className="action-btn"
                                     onClick={() => fetchHistory(customer)}
@@ -252,8 +349,48 @@ const CustomerManagement = () => {
                                     <Edit2 size={16} />
                                 </button>
                             </div>
-                        </div>
+                        </article>
                     ))
+                )}
+                {!loading && customersError && (
+                    <div className="customer-empty-state customer-error-state" role="alert">
+                        <AlertCircle size={26} />
+                        <h3>Could not load customers</h3>
+                        <p>{customersError}</p>
+                        <button type="button" className="customer-empty-action" onClick={() => fetchCustomers(searchQuery)}>
+                            Try again
+                        </button>
+                    </div>
+                )}
+                {!loading && !customersError && visibleCustomers.length === 0 && customers.length > 0 && (
+                    <div className="customer-empty-state">
+                        <UserRound size={28} />
+                        <h3>No customers match these filters</h3>
+                        <p>Try another VIP tier or clear the search.</p>
+                        <button
+                            type="button"
+                            className="customer-empty-action"
+                            onClick={() => {
+                                setTierFilter('all');
+                                setSearchQuery('');
+                                fetchCustomers();
+                            }}
+                        >
+                            Clear filters
+                        </button>
+                    </div>
+                )}
+                {!loading && !customersError && customers.length === 0 && (
+                    <div className="customer-empty-state">
+                        <UserRound size={28} />
+                        <h3>{searchQuery ? 'No customers match your search' : 'No customers yet'}</h3>
+                        <p>{searchQuery ? 'Try another name or phone number.' : 'Add your first customer to start tracking visits and loyalty points.'}</p>
+                        {!searchQuery && (
+                            <button type="button" className="customer-empty-action" onClick={() => { setSelectedCustomer(null); setFormData({ name: '', phone: '', email: '' }); setIsModalOpen(true); }}>
+                                <Plus size={16} /> Add first customer
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -359,10 +496,12 @@ const CustomerManagement = () => {
                                         </div>
                                         <div style={{ textAlign: 'right', marginLeft: '1.5rem' }}>
                                             <div style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--primary)', marginBottom: '4px' }}>{formatCurrency(order.totalAmount)}</div>
-                                            <div className="order-points-gain">
-                                                <Award size={12} />
-                                                <span>+{Math.floor(order.totalAmount / 100)} Points</span>
-                                            </div>
+                                            {order.status === 'Paid' && (
+                                                <div className="order-points-gain">
+                                                    <Award size={12} />
+                                                    <span>+{Math.floor(order.totalAmount / 100)} Points</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))

@@ -1,5 +1,5 @@
 /* =====================================================
-   TABLE MANAGEMENT — Gilded Night Premium UI v4
+   TABLE MANAGEMENT
    ===================================================== */
 
 /* ── Layout & Header ── */
@@ -24,25 +24,25 @@
   font-weight: 900;
   letter-spacing: -0.04em;
   margin: 0;
-  color: #fff;
+  color: var(--text-heading);
 }
 
 .tm-capacity-pill {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-card);
   padding: 4px 12px;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
   font-size: 0.8rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-main);
   height: 32px;
 }
 
 .tm-capacity-pill small {
-  opacity: 0.5;
+  color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.6rem;
@@ -52,7 +52,7 @@
 .tm-capacity-bar-mini {
   width: 40px;
   height: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--border);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -89,15 +89,15 @@
 }
 
 .tm-action-pill.takeaway {
-  background: rgba(212, 168, 83, 0.1);
+  background: var(--primary-glow);
   color: var(--primary);
-  border-color: rgba(212, 168, 83, 0.15);
+  border-color: var(--border);
 }
 
 .tm-action-pill.add {
   background: var(--primary-gradient);
   color: white;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+  box-shadow: var(--shadow-glow);
 }
 
 .tm-action-pill:hover:not(:disabled) {
@@ -128,21 +128,21 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: #16181d;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   transition: all 0.3s ease;
 }
 .tm-stat-pill:hover {
-  background: #1e222a;
-  border-color: rgba(212, 175, 55, 0.2);
+  background: var(--bg-card-hover);
+  border-color: var(--primary);
   transform: translateY(-2px);
 }
 
 .tm-stat-pill .count {
   font-size: 1.5rem;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-heading);
 }
 .tm-stat-pill .label {
   font-size: 0.7rem;
@@ -161,13 +161,13 @@
   justify-content: center;
 }
 
-.available .stat-icon-wrapper { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.occupied .stat-icon-wrapper { background: rgba(212, 175, 55, 0.1); color: #d4a853; }
-.reserved .stat-icon-wrapper { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.tm-stat-pill.available .stat-icon-wrapper { background: var(--primary-glow); color: var(--success); }
+.tm-stat-pill.occupied .stat-icon-wrapper { background: var(--primary-glow); color: var(--primary); }
+.tm-stat-pill.reserved .stat-icon-wrapper { background: var(--primary-glow); color: var(--warning); }
 
-.tm-stat-pill.available .count { color: #10b981; }
-.tm-stat-pill.occupied .count { color: #d4a853; }
-.tm-stat-pill.reserved .count { color: #f59e0b; }
+.tm-stat-pill.available .count { color: var(--success); }
+.tm-stat-pill.occupied .count { color: var(--primary); }
+.tm-stat-pill.reserved .count { color: var(--warning); }
 
 @media (max-width: 600px) {
   .tm-summary-bar {
@@ -214,8 +214,8 @@
 .tm-filter-item {
   padding: 0.75rem 1.25rem;
   border-radius: 16px;
-  background: #16181d;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   font-weight: 700;
   font-size: 0.85rem;
@@ -229,39 +229,15 @@
 }
 
 .tm-filter-item:hover {
-  background: #1e222a;
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--bg-card-hover);
+  border-color: var(--border-light);
   transform: translateY(-2px);
 }
 
 .tm-filter-item.active {
-  color: #fff;
-  border-color: transparent;
-}
-
-/* Active State Colors */
-.tm-filter-item.all.active {
-  background: rgba(212, 175, 55, 0.15);
-  color: #d4a853;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-}
-
-.tm-filter-item.available.active {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.tm-filter-item.occupied.active {
-  background: rgba(212, 168, 83, 0.15);
-  color: #d4a853;
-  border: 1px solid rgba(212, 168, 83, 0.3);
-}
-
-.tm-filter-item.reserved.active {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--primary-glow);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .tm-filter-item .active-dot {
@@ -292,8 +268,8 @@
 
 /* ── Table Card ── */
 .tm-card {
-  background: #16181d;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 24px;
   padding: 1.5rem;
   display: flex;
@@ -304,9 +280,9 @@
 }
 .tm-card:hover {
   transform: translateY(-8px);
-  border-color: rgba(212, 175, 55, 0.3);
-  background: #1c1f26;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+  border-color: var(--primary);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-lg);
 }
 
 .tm-card-top {
@@ -319,7 +295,7 @@
 .tm-card-title {
   font-size: 1.4rem;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-heading);
   letter-spacing: -0.02em;
 }
 
@@ -334,8 +310,8 @@
 }
 
 .tm-card-timer {
-  background: rgba(212, 175, 55, 0.1);
-  color: #d4a853;
+  background: var(--primary-glow);
+  color: var(--primary);
   padding: 2px 8px;
   border-radius: 100px;
   font-size: 0.75rem;
@@ -352,28 +328,28 @@
 .tm-card-icon-btn {
   width: 28px; height: 28px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   display: flex; align-items: center; justify-content: center;
   transition: all 0.2s ease;
 }
 .tm-card-icon-btn:hover {
-  background: rgba(212, 175, 55, 0.1);
-  color: #d4a853;
-  border-color: #d4a853;
+  background: var(--primary-glow);
+  color: var(--primary);
+  border-color: var(--primary);
 }
-.tm-card-icon-btn.danger:hover { background: #ef4444; color: white; border-color: #ef4444; }
+.tm-card-icon-btn.danger:hover { background: var(--danger); color: white; border-color: var(--danger); }
 
 .tm-card-status {
   margin: 1rem 0 1.5rem;
   padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-input);
   border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
 }
 
 .status-dot {
@@ -381,9 +357,9 @@
   border-radius: 50%;
   position: relative;
 }
-.status-dot.green { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-.status-dot.blue { background: #d4a853; box-shadow: 0 0 10px rgba(212, 168, 83, 0.5); }
-.status-dot.amber { background: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+.status-dot.green { background: var(--success); box-shadow: 0 0 10px var(--success); }
+.status-dot.blue { background: var(--primary); box-shadow: 0 0 10px var(--primary); }
+.status-dot.amber { background: var(--warning); box-shadow: 0 0 10px var(--warning); }
 
 /* Status Pulsing Hook */
 .status-dot::after {
@@ -421,17 +397,17 @@
 .tm-action-btn.seat {
   background: var(--primary-gradient);
   color: white;
-  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+  box-shadow: var(--shadow-glow);
 }
 .tm-action-btn.view {
-  background: #232730;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--border);
 }
 .tm-action-btn.bill {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: var(--success);
   color: white;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── Responsive ── */
